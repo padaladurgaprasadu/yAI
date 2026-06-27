@@ -107,6 +107,9 @@ function App() {
     setChatMessages(prev => [...prev, { role: 'user', content: userMessage }])
     setChatInput('')
     setIsChatLoading(true)
+    
+    // Add an empty AI message that we will stream into
+    setChatMessages(prev => [...prev, { role: 'ai', content: '' }])
 
     try {
       const response = await fetch(`${API_URL}/api/chat`, {
@@ -117,26 +120,64 @@ function App() {
         },
         body: JSON.stringify({ message: userMessage, history: chatMessages })
       })
-      const data = await response.json()
+      
+      setIsChatLoading(false) // Stop the spinner once stream starts
       
       if (!response.ok) {
-        // Handle 429 Rate Limit or 401 Unauthorized errors gracefully
-        setChatMessages(prev => [...prev, { role: 'ai', content: `⚠️ Error: ${data.detail || data.error || "Something went wrong"}` }])
+        setChatMessages(prev => {
+            const newMsgs = [...prev];
+            newMsgs[newMsgs.length - 1].content = `⚠️ Error: Could not connect to AI.`;
+            return newMsgs;
+        });
         return;
       }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder("utf-8");
       
-      if (data.type === 'build') {
-        setChatMessages(prev => [...prev, { role: 'ai', content: `Starting build process...\nRole: ${data.agent_role}\nGoal: ${data.goal}` }])
-        setGoal(data.goal)
-        setAgentRole(data.agent_role)
-        handlePlan(data.goal, data.agent_role)
-      } else {
-        setChatMessages(prev => [...prev, { role: 'ai', content: data.response || "Sorry, I couldn't process that." }])
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+        
+        for (const line of lines) {
+            if (line.startsWith('data: ')) {
+                try {
+                    const data = JSON.parse(line.slice(6));
+                    if (data.type === 'chat') {
+                        // Append token to the last AI message
+                        setChatMessages(prev => {
+                            const newMsgs = [...prev];
+                            newMsgs[newMsgs.length - 1].content += data.token;
+                            return newMsgs;
+                        });
+                    } else if (data.type === 'build') {
+                        // It's a build command, remove the empty AI message and trigger build
+                        setChatMessages(prev => {
+                            const newMsgs = [...prev];
+                            newMsgs[newMsgs.length - 1].content = `Starting build process...\nRole: ${data.data.agent_role}\nGoal: ${data.data.goal}`;
+                            return newMsgs;
+                        });
+                        setGoal(data.data.goal);
+                        setAgentRole(data.data.agent_role);
+                        handlePlan(data.data.goal, data.data.agent_role);
+                    }
+                } catch (e) {
+                    console.error("Error parsing stream line:", line);
+                }
+            }
+        }
       }
+      
     } catch (err) {
-      setChatMessages(prev => [...prev, { role: 'ai', content: "Error connecting to AI. Please try again." }])
-    } finally {
       setIsChatLoading(false)
+      setChatMessages(prev => {
+          const newMsgs = [...prev];
+          newMsgs[newMsgs.length - 1].content = "Error connecting to AI. Please try again.";
+          return newMsgs;
+      });
     }
   }
 
