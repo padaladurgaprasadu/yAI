@@ -78,12 +78,97 @@ function App() {
   const [chatMessages, setChatMessages] = useState([])
   const [isChatLoading, setIsChatLoading] = useState(false)
   
+  // Sidebar History state
+  const [chatHistoryList, setChatHistoryList] = useState([])
+  const [currentChatId, setCurrentChatId] = useState(() => Date.now().toString())
+  
   // New Interactive State
   const [copiedIndex, setCopiedIndex] = useState(null)
   const [feedbackState, setFeedbackState] = useState({})
   const [isRecording, setIsRecording] = useState(false)
 
   const chatEndRef = useRef(null)
+
+  // Load chat history from localStorage on mount
+  useEffect(() => {
+    try {
+        const savedHistory = localStorage.getItem('aion_chat_history');
+        if (savedHistory) {
+            setChatHistoryList(JSON.parse(savedHistory));
+        }
+    } catch (e) {
+        console.error("Failed to load chat history", e);
+    }
+  }, []);
+
+  // Save current chat to localStorage whenever it updates
+  useEffect(() => {
+      if (chatMessages.length === 0) return;
+      
+      setChatHistoryList(prev => {
+          // If this chat is already in the list, update it. Otherwise, add it.
+          const existingIdx = prev.findIndex(c => c.id === currentChatId);
+          let title = "New Project";
+          if (chatMessages.length > 0 && chatMessages[0].role === 'user') {
+              title = chatMessages[0].content.substring(0, 30) + (chatMessages[0].content.length > 30 ? "..." : "");
+          }
+          
+          const currentChatData = {
+              id: currentChatId,
+              title: title,
+              timestamp: Date.now(),
+              goal,
+              step,
+              chatMessages,
+              blueprintJson,
+              codeFiles,
+              executionLogs,
+              agentRole
+          };
+          
+          let newList = [...prev];
+          if (existingIdx >= 0) {
+              newList[existingIdx] = currentChatData;
+          } else {
+              newList.unshift(currentChatData); // Add to top
+          }
+          
+          try {
+              localStorage.setItem('aion_chat_history', JSON.stringify(newList));
+          } catch (e) {
+              console.error("Failed to save chat history", e);
+          }
+          
+          return newList;
+      });
+  }, [chatMessages, goal, step, blueprintJson, codeFiles, executionLogs, agentRole]);
+
+  const handleNewChat = () => {
+      setCurrentChatId(Date.now().toString());
+      setStep(1);
+      setGoal('');
+      setChatMessages([]);
+      setBlueprintJson('');
+      setCodeFiles(null);
+      setExecutionLogs([]);
+      setError(null);
+      setChatInput('');
+  };
+
+  const handleLoadChat = (chatId) => {
+      const chat = chatHistoryList.find(c => c.id === chatId);
+      if (chat) {
+          setCurrentChatId(chat.id);
+          setStep(chat.step || 1);
+          setGoal(chat.goal || '');
+          setChatMessages(chat.chatMessages || []);
+          setBlueprintJson(chat.blueprintJson || '');
+          setCodeFiles(chat.codeFiles || null);
+          setExecutionLogs(chat.executionLogs || []);
+          setAgentRole(chat.agentRole || "Fullstack Web Developer");
+          setError(null);
+      }
+  };
 
   const handleEditMessage = (idx) => {
     const msgToEdit = chatMessages[idx].content
@@ -413,6 +498,27 @@ function App() {
       {/* MAIN CONTENT AREA */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         
+        {/* LEFT NAVIGATION SIDEBAR */}
+        <aside className="sidebar">
+          <button className="sidebar-new-chat-btn" onClick={handleNewChat}>
+            <span style={{ fontSize: '1.2rem' }}>➕</span> New Chat
+          </button>
+          
+          <div className="sidebar-history-title">Recent Chats</div>
+          <div className="sidebar-history-list">
+            {chatHistoryList.map(chat => (
+              <div 
+                key={chat.id} 
+                className={`sidebar-history-item ${currentChatId === chat.id ? 'active' : ''}`}
+                onClick={() => handleLoadChat(chat.id)}
+                title={chat.title}
+              >
+                💬 <span className="history-item-text">{chat.title}</span>
+              </div>
+            ))}
+          </div>
+        </aside>
+
         {/* CHAT SECTION (Centers when step=1, shrinks to 30% when step>1) */}
         <div style={{ 
           flex: step === 1 ? '1' : '0 0 35%', 

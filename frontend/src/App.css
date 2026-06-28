@@ -311,3 +311,83 @@ pre {
 .markdown-body table tr:nth-child(2n) {
   background-color: #161b22;
 }
+
+/* Sidebar Styles */
+.sidebar {
+  width: 260px;
+  background-color: #111;
+  border-right: 1px solid #2a2a2a;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  overflow-y: auto;
+  transition: all 0.3s ease;
+}
+
+.sidebar-new-chat-btn {
+  background-color: transparent;
+  color: #fff;
+  border: 1px solid #333;
+  padding: 12px 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 24px;
+}
+
+.sidebar-new-chat-btn:hover {
+  background-color: #1f1f1f;
+  border-color: #555;
+}
+
+.sidebar-history-title {
+  color: #888;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  padding-left: 8px;
+}
+
+.sidebar-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sidebar-history-item {
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #ccc;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.2s;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-history-item:hover {
+  background-color: #1f1f1f;
+}
+
+.sidebar-history-item.active {
+  background-color: #2a2a2a;
+  color: #fff;
+  font-weight: 500;
+}
+
+.history-item-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
