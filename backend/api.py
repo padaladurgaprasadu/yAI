@@ -266,6 +266,38 @@ async def websocket_generate(websocket: WebSocket):
                 with open(full_path, "w", encoding="utf-8") as f:
                     f.write(content)
                     
+
+        # Send final completion message
+        await websocket.send_json({
+            "type": "complete",
+            "code_files": final_state.get("code_files", {}),
+            "execution_logs": final_state.get("execution_logs", [])
+        })
+        
+        # 🟢 Send PREVIEW_READY to the frontend
+        try:
+            preview_data = await start_preview(project_id)
+            port = preview_data.get("port", 3000)
+            await websocket.send_json({
+                "type": "PREVIEW_READY",
+                "url": f"http://localhost:{port}"
+            })
+        except Exception as preview_err:
+            print(f"Warning: Auto-start preview failed: {preview_err}")
+        
+    except WebSocketDisconnect:
+        print("Client disconnected")
+    except Exception as e:
+        await websocket.send_json({"type": "error", "message": str(e)})
+        
+    finally:
+        try:
+            await websocket.close()
+        except:
+            pass
+
+active_servers = {}
+
 class ResumeRequest(BaseModel):
     project_id: str
     action: str = "approve"
@@ -304,37 +336,6 @@ async def resume_generation(req: ResumeRequest, auth: str = Depends(verify_token
     asyncio.create_task(asyncio.to_thread(resume_graph))
     return {"status": "resumed"}
 
-
-        # Send final completion message
-        await websocket.send_json({
-            "type": "complete",
-            "code_files": final_state.get("code_files", {}),
-            "execution_logs": final_state.get("execution_logs", [])
-        })
-        
-        # 🟢 Send PREVIEW_READY to the frontend
-        try:
-            preview_data = await start_preview(project_id)
-            port = preview_data.get("port", 3000)
-            await websocket.send_json({
-                "type": "PREVIEW_READY",
-                "url": f"http://localhost:{port}"
-            })
-        except Exception as preview_err:
-            print(f"Warning: Auto-start preview failed: {preview_err}")
-        
-    except WebSocketDisconnect:
-        print("Client disconnected")
-    except Exception as e:
-        await websocket.send_json({"type": "error", "message": str(e)})
-        
-    finally:
-        try:
-            await websocket.close()
-        except:
-            pass
-
-active_servers = {}
 
 @app.post("/api/start-preview/{project_id}")
 async def start_preview(project_id: str):
