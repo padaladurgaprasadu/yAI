@@ -3,16 +3,20 @@ import './App.css'
 import Auth from './components/Auth'
 import Mermaid from './Mermaid'
 import { supabase } from './lib/supabaseClient'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import remarkBreaks from 'remark-breaks'
+import { marked } from 'marked'
+import DOMPurify from 'dompurify'
+
+// Configure marked to use breaks
+marked.setOptions({
+  breaks: true,
+  gfm: true
+})
 
 const renderMessageContent = (content) => {
   if (!content.includes('<mermaid>')) {
+      const htmlContent = DOMPurify.sanitize(marked.parse(content));
       return (
-          <div className="markdown-body">
-              <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{content}</ReactMarkdown>
-          </div>
+          <div className="markdown-body" dangerouslySetInnerHTML={{ __html: htmlContent }} />
       );
   }
   
@@ -22,10 +26,9 @@ const renderMessageContent = (content) => {
           const chart = part.replace('<mermaid>', '').replace('</mermaid>', '').trim();
           return <Mermaid key={i} chart={chart} />;
       }
+      const htmlContent = DOMPurify.sanitize(marked.parse(part));
       return (
-          <div key={i} className="markdown-body">
-              <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{part}</ReactMarkdown>
-          </div>
+          <div key={i} className="markdown-body" dangerouslySetInnerHTML={{ __html: htmlContent }} />
       );
   });
 };
@@ -565,7 +568,6 @@ function App() {
                     lineHeight: '1.6',
                     fontSize: '1rem',
                     color: '#e0e0e0',
-                    whiteSpace: 'pre-wrap',
                     position: 'relative'
                   }}>
                     {renderMessageContent(msg.content)}
