@@ -24,6 +24,11 @@ const renderMessageContent = (content) => {
   return parts.map((part, i) => {
       if (part.startsWith('<mermaid>') && part.endsWith('</mermaid>')) {
           const chart = part.replace('<mermaid>', '').replace('</mermaid>', '').trim();
+          if (!chart || chart.length < 5 || !chart.includes('\n')) {
+              // It's probably just an inline mention, render as text
+              const htmlContent = DOMPurify.sanitize(marked.parse(part.replace(/</g, '&lt;').replace(/>/g, '&gt;')));
+              return <div key={i} className="markdown-body" dangerouslySetInnerHTML={{ __html: htmlContent }} />;
+          }
           return <Mermaid key={i} chart={chart} />;
       }
       const htmlContent = DOMPurify.sanitize(marked.parse(part));
