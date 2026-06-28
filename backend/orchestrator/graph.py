@@ -9,6 +9,7 @@ from backend.agents.devops import DevOpsAgent
 from backend.agents.ml_trainer import AIMLModelTrainingAgent
 from backend.agents.hyperparameter_tuner import AutoHyperparameterTuningAgent
 from backend.agents.researcher import ResearchAgent
+from backend.agents.tester import TesterAgent
 
 def should_continue(state: AiONState):
     """
@@ -57,6 +58,7 @@ def build_graph():
     executor = ExecutorAgent()
     ml_trainer = AIMLModelTrainingAgent()
     hp_tuner = AutoHyperparameterTuningAgent()
+    tester = TesterAgent()
 
     researcher = ResearchAgent()
 
@@ -66,6 +68,7 @@ def build_graph():
     workflow.add_node("coder", coder.run)
     workflow.add_node("ml_trainer", ml_trainer.run)
     workflow.add_node("hp_tuner", hp_tuner.run)
+    workflow.add_node("tester", tester.run)
     workflow.add_node("reviewer", reviewer.run)
     workflow.add_node("devops", devops.run)
     workflow.add_node("executor", executor.run)
@@ -77,7 +80,8 @@ def build_graph():
     
     workflow.add_edge("coder", "ml_trainer")
     workflow.add_edge("ml_trainer", "hp_tuner")
-    workflow.add_edge("hp_tuner", "reviewer")
+    workflow.add_edge("hp_tuner", "tester")
+    workflow.add_edge("tester", "reviewer")
     workflow.add_conditional_edges("reviewer", should_continue, {"coder": "coder", "devops": "devops"})
     workflow.add_edge("devops", "executor")
     workflow.add_conditional_edges("executor", should_retry_execution, {"coder": "coder", END: END})
@@ -115,10 +119,12 @@ def build_generate_graph():
     executor = ExecutorAgent()
     ml_trainer = AIMLModelTrainingAgent()
     hp_tuner = AutoHyperparameterTuningAgent()
+    tester = TesterAgent()
     
     workflow.add_node("coder", coder.run)
     workflow.add_node("ml_trainer", ml_trainer.run)
     workflow.add_node("hp_tuner", hp_tuner.run)
+    workflow.add_node("tester", tester.run)
     workflow.add_node("reviewer", reviewer.run)
     workflow.add_node("devops", devops.run)
     workflow.add_node("executor", executor.run)
@@ -127,7 +133,8 @@ def build_generate_graph():
     
     workflow.add_edge("coder", "ml_trainer")
     workflow.add_edge("ml_trainer", "hp_tuner")
-    workflow.add_edge("hp_tuner", "reviewer")
+    workflow.add_edge("hp_tuner", "tester")
+    workflow.add_edge("tester", "reviewer")
     
     workflow.add_conditional_edges("reviewer", should_continue, {"coder": "coder", "devops": "devops"})
     workflow.add_edge("devops", "executor")
