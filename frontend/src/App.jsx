@@ -32,18 +32,20 @@ const handleMarkdownClick = async (e) => {
     if (lang === 'js' || lang === 'node') pistonLang = 'javascript';
     if (lang === 'py') pistonLang = 'python';
     
+    // Use VITE_API_URL or local fallback
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    
     try {
-      const res = await fetch('https://emkc.org/api/v2/piston/execute', {
+      const res = await fetch(`${apiUrl}/api/execute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           language: pistonLang,
-          version: '*',
-          files: [{ content: code }]
+          code: code
         })
       });
       const data = await res.json();
-      const output = data.run?.output || data.message || "No output returned.";
+      const output = data.output || data.message || "No output returned.";
       outputDiv.innerHTML = `<pre style="margin:0; padding:12px; background:#050505; color:#4ade80; font-family:monospace; font-size:0.85rem; overflow-x:auto;">${output.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`;
     } catch (err) {
       outputDiv.innerHTML = `<div style="padding: 12px; color: #ef4444; font-family: monospace; font-size: 0.85rem;">Error: ${err.message}</div>`;

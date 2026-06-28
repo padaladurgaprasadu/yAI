@@ -680,7 +680,44 @@ async def download_project():
         filename="aion_generated_project.zip"
     )
 
-
+@app.post("/api/execute")
+async def execute_code(request: Request):
+    import subprocess
+    data = await request.json()
+    language = data.get("language")
+    code = data.get("code")
+    
+    if language not in ["python", "javascript", "js", "py", "node"]:
+        raise HTTPException(status_code=400, detail="Unsupported language")
+        
+    try:
+        if language in ["python", "py"]:
+            process = subprocess.Popen(
+                ["python", "-c", code],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+        else:
+            process = subprocess.Popen(
+                ["node", "-e", code],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            
+        stdout, stderr = process.communicate(timeout=5)
+        
+        output = stdout
+        if stderr:
+            output += f"\n{stderr}"
+            
+        return {"output": output}
+    except subprocess.TimeoutExpired:
+        process.kill()
+        return {"output": "Execution timed out (5 seconds)."}
+    except Exception as e:
+        return {"output": str(e)}
 
 if __name__ == "__main__":
     import uvicorn
