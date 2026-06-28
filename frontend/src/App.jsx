@@ -528,41 +528,12 @@ function App() {
           <h1 style={{ margin: 0, fontSize: '1.2rem', letterSpacing: '1px', fontWeight: '600' }}>AiON</h1>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
-          <button onClick={() => setShowDevModal(true)} style={{ padding: '8px 16px', fontSize: '0.85rem', backgroundColor: '#3b82f6', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', transition: 'background 0.2s', fontWeight: 'bold' }}>
-            🔌 Developer APIs
-          </button>
           <button onClick={() => supabase.auth.signOut()} style={{ padding: '8px 16px', fontSize: '0.85rem', backgroundColor: '#2a2a2a', color: '#ccc', border: '1px solid #333', borderRadius: '6px', cursor: 'pointer', transition: 'background 0.2s' }} onMouseEnter={(e) => e.target.style.backgroundColor = '#3a3a3a'} onMouseLeave={(e) => e.target.style.backgroundColor = '#2a2a2a'}>
             Sign Out
           </button>
         </div>
       </header>
       
-      {/* DEVELOPER APIs MODAL */}
-      {showDevModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100 }}>
-            <div style={{ backgroundColor: '#1a1a1a', padding: '30px', borderRadius: '12px', width: '600px', maxWidth: '90%', border: '1px solid #333' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                    <h2 style={{ margin: 0, color: '#fff' }}>Developer APIs & Plugins</h2>
-                    <button onClick={() => setShowDevModal(false)} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '1.5rem' }}>&times;</button>
-                </div>
-                
-                <h3 style={{ color: '#3b82f6', fontSize: '1rem', marginBottom: '10px' }}>Programmatic Execution Endpoint</h3>
-                <p style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '10px' }}>Trigger AiON workflows from your CI/CD pipelines (e.g., GitHub Actions).</p>
-                <div style={{ backgroundColor: '#0f0f0f', padding: '15px', borderRadius: '8px', border: '1px solid #333', marginBottom: '20px', fontFamily: 'monospace', fontSize: '0.85rem', color: '#ddd', overflowX: 'auto' }}>
-                    <span style={{ color: '#10b981' }}>POST</span> {API_URL}/api/v1/agents/execute<br/><br/>
-                    {`{\n  "goal": "Create a python fastAPI backend",\n  "agent_role": "Backend Developer",\n  "auto_approve": false\n}`}
-                </div>
-                
-                <h3 style={{ color: '#a855f7', fontSize: '1rem', marginBottom: '10px' }}>Active Enterprise Plugins</h3>
-                <p style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '10px' }}>Custom LangChain tools currently loaded from the backend `plugins/` directory.</p>
-                <div style={{ backgroundColor: '#0f0f0f', padding: '15px', borderRadius: '8px', border: '1px solid #333', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                    <span style={{ backgroundColor: '#2a2a2a', padding: '5px 10px', borderRadius: '4px', fontSize: '0.85rem' }}>hello_world_plugin v1.0</span>
-                    <span style={{ backgroundColor: '#2a2a2a', padding: '5px 10px', borderRadius: '4px', fontSize: '0.85rem' }}>Neo4jMemory v2.1</span>
-                </div>
-            </div>
-        </div>
-      )}
-
       {/* MAIN CONTENT AREA */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         

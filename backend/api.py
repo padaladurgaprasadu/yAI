@@ -673,70 +673,7 @@ async def download_project():
         filename="aion_generated_project.zip"
     )
 
-# ==========================================
-# PHASE 3: ENTERPRISE DEVELOPER APIs
-# ==========================================
 
-class ExecuteRequest(BaseModel):
-    goal: str
-    agent_role: str = "Fullstack Web Developer"
-    auto_approve: bool = False # If true, bypasses human-in-the-loop
-
-@app.post("/api/v1/agents/execute")
-@limiter.limit("5/minute")
-async def api_execute_agent(req: ExecuteRequest, request: Request, auth: str = Depends(verify_token)):
-    """
-    Enterprise API for programmatically triggering AiON workflows.
-    Great for CI/CD integrations or custom backend automations.
-    """
-    project_id = str(uuid.uuid4())
-    
-    # Run Planner
-    from backend.agents.planner import PlannerAgent
-    from backend.agents.architect import ArchitectAgent
-    planner = PlannerAgent()
-    architect = ArchitectAgent()
-    
-    state = AiONState(
-        goal=req.goal,
-        project_id=project_id,
-        agent_role=req.agent_role,
-        modules=[],
-        dag_tasks=[],
-        blueprint={},
-        code_files={},
-        error=None,
-        review_feedback=None,
-        revision_count=0,
-        execution_retries=0,
-        execution_logs=[],
-        semantic_context=None
-    )
-    
-    state = planner.run(state)
-    state = architect.run(state)
-    
-    graph = build_generate_graph()
-    thread_config = {"configurable": {"thread_id": project_id}}
-    
-    # Run full graph synchronously for API
-    final_st = None
-    for output in graph.stream(state, config=thread_config):
-        node_name = list(output.keys())[0]
-        final_st = output[node_name]
-        
-    state_snapshot = graph.get_state(thread_config)
-    if state_snapshot.next:
-        if req.auto_approve:
-            # Auto-resume
-            for output in graph.stream(None, config=thread_config):
-                node_name = list(output.keys())[0]
-                final_st = output[node_name]
-            return {"status": "success", "project_id": project_id, "message": "Execution complete (auto-approved)."}
-        else:
-            return {"status": "paused", "project_id": project_id, "message": "Awaiting human approval at /api/resume_generation"}
-            
-    return {"status": "success", "project_id": project_id, "message": "Execution complete."}
 
 if __name__ == "__main__":
     import uvicorn
