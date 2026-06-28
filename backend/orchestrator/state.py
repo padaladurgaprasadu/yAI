@@ -9,6 +9,7 @@ class AiONState(TypedDict):
     project_id: str
     agent_role: str
     modules: Optional[List[str]]
+    dag_tasks: Optional[List[Dict[str, Any]]]
     blueprint: Optional[Dict[str, Any]]
     code_files: Optional[Dict[str, str]]
     error: Optional[str]

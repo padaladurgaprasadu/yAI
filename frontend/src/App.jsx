@@ -74,6 +74,7 @@ function App() {
 
   // Phase 7 additions
   const [isPreviewRunning, setIsPreviewRunning] = useState(false)
+  const [awaitingApproval, setAwaitingApproval] = useState(false)
   const [previewPort, setPreviewPort] = useState(null)
 
   // Chat state
@@ -381,6 +382,7 @@ function App() {
     setIsLoading(true)
     setError(null)
     setLiveUpdates([])
+    setAwaitingApproval(false)
     
     let parsedBlueprint;
     try {
@@ -427,6 +429,9 @@ function App() {
           setStep(3)
           setIsLoading(false)
           // Keep ws open to receive PREVIEW_READY
+        } else if (data.type === "INTERRUPT") {
+          setAwaitingApproval(true)
+          setLiveUpdates(prev => [...prev, "⏸️ " + data.message])
         } else if (data.type === "PREVIEW_READY") {
           setPreviewPort(data.url.split(':').pop())
           setIsPreviewRunning(true)
@@ -448,6 +453,32 @@ function App() {
       setError(err.message)
       setIsLoading(false)
       setStep(1)
+    }
+  }
+
+  const handleResume = async (action) => {
+    setAwaitingApproval(false)
+    try {
+        const response = await fetch(`${API_URL}/api/resume_generation`, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session?.access_token || 'mock-token-for-local-dev'}`
+            },
+            body: JSON.stringify({ project_id: projectId, action })
+        });
+        
+        const data = await response.json();
+        if (data.status === "aborted") {
+            setError("Deployment aborted by user.");
+            setIsLoading(false);
+            setStep(1);
+        } else {
+            setLiveUpdates(prev => [...prev, "▶️ Resuming deployment..."]);
+        }
+    } catch (err) {
+        setError(err.message);
+        setAwaitingApproval(false);
     }
   }
 

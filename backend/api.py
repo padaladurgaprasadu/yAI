@@ -149,6 +149,7 @@ async def websocket_generate(websocket: WebSocket):
             project_id=project_id,
             agent_role=agent_role,
             modules=[],
+            dag_tasks=[],
             blueprint=blueprint,
             code_files={},
             error=None,
@@ -170,7 +171,8 @@ async def websocket_generate(websocket: WebSocket):
         def run_graph():
             try:
                 final_st = None
-                for output in graph.stream(initial_state):
+                thread_config = {"configurable": {"thread_id": project_id}}
+                for output in graph.stream(initial_state, config=thread_config):
                     node_name = list(output.keys())[0]
                     final_st = output[node_name]
                     q.put({
@@ -178,7 +180,13 @@ async def websocket_generate(websocket: WebSocket):
                         "node": node_name,
                         "message": f"{node_name.capitalize()} agent completed its task..."
                     })
-                q.put({"type": "GRAPH_DONE", "state": final_st or initial_state})
+                
+                # Check if it was interrupted
+                state_snapshot = graph.get_state(thread_config)
+                if state_snapshot.next:
+                    q.put({"type": "INTERRUPT", "message": "Awaiting human approval before DevOps deployment."})
+                else:
+                    q.put({"type": "GRAPH_DONE", "state": final_st or initial_state})
             except Exception as e:
                 q.put({"type": "error", "message": str(e)})
 
@@ -222,6 +230,44 @@ async def websocket_generate(websocket: WebSocket):
                 os.makedirs(os.path.dirname(full_path), exist_ok=True)
                 with open(full_path, "w", encoding="utf-8") as f:
                     f.write(content)
+                    
+class ResumeRequest(BaseModel):
+    project_id: str
+    action: str = "approve"
+
+@app.post("/api/resume_generation")
+async def resume_generation(req: ResumeRequest, auth: str = Depends(verify_token)):
+    if req.project_id not in stream_queues:
+        raise HTTPException(status_code=404, detail="No active generation found for this project_id.")
+        
+    q = stream_queues[req.project_id]
+    graph = build_generate_graph()
+    thread_config = {"configurable": {"thread_id": req.project_id}}
+    
+    if req.action != "approve":
+        q.put({"type": "error", "message": "Deployment aborted by user."})
+        return {"status": "aborted"}
+        
+    def resume_graph():
+        try:
+            final_st = None
+            q.put({"type": "progress", "node": "system", "message": "Human approval received. Resuming deployment..."})
+            for output in graph.stream(None, config=thread_config):
+                node_name = list(output.keys())[0]
+                final_st = output[node_name]
+                q.put({
+                    "type": "progress",
+                    "node": node_name,
+                    "message": f"{node_name.capitalize()} agent completed its task..."
+                })
+            q.put({"type": "GRAPH_DONE", "state": final_st})
+        except Exception as e:
+            q.put({"type": "error", "message": str(e)})
+            
+    import asyncio
+    asyncio.create_task(asyncio.to_thread(resume_graph))
+    return {"status": "resumed"}
+
 
         # Send final completion message
         await websocket.send_json({

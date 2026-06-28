@@ -108,6 +108,11 @@ def build_plan_graph():
     
     return workflow.compile()
 
+from langgraph.checkpoint.memory import MemorySaver
+
+# Global memory saver for human-in-the-loop persistence across requests
+workflow_memory = MemorySaver()
+
 def build_generate_graph():
     """
     Builds the second half of the graph (Phase 4): Coder <-> Reviewer -> DevOps -> Executor -> END
@@ -140,4 +145,5 @@ def build_generate_graph():
     workflow.add_edge("devops", "executor")
     workflow.add_conditional_edges("executor", should_retry_execution, {"coder": "coder", END: END})
     
-    return workflow.compile()
+    # Compile with memory saver and interrupt before devops
+    return workflow.compile(checkpointer=workflow_memory, interrupt_before=["devops"])
