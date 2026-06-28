@@ -3,9 +3,13 @@ import './App.css'
 import Auth from './components/Auth'
 import Mermaid from './Mermaid'
 import { supabase } from './lib/supabaseClient'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 const renderMessageContent = (content) => {
-  if (!content.includes('<mermaid>')) return content;
+  if (!content.includes('<mermaid>')) {
+      return <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>;
+  }
   
   const parts = content.split(/(<mermaid>[\s\S]*?<\/mermaid>)/);
   return parts.map((part, i) => {
@@ -13,7 +17,7 @@ const renderMessageContent = (content) => {
           const chart = part.replace('<mermaid>', '').replace('</mermaid>', '').trim();
           return <Mermaid key={i} chart={chart} />;
       }
-      return <span key={i}>{part}</span>;
+      return <ReactMarkdown key={i} remarkPlugins={[remarkGfm]}>{part}</ReactMarkdown>;
   });
 };
 
