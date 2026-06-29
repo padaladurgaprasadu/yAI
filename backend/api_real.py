@@ -136,8 +136,8 @@ class GenerateRequest(BaseModel):
     agent_role: str = "Fullstack Web Developer"
 
 @app.post("/api/plan")
-@limiter.limit("10/minute")
-async def plan_project(request_data: PlanRequest, request: Request, auth: str = Depends(verify_token)):
+@limiter.limit("5/minute")
+async def plan_project(request_data: PlanRequest, request: Request, auth: dict = Depends(verify_token)):
     from fastapi.responses import StreamingResponse
     import json
     from backend.agents.planner import PlannerAgent
@@ -354,7 +354,7 @@ class ResumeRequest(BaseModel):
     action: str = "approve"
 
 @app.post("/api/resume_generation")
-async def resume_generation(req: ResumeRequest, auth: str = Depends(verify_token)):
+async def resume_generation(req: ResumeRequest, auth: dict = Depends(verify_token)):
     if req.project_id not in stream_queues:
         raise HTTPException(status_code=404, detail="No active generation found for this project_id.")
         
@@ -547,7 +547,7 @@ class ChatRequest(BaseModel):
 
 @app.post("/api/chat")
 @limiter.limit("20/minute")
-async def ai_chat(request_data: ChatRequest, request: Request, auth: str = Depends(verify_token)):
+async def ai_chat(request_data: ChatRequest, request: Request, auth: dict = Depends(verify_token)):
     from fastapi.responses import StreamingResponse
     import json
     import re
