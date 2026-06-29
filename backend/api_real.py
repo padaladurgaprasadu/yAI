@@ -61,37 +61,37 @@ def verify_token(authorization: str = Header(None)):
         return token
         
     try:
-        # The easiest and most common way: Decode using the HS256 JWT secret
+        # If we have a jwt_secret, try HS256 first
+        hs256_failed = False
         if jwt_secret:
             try:
                 decoded = jwt.decode(token, jwt_secret, algorithms=["HS256"], options={"verify_aud": False})
                 return decoded
             except Exception as hs256_err:
-                # If HS256 fails (e.g. because they use RS256/ES256), fallback to JWKS if possible
-                if supabase_url:
-                    # Note: Supabase requires apikey header for /auth/v1/jwks in some setups
-                    import json, urllib.request
-                    jwks_url = f"{supabase_url}/auth/v1/jwks"
-                    
-                    req = urllib.request.Request(jwks_url)
-                    anon_key = os.getenv("SUPABASE_ANON_KEY", "")
-                    if anon_key:
-                        req.add_header("apikey", anon_key)
-                    
-                    with urllib.request.urlopen(req) as response:
-                        jwks_data = json.loads(response.read().decode())
-                        
-                    jwks_client = PyJWKClient(jwks_url)
-                    # Hack: overwrite the fetched data so it doesn't try to fetch again without headers
-                    jwks_client.get_jwk_set = lambda *args, **kwargs: jwt.PyJWKSet.from_dict(jwks_data)
-                    
-                    signing_key = jwks_client.get_signing_key_from_jwt(token)
-                    decoded = jwt.decode(token, signing_key.key, algorithms=["RS256", "ES256", "HS256"], options={"verify_aud": False})
-                    return decoded
-                else:
-                    raise hs256_err
-        else:
-            raise Exception("No SUPABASE_JWT_SECRET found in environment variables.")
+                hs256_failed = True
+                
+        # If HS256 failed, OR if we don't have a jwt_secret but we DO have supabase_url, try JWKS
+        if supabase_url and (hs256_failed or not jwt_secret):
+            import json, urllib.request
+            jwks_url = f"{supabase_url}/auth/v1/jwks"
+            
+            req = urllib.request.Request(jwks_url)
+            anon_key = os.getenv("SUPABASE_ANON_KEY", "")
+            if anon_key:
+                req.add_header("apikey", anon_key)
+            
+            with urllib.request.urlopen(req) as response:
+                jwks_data = json.loads(response.read().decode())
+                
+            jwks_client = PyJWKClient(jwks_url)
+            jwks_client.get_jwk_set = lambda *args, **kwargs: jwt.PyJWKSet.from_dict(jwks_data)
+            
+            signing_key = jwks_client.get_signing_key_from_jwt(token)
+            decoded = jwt.decode(token, signing_key.key, algorithms=["RS256", "ES256", "HS256"], options={"verify_aud": False})
+            return decoded
+            
+        # If everything failed or missing
+        raise Exception("Missing SUPABASE_JWT_SECRET and failed to fetch JWKS from SUPABASE_URL.")
             
     except Exception as e:
         raise HTTPException(status_code=401, detail=f"Unauthorized: Token validation failed. {str(e)}")
