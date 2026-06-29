@@ -40,6 +40,24 @@ limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    import traceback
+    print("❌ Validation Error! Payload sent by frontend:")
+    try:
+        body = await request.body()
+        print("BODY:", body.decode())
+    except:
+        pass
+    print("ERRORS:", exc.errors())
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors()}
+    )
+
 import jwt
 
 import jwt
@@ -58,7 +76,7 @@ def verify_token(authorization: str = Header(None)):
     if not jwt_secret and not supabase_url:
         if len(token) < 10:
             raise HTTPException(status_code=401, detail="Unauthorized: Invalid Token.")
-        return token
+        return {"sub": "local", "role": "authenticated"}
         
     try:
         # If we have a jwt_secret, try HS256 first
@@ -543,7 +561,7 @@ async def stop_preview(project_id: str):
 class ChatRequest(BaseModel):
     message: str
     history: list = []
-    image: str = None
+    image: typing.Optional[str] = None
 
 @app.post("/api/chat")
 @limiter.limit("20/minute")
