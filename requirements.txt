@@ -16,3 +16,4 @@ tenacity
 wikipedia
 PyJWT
 pysqlite3-binary
+cryptography
