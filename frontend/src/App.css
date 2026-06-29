@@ -396,7 +396,7 @@ pre {
 @media (max-width: 768px) {
   .sidebar {
     position: absolute;
-    height: calc(100vh - 56px); /* account for header */
+    height: calc(100dvh - 56px); /* account for header */
     z-index: 50;
     box-shadow: 5px 0 15px rgba(0,0,0,0.8);
   }

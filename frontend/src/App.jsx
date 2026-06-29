@@ -630,7 +630,7 @@ function App() {
   }
 
   return (
-    <div className="app-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#0f0f0f', color: '#ececec', overflow: 'hidden' }}>
+    <div className="app-container" style={{ display: 'flex', flexDirection: 'column', height: '100dvh', backgroundColor: '#0f0f0f', color: '#ececec', overflow: 'hidden' }}>
       
       {/* TOP NAV BAR */}
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 24px', backgroundColor: '#1a1a1a', borderBottom: '1px solid #2a2a2a', zIndex: 10 }}>
@@ -879,6 +879,7 @@ function App() {
                 placeholder={step === 1 ? "Message AiON..." : "Update your app..."} 
                 style={{ 
                   flex: 1, 
+                  minWidth: 0,
                   padding: '12px 20px', 
                   backgroundColor: 'transparent', 
                   border: 'none', 
@@ -946,7 +947,7 @@ function App() {
                   <p style={{ color: '#888', marginBottom: '20px' }}>Review the proposed architecture below. You can edit the JSON directly before building.</p>
                   
                   <textarea 
-                      style={{ width: '100%', height: 'calc(100vh - 250px)', backgroundColor: '#1e1e1e', color: '#00ff00', padding: '20px', fontFamily: 'monospace', borderRadius: '12px', border: '1px solid #333', resize: 'none', outline: 'none' }}
+                      style={{ width: '100%', height: 'calc(100dvh - 250px)', backgroundColor: '#1e1e1e', color: '#00ff00', padding: '20px', fontFamily: 'monospace', borderRadius: '12px', border: '1px solid #333', resize: 'none', outline: 'none' }}
                       value={blueprintJson}
                       onChange={(e) => setBlueprintJson(e.target.value)}
                       disabled={isLoading}
