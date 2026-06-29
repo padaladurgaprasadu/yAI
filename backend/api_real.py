@@ -563,6 +563,7 @@ class ChatRequest(BaseModel):
     message: str
     history: list = []
     image: typing.Optional[str] = None
+    memory: typing.Optional[str] = None
 
 @app.post("/api/chat")
 @limiter.limit("20/minute")
@@ -627,8 +628,18 @@ DO NOT use JSON unless specifically asked by the user in chat.
 
 If they are asking to build, develop, create, generate, OR research a topic/project, return EXACTLY this format and nothing else:
 [BUILD] {"goal": "The specific project they want", "agent_role": "Select the best role: Fullstack Web Developer, Machine Learning Engineer, Deep Learning Researcher, Data Scientist, Data Analyst, AI Systems Architect"}
+
+[LONG-TERM MEMORY DIRECTIVE]: If the user explicitly shares a new personal fact about themselves (e.g., their name, profession, goals, skill level, or preferences), you MUST secretly append exactly `[MEMORY_ADD] <fact>` to the VERY END of your response. 
+Example: `[MEMORY_ADD] User is a physics student.`
+
+[USER'S PAST MEMORY]:
+{USER_MEMORY}
 """
 
+
+# Inject memory if available
+    user_mem = request_data.memory if request_data.memory else "No past memory recorded yet."
+    system_prompt = system_prompt.replace("{USER_MEMORY}", user_mem)
 
     messages = [SystemMessage(content=system_prompt)]
     for msg in request_data.history:
