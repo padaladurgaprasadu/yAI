@@ -61,17 +61,37 @@ def verify_token(authorization: str = Header(None)):
         return token
         
     try:
-        # If they use a modern Supabase project with ECC/RS256 keys, fetch the JWKS
-        if supabase_url:
-            jwks_url = f"{supabase_url}/auth/v1/jwks"
-            jwks_client = PyJWKClient(jwks_url)
-            signing_key = jwks_client.get_signing_key_from_jwt(token)
-            decoded = jwt.decode(token, signing_key.key, algorithms=["RS256", "ES256", "HS256"], options={"verify_aud": False})
-            return decoded
+        # The easiest and most common way: Decode using the HS256 JWT secret
+        if jwt_secret:
+            try:
+                decoded = jwt.decode(token, jwt_secret, algorithms=["HS256"], options={"verify_aud": False})
+                return decoded
+            except Exception as hs256_err:
+                # If HS256 fails (e.g. because they use RS256/ES256), fallback to JWKS if possible
+                if supabase_url:
+                    # Note: Supabase requires apikey header for /auth/v1/jwks in some setups
+                    import json, urllib.request
+                    jwks_url = f"{supabase_url}/auth/v1/jwks"
+                    
+                    req = urllib.request.Request(jwks_url)
+                    anon_key = os.getenv("SUPABASE_ANON_KEY", "")
+                    if anon_key:
+                        req.add_header("apikey", anon_key)
+                    
+                    with urllib.request.urlopen(req) as response:
+                        jwks_data = json.loads(response.read().decode())
+                        
+                    jwks_client = PyJWKClient(jwks_url)
+                    # Hack: overwrite the fetched data so it doesn't try to fetch again without headers
+                    jwks_client.get_jwk_set = lambda *args, **kwargs: jwt.PyJWKSet.from_dict(jwks_data)
+                    
+                    signing_key = jwks_client.get_signing_key_from_jwt(token)
+                    decoded = jwt.decode(token, signing_key.key, algorithms=["RS256", "ES256", "HS256"], options={"verify_aud": False})
+                    return decoded
+                else:
+                    raise hs256_err
         else:
-            # Fallback to legacy HS256 string secret
-            decoded = jwt.decode(token, jwt_secret, algorithms=["HS256"], options={"verify_aud": False})
-            return decoded
+            raise Exception("No SUPABASE_JWT_SECRET found in environment variables.")
             
     except Exception as e:
         raise HTTPException(status_code=401, detail=f"Unauthorized: Token validation failed. {str(e)}")
