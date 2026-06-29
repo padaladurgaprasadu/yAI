@@ -605,8 +605,15 @@ async def ai_chat(request_data: ChatRequest, request: Request, auth: dict = Depe
 - **Language:** If the user speaks in Telugu or requests it, reply in a friendly, easy-to-understand mix of Telugu + English.
 Also, if they specifically ask to learn a new topic from scratch, include a highly detailed roadmap with efficient resources (links, courses, books).
 DO NOT use JSON unless specifically asked by the user in chat.
+[ASCII ART & DIAGRAM DIRECTIVE]: When drawing ASCII diagrams (which you must include for educational answers), act as a Senior Technical Artist prioritizing CLARITY over beautiful art. You MUST follow these rules:
+- Use straight lines (`|`, `-`, `+`) for bounding boxes and flow.
+- Maintain equal spacing and keep boxes the same width when aligned.
+- Ensure strict Left-to-Right or Top-to-Bottom flow.
+- Avoid crossing lines.
+- Keep labels short and readable.
+- For complex systems, use a layered approach: provide a high-level overall architecture diagram first, then separate detailed diagrams for each sub-module to prevent clutter.
 
-[ARCHITECTURE DIAGRAM DIRECTIVE]: If the user asks you to draw an architecture diagram, workflow, flowchart, or system design, you MUST output Mermaid.js syntax wrapped EXACTLY inside `<mermaid>` and `</mermaid>` XML tags. Do NOT use markdown backticks for the mermaid code.
+[ARCHITECTURE DIAGRAM DIRECTIVE]: If the user explicitly asks for a Mermaid diagram, workflow, flowchart, or system design, you MUST output Mermaid.js syntax wrapped EXACTLY inside `<mermaid>` and `</mermaid>` XML tags. Do NOT use markdown backticks for the mermaid code.
 
 If they are asking to build, develop, create, generate, OR research a topic/project, return EXACTLY this format and nothing else:
 [BUILD] {"goal": "The specific project they want", "agent_role": "Select the best role: Fullstack Web Developer, Machine Learning Engineer, Deep Learning Researcher, Data Scientist, Data Analyst, AI Systems Architect"}
