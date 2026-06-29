@@ -10,7 +10,7 @@ req_payload = {
 }
 
 resp = requests.post(
-    "https://aion-v1-beta.onrender.com/api/chat",
+    "http://127.0.0.1:10001/api/chat",
     json=req_payload,
     headers={"Authorization": f"Bearer {token}"}
 )

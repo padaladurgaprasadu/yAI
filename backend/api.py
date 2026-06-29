@@ -24,7 +24,7 @@ try:
     
     # If successful, override the fallback app with the real app
     app = real_app
-    print("✅ Real API loaded successfully!")
+    print("Real API loaded successfully!")
     
     # We still add the /debug route to the real app just in case
     @app.get("/debug")
