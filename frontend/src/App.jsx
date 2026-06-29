@@ -699,6 +699,7 @@ function App() {
         {/* CHAT SECTION (Centers when step=1, shrinks to 30% when step>1) */}
         <div className="chat-section" style={{ 
           flex: step === 1 ? '1' : '0 0 35%', 
+          minHeight: 0,
           maxWidth: step === 1 ? '100%' : '450px',
           display: 'flex', 
           flexDirection: 'column', 
@@ -930,7 +931,7 @@ function App() {
 
         {/* WORKSPACE PANEL (Hidden in step 1, takes remaining width in step 2 & 3) */}
         {step > 1 && (
-          <div className="preview-section" style={{ flex: 1, backgroundColor: '#0a0a0a', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+          <div className="preview-section" style={{ flex: 1, minHeight: 0, backgroundColor: '#0a0a0a', display: 'flex', flexDirection: 'column', position: 'relative' }}>
             
             {/* WORKSPACE CONTENT */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '30px' }}>
