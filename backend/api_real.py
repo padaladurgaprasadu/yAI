@@ -609,68 +609,6 @@ If they are asking to build, develop, create, generate, OR research a topic/proj
 [BUILD] {"goal": "The specific project they want", "agent_role": "Select the best role: Fullstack Web Developer, Machine Learning Engineer, Deep Learning Researcher, Data Scientist, Data Analyst, AI Systems Architect"}
 """
 
-    # === AI RESOURCE RECOMMENDER (RAG) ===
-    # Fast LLM classification to check if user needs web resources
-    try:
-        from langchain_core.prompts import ChatPromptTemplate
-        classifier_prompt = ChatPromptTemplate.from_messages([
-            ("system", "Analyze the user's message. Are they asking for learning resources, tutorials, documentation, courses, or guides on a technical topic? Reply ONLY with 'YES' or 'NO'."),
-            ("human", "{message}")
-        ])
-        classification_res = await agent.llm.ainvoke(classifier_prompt.format_messages(message=sanitized_message))
-        classification = classification_res.content.strip().upper()
-        
-        if "YES" in classification:
-            query_prompt = ChatPromptTemplate.from_messages([
-                ("system", "Generate 2 optimized web search queries to find the best, most effective resources/tutorials for the user's request. Return as a comma-separated list of queries only. Do not include markdown formatting or quotes."),
-                ("human", "{message}")
-            ])
-            queries_res = await agent.llm.ainvoke(query_prompt.format_messages(message=sanitized_message))
-            queries_str = queries_res.content.strip()
-            queries = [q.strip() for q in queries_str.split(",") if q.strip()]
-            
-            from duckduckgo_search import DDGS
-            import asyncio
-            
-            def perform_search():
-                ddgs = DDGS()
-                links = []
-                for q in queries[:2]:
-                    try:
-                        # Render IPs are often blocked by DDG text API, try html backend
-                        results = ddgs.html(q, max_results=3)
-                        if results:
-                            for res in results:
-                                links.append(f"Title: {res.get('title')}\nURL: {res.get('href')}\nSnippet: {res.get('body')}")
-                    except Exception as search_err:
-                        print(f"[Resource Recommender] Search failed for query '{q}': {search_err}")
-                        # Fallback to Wikipedia if DDGS blocks Render IP
-                        try:
-                            import wikipedia
-                            wiki_res = wikipedia.search(q, results=2)
-                            for wq in wiki_res:
-                                try:
-                                    page = wikipedia.page(wq, auto_suggest=False)
-                                    links.append(f"Title: {page.title} (Wikipedia)\nURL: {page.url}\nSnippet: {page.summary[:200]}...")
-                                except:
-                                    pass
-                        except Exception as wiki_err:
-                            print(f"[Resource Recommender] Wiki fallback failed: {wiki_err}")
-                return links
-            
-            gathered_links = await asyncio.to_thread(perform_search)
-            
-            if gathered_links:
-                web_context = (
-                    "You MUST USE the following real-time web search results to provide accurate, "
-                    "effective links and resources to the user. Do not hallucinate links.\n\n"
-                    "=== SEARCH RESULTS ===\n" + "\n\n".join(gathered_links)
-                )
-                system_prompt += "\n\n" + web_context
-                print(f"[Resource Recommender] Successfully injected {len(gathered_links)} links into context.")
-    except Exception as e:
-        print(f"[Resource Recommender] Error: {e}")
-    # =====================================
 
     messages = [SystemMessage(content=system_prompt)]
     for msg in request_data.history:
