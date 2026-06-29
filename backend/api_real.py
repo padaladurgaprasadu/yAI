@@ -65,15 +65,20 @@ def verify_token(authorization: str = Header(None)):
         hs256_failed = False
         if jwt_secret:
             import base64
+            from jwt.exceptions import ExpiredSignatureError
             # Try plain string first
             try:
                 decoded = jwt.decode(token, jwt_secret, algorithms=["HS256"], options={"verify_aud": False})
                 return decoded
+            except ExpiredSignatureError:
+                raise HTTPException(status_code=401, detail="Unauthorized: Your login token has expired. Please refresh the Vercel page and log in again.")
             except Exception:
                 # If plain string fails, try base64 decoding it (Standard for Supabase legacy secrets)
                 try:
                     decoded = jwt.decode(token, base64.b64decode(jwt_secret), algorithms=["HS256"], options={"verify_aud": False})
                     return decoded
+                except ExpiredSignatureError:
+                    raise HTTPException(status_code=401, detail="Unauthorized: Your login token has expired. Please refresh the Vercel page and log in again.")
                 except Exception as hs256_err:
                     hs256_failed = True
                 
