@@ -647,7 +647,7 @@ function App() {
       </header>
       
       {/* MAIN CONTENT AREA */}
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      <div className="main-content-wrapper" style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
         
         {/* LEFT NAVIGATION SIDEBAR */}
         {showSidebar && (
@@ -697,7 +697,7 @@ function App() {
         )}
 
         {/* CHAT SECTION (Centers when step=1, shrinks to 30% when step>1) */}
-        <div style={{ 
+        <div className="chat-section" style={{ 
           flex: step === 1 ? '1' : '0 0 35%', 
           maxWidth: step === 1 ? '100%' : '450px',
           display: 'flex', 
@@ -719,7 +719,7 @@ function App() {
               )}
 
               {chatMessages.map((msg, idx) => (
-                <div key={idx} style={{ 
+                <div key={idx} className="chat-message-container" style={{ 
                   display: 'flex', 
                   gap: '16px', 
                   alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
@@ -929,7 +929,7 @@ function App() {
 
         {/* WORKSPACE PANEL (Hidden in step 1, takes remaining width in step 2 & 3) */}
         {step > 1 && (
-          <div style={{ flex: 1, backgroundColor: '#0a0a0a', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+          <div className="preview-section" style={{ flex: 1, backgroundColor: '#0a0a0a', display: 'flex', flexDirection: 'column', position: 'relative' }}>
             
             {/* WORKSPACE CONTENT */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '30px' }}>
@@ -992,7 +992,7 @@ function App() {
 
               {/* STEP 3: RESULTS */}
               {step === 3 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.5s ease-out' }}>
+                <div className="preview-section" style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.5s ease-out' }}>
                   
                   {/* Phase 7: Live Preview */}
                   <div style={{ backgroundColor: '#111', borderRadius: '12px', border: '1px solid #333', overflow: 'hidden' }}>

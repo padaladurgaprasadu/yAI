@@ -391,3 +391,33 @@ pre {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .sidebar {
+    position: absolute;
+    height: calc(100vh - 56px); /* account for header */
+    z-index: 50;
+    box-shadow: 5px 0 15px rgba(0,0,0,0.8);
+  }
+
+  .main-content-wrapper {
+    flex-direction: column !important;
+  }
+
+  .chat-section {
+    flex: 1 !important;
+    max-width: 100% !important;
+    border-right: none !important;
+  }
+
+  .preview-section {
+    flex: 1 !important;
+    min-height: 50vh !important;
+    border-top: 2px solid #2a2a2a;
+  }
+  
+  .chat-message-container {
+    max-width: 95% !important;
+  }
+}
