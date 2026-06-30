@@ -76,10 +76,10 @@ class ChromaClient:
                 # results["distances"] contains the L2 distance. Smaller is closer.
                 distance = results["distances"][0][0] if "distances" in results and results["distances"] else 0
                 if distance < threshold:
-                    print(f"⚡ [Semantic Cache Hit] Distance: {distance:.4f} for query: {query}")
+                    print(f"[Semantic Cache Hit] Distance: {distance:.4f} for query: {query}")
                     return results["documents"][0][0]
                 else:
-                    print(f"🐌 [Semantic Cache Miss] Closest distance: {distance:.4f}")
+                    print(f"[Semantic Cache Miss] Closest distance: {distance:.4f}")
             return None
         except Exception as e:
             print(f"   -> [WARNING] Semantic Cache search failed: {e}")

@@ -566,8 +566,8 @@ class ChatRequest(BaseModel):
     memory: typing.Optional[str] = None
 
 @app.post("/api/chat")
-@limiter.limit("20/minute")
-async def ai_chat(request_data: ChatRequest, request: Request, auth: dict = Depends(verify_token)):
+@limiter.limit("50/minute")
+async def ai_chat(request_data: ChatRequest, request: Request):
     from fastapi.responses import StreamingResponse
     import json
     import re
@@ -664,6 +664,7 @@ Example: `[MEMORY_ADD] User is a physics student.`
     else:
         messages.append(HumanMessage(content=sanitized_message))
     async def event_generator():
+        import json
         try:
             is_build = False
             buffer = ""
@@ -676,7 +677,6 @@ Example: `[MEMORY_ADD] User is a physics student.`
                     cache_client = ChromaClient()
                     cached_response = cache_client.get_cache(sanitized_message)
                     if cached_response:
-                        import json
                         escaped_chunk = json.dumps({"type": "chat", "token": cached_response})
                         yield f"data: {escaped_chunk}\n\n"
                         return
@@ -743,6 +743,8 @@ Example: `[MEMORY_ADD] User is a physics student.`
             # ==========================
                     
         except Exception as e:
+            import traceback
+            print(f"!!! STREAM ERROR !!!\n{traceback.format_exc()}")
             error_msg = str(e).lower()
             if "429" in error_msg:
                 yield f"data: {json.dumps({'type': 'chat', 'token': '⚠️ Error: Insufficient Quota.'})}\n\n"
