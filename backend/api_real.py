@@ -607,6 +607,16 @@ async def ai_chat(request_data: ChatRequest, request: Request):
     # Phase 2.5: Dynamic Prompt Composer (Multi-Dimensional Intent Routing)
     router = IntentRouter(llm=agent.llm)
     intent_data = router.detect_intent(sanitized_message, request_data.history)
+    
+    # 🟢 PHASE 4: Early Exit for Missing Information (Response Planner v1.0)
+    missing_info = intent_data.get("missing_info_question")
+    if missing_info and isinstance(missing_info, str) and missing_info.lower() not in ["none", "null", "", "n/a"]:
+        async def early_exit_generator():
+            import json
+            yield f"data: {json.dumps({'type': 'chat', 'token': missing_info})}\n\n"
+        from fastapi.responses import StreamingResponse
+        return StreamingResponse(early_exit_generator(), media_type="text/event-stream")
+
     base_prompt = get_system_prompt(intent_data)
 
     # 🟢 PHASE 3: Persistent Vector Memory (ChromaDB) Retrieval

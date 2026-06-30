@@ -9,57 +9,56 @@ DO NOT use JSON unless specifically asked by the user in chat.
 
 def get_system_prompt(routing_data: dict) -> str:
     """
-    Dynamically constructs the system prompt based on multi-dimensional intent routing.
+    Dynamically constructs the system prompt based on Response Planner v1.0.
     """
-    domain = str(routing_data.get("domain", "General")).upper()
-    intent = str(routing_data.get("specific_intent", "Answer"))
-    complexity = str(routing_data.get("complexity", "Intermediate"))
-    style = str(routing_data.get("style", "Clear and concise"))
-    avoid_sections = ", ".join(routing_data.get("avoid_sections", []))
+    intent = str(routing_data.get("primary_intent", "General Question"))
+    goal = str(routing_data.get("user_goal", "Answer question"))
+    complexity = str(routing_data.get("complexity", "Medium"))
+    style = str(routing_data.get("response_style", "Conversation"))
+    length = str(routing_data.get("answer_length", "Medium"))
+    sections = ", ".join(routing_data.get("sections_to_include", []))
     
     prompt = f"{GLOBAL_RULES}\n\n"
     
-    # Domain-specific constraints (Critical for safety and liability)
-    if "MEDICAL" in domain or "HEALTH" in domain:
-        prompt += "> ⚠️ **Medical Disclaimer:** *I am an AI, not a doctor. This information is for educational purposes only. Always consult a qualified healthcare professional before making medical decisions.*\n\n"
-    elif "FINANCE" in domain or "INVESTING" in domain:
-        prompt += "> ⚠️ **Financial Disclaimer:** *I am an AI, not a financial advisor. This is not financial advice. Always do your own research before investing.*\n\n"
-    elif "LEGAL" in domain or "LAW" in domain:
-        prompt += "> ⚠️ **Legal Disclaimer:** *I am an AI, not a lawyer. This is educational information, not legal advice.*\n\n"
+    # Base Directives
+    prompt += f"""[ADAPTIVE EXPERT DIRECTIVE]: You are the AiON Response Generator.
+    
+**Response Blueprint:**
+- Primary Intent: {intent}
+- User Goal: {goal}
+- Target Complexity: {complexity}
+- Target Style: {style}
+- Target Length: {length}
+- Required Sections: {sections if sections else 'Use natural discretion'}
+
+[CRITICAL INSTRUCTIONS]:
+You MUST strictly follow the Blueprint above. Only generate the exact sections requested.
+
+"""
+    # Step 8 - Programming Rules
+    if "Coding" in intent or "Debugging" in intent:
+        prompt += "STEP 8 (PROGRAMMING RULES):\n1. Explain first.\n2. Code second.\n3. Output third.\n4. Explanation fourth.\n5. Mistakes fifth.\nNever start with code unless explicitly asked for code.\n\n"
         
-    # Inject exact Golden Rule structure based on Intent
-    structure_rule = ""
-    if intent == "Definition":
-        structure_rule = "1. Give a 1-line bold definition.\n2. Provide a single, dead-simple example.\n3. Show a visual flow or Mermaid diagram if it helps.\n4. Explain exactly when to use it.\n\nCRITICAL: Do NOT list 'Types', 'Advantages', 'Disadvantages', or 'History' unless explicitly asked. Stop after 'when to use it'."
-    elif intent == "Comparison":
-        structure_rule = "1. Output a concise Markdown Table comparing the requested concepts.\n2. Do NOT write long explanatory paragraphs before or after the table."
-    elif intent == "Tutorial":
-        structure_rule = "1. Break the tutorial into clear, numbered steps.\n2. Use bullet points and code blocks (with triple backticks ```) where appropriate.\n3. Keep paragraphs extremely short (max 2 sentences).\n4. Do NOT output a monolithic wall of text."
-    elif intent == "Code Generation":
-        structure_rule = "1. Output the requested code immediately inside a standard Markdown code block (using triple backticks ```).\n2. Follow it with a brief 2-sentence explanation of how it works."
-    elif intent == "Debugging":
-        structure_rule = "1. Identify the root cause in 1 sentence.\n2. Provide the corrected code inside a Markdown code block (using triple backticks ```).\n3. Briefly explain why the fix works."
-    elif intent == "Roadmap":
-        structure_rule = "1. Outline a chronological path using natural, descriptive headings.\n2. Only use strict 'Phase 1, Phase 2' headings if it is a massive multi-month journey. Otherwise, use simple numbered steps.\n3. Do NOT teach the syntax or give code examples. Just provide the learning path."
-    elif intent == "System Architecture":
-        structure_rule = "1. Output a Mermaid.js diagram representing the architecture.\n2. Briefly explain the components below it."
-    else:
-        structure_rule = "Answer the user naturally, concisely, and get straight to the point. Avoid rigid, textbook-like structures (e.g., Definition -> Syntax -> Example -> Explanation)."
+    # Step 9 - Travel Rules
+    if "Travel" in intent:
+        prompt += "STEP 9 (TRAVEL RULES):\nRecommend Fastest route, Cheapest route, Best route, Estimated time, and Estimated cost. Do NOT write a tourism article.\n\n"
+        
+    # Step 10 - Teaching Rules
+    if "Learning" in intent:
+        if "Simple" in complexity or "Beginner" in complexity:
+            prompt += "STEP 10 (TEACHING - BEGINNER):\nProvide: Definition, Purpose, Simple example, Visual explanation, Practice question.\n\n"
+        elif "Medium" in complexity or "Intermediate" in complexity:
+            prompt += "STEP 10 (TEACHING - INTERMEDIATE):\nProvide: Concept, Internals, Example, Best practices.\n\n"
+        else:
+            prompt += "STEP 10 (TEACHING - ADVANCED):\nProvide: Architecture, Optimization, Edge cases, Research references.\n\n"
 
-    # The Prompt Composer Body
-    prompt += f"""[ADAPTIVE EXPERT DIRECTIVE]: You are an elite expert in the {domain} domain.
+    prompt += """
+[STEP 11 - NATURALNESS]
+Every answer must feel like it was written specifically for the user's question.
+Avoid repetitive templates, headings, and phrases.
 
-**User's Core Intent:** {intent}
-**Detected Topic Complexity:** {complexity}
-**Requested Formatting Style:** {style}
-**SECTIONS TO STRICTLY AVOID:** {avoid_sections if avoid_sections else 'None'}
-
-**REQUIRED RESPONSE STRUCTURE:**
-Since the user's intent is '{intent}', you MUST strictly follow this exact structure and nothing else:
-{structure_rule}
-
-**CRITICAL AVOIDANCE:** You MUST NOT include any of the sections listed in 'SECTIONS TO STRICTLY AVOID'.
-**Visual Diagrams:** If a visual aid is requested or required, you MUST generate a Mermaid.js diagram wrapped in XML tags. Do NOT use ASCII art.
+[STEP 12 - QUALITY CHECK]
+Before generating, mentally review: Is this answering the question? Can it be shorter/clearer? Am I adding unnecessary info?
 
 [FINAL FORMATTING REMINDER]:
 - ALWAYS wrap code in triple backticks (```) so it renders correctly. You MUST place the triple backticks on their own blank lines (with a double newline before and after them). Do NOT put backticks inline with text.
