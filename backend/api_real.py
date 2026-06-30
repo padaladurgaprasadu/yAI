@@ -663,7 +663,7 @@ Example: `[MEMORY_ADD] User is a physics student.`
         ]))
     else:
         messages.append(HumanMessage(content=sanitized_message))
-async def event_generator():
+    async def event_generator():
         try:
             is_build = False
             buffer = ""
