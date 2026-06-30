@@ -27,6 +27,21 @@ def get_system_prompt(routing_data: dict) -> str:
     elif "LEGAL" in domain or "LAW" in domain:
         prompt += "> ⚠️ **Legal Disclaimer:** *I am an AI, not a lawyer. This is educational information, not legal advice.*\n\n"
         
+    # Inject exact Golden Rule structure based on Intent
+    structure_rule = ""
+    if intent == "Definition":
+        structure_rule = "1. Give a 1-line bold definition.\n2. Provide a single, dead-simple example.\n3. Show a visual flow or Mermaid diagram if it helps.\n4. Explain exactly when to use it.\n\nCRITICAL: Do NOT list 'Types', 'Advantages', 'Disadvantages', or 'History' unless explicitly asked. Stop after 'when to use it'."
+    elif intent == "Comparison":
+        structure_rule = "1. Output a concise Markdown Table comparing the requested concepts.\n2. Do NOT write long explanatory paragraphs before or after the table."
+    elif intent == "Code Generation":
+        structure_rule = "1. Output the requested code block immediately.\n2. Follow it with a brief 2-sentence explanation of how it works."
+    elif intent == "Roadmap":
+        structure_rule = "1. Output chronological phases (e.g., Phase 1, Phase 2) with timelines.\n2. Do NOT teach the syntax or give code examples. Just provide the learning path."
+    elif intent == "System Architecture":
+        structure_rule = "1. Output a Mermaid.js diagram representing the architecture.\n2. Briefly explain the components below it."
+    else:
+        structure_rule = "Answer the user naturally, concisely, and get straight to the point. Avoid rigid, textbook-like structures (e.g., Definition -> Syntax -> Example -> Explanation)."
+
     # The Prompt Composer Body
     prompt += f"""[ADAPTIVE EXPERT DIRECTIVE]: You are an elite expert in the {domain} domain.
 
@@ -35,16 +50,11 @@ def get_system_prompt(routing_data: dict) -> str:
 **Requested Formatting Style:** {style}
 **SECTIONS TO STRICTLY AVOID:** {avoid_sections if avoid_sections else 'None'}
 
-**ADAPTIVE RESPONSE RULES (THE GOLDEN RULE):**
-Instead of following a rigid template, you MUST dynamically choose the structure that best answers the specific question.
-1. **Analyze the Request:** Are they asking for a Definition, Tutorial, Comparison, Roadmap, Code, Debugging, Project, or Architecture? 
-2. **Apply the Structure:**
-   - *If Definition:* Give a 1-line definition, simple example, visual flow, and when to use it. Do NOT list "Types" or "History" unless asked.
-   - *If Comparison:* Use a Markdown Table comparing features. Do NOT write long paragraphs.
-   - *If Code Generation:* Output the code immediately with a brief 2-sentence explanation.
-   - *If Roadmap:* Output chronological phases. Do not teach the syntax.
-3. **CRITICAL AVOIDANCE:** You MUST NOT include any of the sections listed in 'SECTIONS TO STRICTLY AVOID'.
-4. **Visual Diagrams:** If the user asks for a flowchart, architecture, or visual aid, you MUST generate a Mermaid.js diagram. Do NOT use ASCII art for flowcharts. Ensure Mermaid code is wrapped in XML tags as defined in the global rules.
-5. Avoid repetitive, textbook-like structures (e.g., Definition -> Syntax -> Example -> Explanation -> Best Practices). Your response must flow organically and get straight to the point.
+**REQUIRED RESPONSE STRUCTURE:**
+Since the user's intent is '{intent}', you MUST strictly follow this exact structure and nothing else:
+{structure_rule}
+
+**CRITICAL AVOIDANCE:** You MUST NOT include any of the sections listed in 'SECTIONS TO STRICTLY AVOID'.
+**Visual Diagrams:** If a visual aid is requested or required, you MUST generate a Mermaid.js diagram wrapped in XML tags. Do NOT use ASCII art.
 """
     return prompt
