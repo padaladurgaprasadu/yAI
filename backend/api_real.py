@@ -663,12 +663,27 @@ Example: `[MEMORY_ADD] User is a physics student.`
         ]))
     else:
         messages.append(HumanMessage(content=sanitized_message))
-
-    async def event_generator():
+async def event_generator():
         try:
             is_build = False
             buffer = ""
             flushed_initial = False
+            
+            # === SEMANTIC CACHE HIT CHECK ===
+            if len(request_data.history) == 0 and not request_data.image:
+                try:
+                    from backend.memory.chroma_client import ChromaClient
+                    cache_client = ChromaClient()
+                    cached_response = cache_client.get_cache(sanitized_message)
+                    if cached_response:
+                        import json
+                        escaped_chunk = json.dumps({"type": "chat", "token": cached_response})
+                        yield f"data: {escaped_chunk}\n\n"
+                        return
+                except Exception as e:
+                    print(f"[Semantic Cache] Error checking cache: {e}")
+            # ================================
+
             # Stream the response
             for chunk in agent.llm.stream(messages):
                 text_chunk = chunk.content
@@ -709,6 +724,18 @@ Example: `[MEMORY_ADD] User is a physics student.`
                 except Exception as e:
                     escaped_chunk = json.dumps({"type": "chat", "token": "\n\n(Error parsing build parameters. Please try again.)"})
                     yield f"data: {escaped_chunk}\n\n"
+            
+            # === SEMANTIC CACHE SET ===
+            if len(request_data.history) == 0 and not request_data.image and not is_build:
+                try:
+                    from backend.memory.chroma_client import ChromaClient
+                    import asyncio
+                    def save_cache():
+                        ChromaClient().set_cache(sanitized_message, buffer)
+                    asyncio.create_task(asyncio.to_thread(save_cache))
+                except Exception as e:
+                    print(f"[Semantic Cache] Error setting cache: {e}")
+            # ==========================
                     
         except Exception as e:
             error_msg = str(e).lower()

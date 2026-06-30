@@ -1,12 +1,7 @@
-import chromadb
-from chromadb.utils import embedding_functions
+with open('backend/memory/chroma_client.py', 'r', encoding='utf-8') as f:
+    content = f.read()
 
-class ChromaClient:
-    """
-    Manages the Vector Database (ChromaDB) for Semantic Memory.
-    It stores projects and their architectures so the AI can search for them by 'meaning'.
-    """
-    def __init__(self, db_path="./chroma_db"):
+new_init = """    def __init__(self, db_path="./chroma_db"):
         # Initialize a local ChromaDB instance
         self.client = chromadb.PersistentClient(path=db_path)
         
@@ -24,45 +19,11 @@ class ChromaClient:
         self.cache_collection = self.client.get_or_create_collection(
             name="semantic_cache",
             embedding_function=self.embedding_fn
-        )
+        )"""
 
-    def store_blueprint(self, project_id, goal, blueprint):
-        """Stores the project's goal and resulting blueprint into the vector database."""
-        # We embed the 'goal' so we can search by goal later
-        document = f"Goal: {goal}\nBlueprint: {blueprint}"
-        
-        # We use upsert so it overwrites if it already exists
-        self.collection.upsert(
-            documents=[document],
-            metadatas=[{"project_id": project_id, "goal": goal}],
-            ids=[project_id]
-        )
-
-    def find_similar_projects(self, new_goal, n_results=2):
-        """Searches the database for past projects similar to the new goal."""
-        try:
-            # Check how many items are in the DB so we don't request more than exists
-            count = self.collection.count()
-            if count == 0:
-                return []
-                
-            n = min(n_results, count)
-            
-            results = self.collection.query(
-                query_texts=[new_goal],
-                n_results=n
-            )
-            
-            # Extract and return the documents if any exist
-            if results and results["documents"] and len(results["documents"][0]) > 0:
-                return results["documents"][0]
-            return []
-        except Exception as e:
-            print(f"   -> [WARNING] ChromaDB search failed: {e}")
-            return []
-
+cache_methods = """
     def get_cache(self, query: str, threshold: float = 0.3):
-        """Searches for a semantically similar query in the cache."""
+        \"\"\"Searches for a semantically similar query in the cache.\"\"\"
         try:
             if self.cache_collection.count() == 0:
                 return None
@@ -86,7 +47,7 @@ class ChromaClient:
             return None
 
     def set_cache(self, query: str, response: str):
-        """Saves a query-response pair to the semantic cache."""
+        \"\"\"Saves a query-response pair to the semantic cache.\"\"\"
         import uuid
         try:
             cache_id = f"cache-{str(uuid.uuid4())[:8]}"
@@ -97,3 +58,17 @@ class ChromaClient:
             )
         except Exception as e:
             print(f"   -> [WARNING] Failed to set Semantic Cache: {e}")
+"""
+
+content = content.replace("    def __init__(self, db_path=\"./chroma_db\"):", "###REPLACE_INIT###")
+# Extract everything up to the first def after __init__
+init_block_end = content.find("    def store_blueprint")
+before_init = content[:content.find("###REPLACE_INIT###")]
+after_init = content[init_block_end:]
+
+content = before_init + new_init + "\n\n" + after_init + cache_methods
+
+with open('backend/memory/chroma_client.py', 'w', encoding='utf-8') as f:
+    f.write(content)
+
+print("chroma_client.py updated successfully.")
