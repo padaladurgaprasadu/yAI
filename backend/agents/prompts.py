@@ -33,8 +33,12 @@ def get_system_prompt(routing_data: dict) -> str:
         structure_rule = "1. Give a 1-line bold definition.\n2. Provide a single, dead-simple example.\n3. Show a visual flow or Mermaid diagram if it helps.\n4. Explain exactly when to use it.\n\nCRITICAL: Do NOT list 'Types', 'Advantages', 'Disadvantages', or 'History' unless explicitly asked. Stop after 'when to use it'."
     elif intent == "Comparison":
         structure_rule = "1. Output a concise Markdown Table comparing the requested concepts.\n2. Do NOT write long explanatory paragraphs before or after the table."
+    elif intent == "Tutorial":
+        structure_rule = "1. Break the tutorial into clear, numbered steps.\n2. Use bullet points and code blocks (with triple backticks ```) where appropriate.\n3. Keep paragraphs extremely short (max 2 sentences).\n4. Do NOT output a monolithic wall of text."
     elif intent == "Code Generation":
-        structure_rule = "1. Output the requested code block immediately.\n2. Follow it with a brief 2-sentence explanation of how it works."
+        structure_rule = "1. Output the requested code immediately inside a standard Markdown code block (using triple backticks ```).\n2. Follow it with a brief 2-sentence explanation of how it works."
+    elif intent == "Debugging":
+        structure_rule = "1. Identify the root cause in 1 sentence.\n2. Provide the corrected code inside a Markdown code block (using triple backticks ```).\n3. Briefly explain why the fix works."
     elif intent == "Roadmap":
         structure_rule = "1. Output chronological phases (e.g., Phase 1, Phase 2) with timelines.\n2. Do NOT teach the syntax or give code examples. Just provide the learning path."
     elif intent == "System Architecture":
@@ -56,5 +60,9 @@ Since the user's intent is '{intent}', you MUST strictly follow this exact struc
 
 **CRITICAL AVOIDANCE:** You MUST NOT include any of the sections listed in 'SECTIONS TO STRICTLY AVOID'.
 **Visual Diagrams:** If a visual aid is requested or required, you MUST generate a Mermaid.js diagram wrapped in XML tags. Do NOT use ASCII art.
+
+[FINAL FORMATTING REMINDER]:
+- ALWAYS wrap code in triple backticks (```) so it renders correctly. Do NOT output raw inline code blocks for large snippets.
+- NEVER output a giant monolithic paragraph. Use markdown bullet points, bold text, and double newlines to separate concepts.
 """
     return prompt
