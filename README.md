@@ -1,4 +1,6 @@
-# AiON: The Autonomous Multi-Agent Software Engineer
+# AiON: The AI Operating System for Software Engineering
+
+*The intelligence platform that coordinates models, agents, enterprise knowledge, and execution across the entire software lifecycle.*
 
 ### 🧠 Summary: The Big Picture
 
