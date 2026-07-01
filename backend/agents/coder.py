@@ -113,8 +113,12 @@ class CoderAgent(BaseAgent):
         semantic_context = state.get("semantic_context", "No semantic context provided.")
         project_id = state.get("project_id")
         
-        # Access the global stream queue directly from state to avoid circular import issues
-        q = state.get("stream_queue")
+        # Access the global stream queue if it exists
+        try:
+            from backend.api_real import stream_queues
+            q = stream_queues.get(project_id)
+        except ImportError:
+            q = None
         
         # Custom LangChain callback to stream tokens to our queue
         from langchain.callbacks.base import BaseCallbackHandler

@@ -19,4 +19,3 @@ class AiONState(TypedDict):
     execution_retries: int
     execution_logs: Optional[list[str]]
     semantic_context: Optional[str]
-    stream_queue: Optional[Any]
