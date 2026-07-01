@@ -722,11 +722,11 @@ async def ai_chat(request_data: ChatRequest, request: Request):
                 except Exception:
                     pass
 
-            # 🟢 PHASE 4: Direct Streaming (Bypassing Validator/Formatter)
-            for chunk in agent.llm.stream(messages):
-                text_chunk = chunk.content
-                if isinstance(text_chunk, list):
-                    text_chunk = "".join(c.get("text", "") if isinstance(c, dict) else str(c) for c in text_chunk)
+            # 🟢 PHASE 4: Direct Streaming (With Real-Time Compliance Middleware)
+            from backend.utils.compliance import StreamingComplianceEngine
+            compliance_engine = StreamingComplianceEngine(agent.llm.stream(messages))
+            
+            for text_chunk in compliance_engine.process():
                 
                 draft_text += text_chunk
                 buffer = draft_text
