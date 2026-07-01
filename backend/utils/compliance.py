@@ -43,16 +43,27 @@ class StreamingComplianceEngine:
                     self.current_paragraph = ""
                     continue
                     
-                # Check for sentence end (heuristic: dot/bang/question followed by space)
+                # Check for sentence end (heuristic: dot/bang/question followed by space or newline)
                 if not self.in_code_block:
-                    if self.current_paragraph.endswith(". ") or self.current_paragraph.endswith("! ") or self.current_paragraph.endswith("? "):
+                    # Detect end of sentence
+                    is_sentence_end = False
+                    if len(self.current_paragraph) >= 2:
+                        last_two = self.current_paragraph[-2:]
+                        if last_two in [". ", "! ", "? ", ".\n", "!\n", "?\n"]:
+                            is_sentence_end = True
+                        elif len(self.current_paragraph) >= 3:
+                            last_three = self.current_paragraph[-3:]
+                            if last_three in ['. "\n', '! "\n', '? "\n', '." ', '!" ', '?" ']:
+                                is_sentence_end = True
+                    
+                    if is_sentence_end:
                         # Avoid counting abbreviations like "Mr. " or "e.g. "
-                        if len(self.current_paragraph) > 4 and not re.search(r'\b(?:Mr|Mrs|Ms|Dr|vs|e\.g|i\.e|etc)\.\s$', self.current_paragraph, flags=re.IGNORECASE):
+                        if len(self.current_paragraph) > 4 and not re.search(r'\b(?:Mr|Mrs|Ms|Dr|vs|e\.g|i\.e|etc)\.\s*$', self.current_paragraph, flags=re.IGNORECASE):
                             self.sentence_count += 1
                             
                             # Force break if we hit 2 sentences!
                             if self.sentence_count >= 2:
-                                # Inject a double newline
+                                # Inject a double newline to guarantee Markdown paragraph break
                                 processed_chunk += "\n\n"
                                 self.sentence_count = 0
                                 self.current_paragraph = ""

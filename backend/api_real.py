@@ -690,13 +690,17 @@ async def ai_chat(request_data: ChatRequest, request: Request):
                 elif role == "ai" and not content.startswith("[BUILD]"):
                     messages.append(AIMessage(content=content))
                     
+            # 🟢 [INSTRUCTION REINFORCEMENT] Append formatting constraints to the final message
+            # This guarantees the LLM doesn't "forget" the system prompt during long conversation histories.
+            formatting_reminder = "\n\n[CRITICAL REMINDER]: You MUST strictly follow the requested formatting. Use H3 (###) headers, bold text, bullet points, and NEVER write paragraphs longer than 2 sentences."
+            
             if request_data.image:
                 messages.append(HumanMessage(content=[
-                    {"type": "text", "text": sanitized_message},
+                    {"type": "text", "text": sanitized_message + formatting_reminder},
                     {"type": "image_url", "image_url": {"url": request_data.image}}
                 ]))
             else:
-                messages.append(HumanMessage(content=sanitized_message))
+                messages.append(HumanMessage(content=sanitized_message + formatting_reminder))
             
             # Clear status indicator
             yield f"data: {json.dumps({'type': 'status', 'message': ''})}\n\n"
