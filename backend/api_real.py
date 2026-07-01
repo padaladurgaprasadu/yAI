@@ -57,11 +57,25 @@ async def log_requests(request: Request, call_next):
     api_logger.info(f"[API] {request.method} {request.url.path} - Status: {response.status_code} - Latency: {process_time:.2f}ms")
     return response
 
+from backend.db.database import engine, Base
+from backend.utils.redis_client import REDIS_URL
+import redis.asyncio as aioredis
+
+# Initialize Database Tables
+Base.metadata.create_all(bind=engine)
+
 @app.get("/")
 def health_check():
-    return {"status": "ok", "message": "AiON Backend is running"}
+    return {"status": "ok", "message": "AiON Backend is running with PostgreSQL & Redis"}
 
-limiter = Limiter(key_func=get_remote_address)
+# Initialize Redis for Rate Limiting
+# Note: slowapi requires an async redis connection string for storage
+try:
+    limiter = Limiter(key_func=get_remote_address, storage_uri=REDIS_URL.replace("redis://", "redis+asyncio://"))
+except Exception as e:
+    print(f"[WARNING] Failed to connect to Redis for Rate Limiting. Falling back to memory: {e}")
+    limiter = Limiter(key_func=get_remote_address)
+
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -321,8 +335,10 @@ async def websocket_generate(websocket: WebSocket):
                 else:
                     q.put({"type": "GRAPH_DONE", "state": final_st or initial_state})
             except Exception as e:
-                print(f"[Error in Graph execution]: {e}")
-                q.put({"type": "error", "message": "Internal Server Error."})
+                import traceback
+                trace = traceback.format_exc()
+                print(f"[Error in Graph execution]: {trace}")
+                q.put({"type": "error", "message": f"Graph Error: {str(e)}"})
 
         # Start graph execution in a background thread
         asyncio.create_task(asyncio.to_thread(run_graph))

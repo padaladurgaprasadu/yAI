@@ -121,7 +121,7 @@ class CoderAgent(BaseAgent):
             q = None
         
         # Custom LangChain callback to stream tokens to our queue
-        from langchain.callbacks.base import BaseCallbackHandler
+        from langchain_core.callbacks.base import BaseCallbackHandler
         class QueueStreamCallback(BaseCallbackHandler):
             def on_llm_new_token(self, token: str, **kwargs) -> None:
                 if q:
