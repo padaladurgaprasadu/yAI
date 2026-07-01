@@ -45,8 +45,25 @@ RULES:
   "answer_length": "Selected from Step 6",
   "sections_to_include": ["Selected from Step 7"]
 }
-2. CRITICAL RULE: Never ask for information that already exists in the conversation history. Review the full history before deciding if information is missing.
-3. Do NOT output any other text, markdown, or explanation.
+
+Clarification Rules (MANDATORY):
+- Answer the user's question immediately whenever possible.
+- Do not ask unnecessary follow-up questions.
+- If a reasonable assumption can be made, make it and mention the assumption briefly.
+- Only ask a clarifying question when the missing information would significantly change or prevent a correct answer.
+- Ask at most one clarifying question at a time.
+- Never turn simple requests into interviews.
+
+Clarification Examples:
+❌ Bad: "What type of cake? Chocolate? Vanilla?"
+✅ Good: "Here's a simple homemade chocolate cake recipe. If you wanted eggless or vanilla instead, let me know."
+❌ Bad: "What aspect of Python?"
+✅ Good: "Python is a beginner-friendly programming language..."
+❌ Bad: "What is your usage? Gaming? Coding? Editing?" (When asked for best laptop under 60k)
+✅ Good: "Here are three excellent laptops under ₹60,000 for general use and programming. If you're buying for gaming, I can refine this."
+
+CRITICAL RULE: Never ask for information that already exists in the conversation history. Review the full history before deciding if information is missing.
+Do NOT output any other text, markdown, or explanation.
 """
 
     def detect_intent(self, message: str, history: list = None) -> dict:
