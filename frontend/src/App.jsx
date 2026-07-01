@@ -152,7 +152,7 @@ function App() {
   const [step, setStep] = useState(1) // 1: Prompt, 2: Review Blueprint, 3: Generation
   const [projectId, setProjectId] = useState(null)
   const [agentRole, setAgentRole] = useState("Fullstack Web Developer") // New: Agent Selector
-  
+  const [chatStatus, setChatStatus] = useState("") // New: Pipeline Status
   // Phase 4 additions
   const [blueprintJson, setBlueprintJson] = useState('')
   const [codeFiles, setCodeFiles] = useState(null)
@@ -426,6 +426,8 @@ function App() {
                             newMsgs[newMsgs.length - 1].content += data.token;
                             return newMsgs;
                         });
+                    } else if (data.type === 'status') {
+                        setChatStatus(data.message);
                     } else if (data.type === 'build') {
                         // It's a build command, remove the empty AI message and trigger build
                         setChatMessages(prev => {
@@ -927,6 +929,25 @@ function App() {
               </div>
             )}
             
+            {chatStatus && (
+              <div style={{
+                marginBottom: '12px',
+                padding: '8px 16px',
+                backgroundColor: 'rgba(10, 10, 10, 0.7)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '16px',
+                color: '#a6accd',
+                fontSize: '0.85rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                animation: 'fadeIn 0.3s ease-in-out'
+              }}>
+                <div className="spinner" style={{ width: '14px', height: '14px', borderWidth: '2px', borderTopColor: 'var(--accent)' }}></div>
+                ✨ {chatStatus}
+              </div>
+            )}
+
             <form onSubmit={handleChatSubmit} style={{ 
               width: '100%', 
               maxWidth: '800px', 

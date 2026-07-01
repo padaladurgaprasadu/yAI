@@ -665,12 +665,12 @@ async def ai_chat(request_data: ChatRequest, request: Request):
     async def event_generator():
         import json
         import time
+        from backend.agents.validator import ResponseValidatorAgent
+        from backend.agents.formatter import FormatterAgent
+        
         try:
             start_time = time.time()
             is_build = False
-            buffer = ""
-            flushed_initial = False
-            ttft_logged = False
             
             # === SEMANTIC CACHE HIT CHECK ===
             if len(request_data.history) == 0 and not request_data.image:
@@ -680,71 +680,56 @@ async def ai_chat(request_data: ChatRequest, request: Request):
                     cached_response, distance = cache_client.get_cache(sanitized_message)
                     if cached_response:
                         ttft = (time.time() - start_time) * 1000
-                        api_logger.info(f"[CACHE HIT] Distance: {distance:.4f} | TTFT: {ttft:.2f}ms | Query: '{sanitized_message[:30]}...'")
-                        escaped_chunk = json.dumps({"type": "chat", "token": cached_response})
-                        yield f"data: {escaped_chunk}\n\n"
+                        api_logger.info(f"[CACHE HIT] Distance: {distance:.4f} | TTFT: {ttft:.2f}ms")
+                        yield f"data: {json.dumps({'type': 'chat', 'token': cached_response})}\n\n"
                         return
-                    else:
-                        api_logger.info(f"[CACHE MISS] Query: '{sanitized_message[:30]}...'")
-                except Exception as e:
+                except Exception:
                     pass
 
-            # Stream the response
-            for chunk in agent.llm.stream(messages):
-                if not ttft_logged:
-                    ttft = (time.time() - start_time) * 1000
-                    api_logger.info(f"[LLM TTFT] First token generated in {ttft:.2f}ms")
-                    ttft_logged = True
-                    
+            # 1. DRAFTING PHASE
+            yield f"data: {json.dumps({'type': 'status', 'message': 'Drafting Response...'})}\n\n"
+            draft_response = agent.llm.invoke(messages)
+            draft_text = draft_response.content
+            if isinstance(draft_text, list):
+                draft_text = "".join(c.get("text", "") if isinstance(c, dict) else str(c) for c in draft_text)
+                
+            # If it's a build command, bypass validation and formatting!
+            if "[BUILD]" in draft_text:
+                try:
+                    json_str = draft_text.split("[BUILD]")[1].strip()
+                    parsed = json.loads(json_str, strict=False)
+                    yield f"data: {json.dumps({'type': 'build', 'data': parsed})}\n\n"
+                except Exception as e:
+                    yield f"data: {json.dumps({'type': 'chat', 'token': '\n\n(Error parsing build parameters. Please try again.)'})}\n\n"
+                return
+
+            # 2. VALIDATION PHASE
+            yield f"data: {json.dumps({'type': 'status', 'message': 'Validating Quality...'})}\n\n"
+            validator = ResponseValidatorAgent(llm=agent.llm)
+            validation_result = validator.validate_draft(draft_text, sanitized_message)
+            
+            final_text_to_format = validation_result.get("corrected_text", draft_text)
+
+            # 3. FORMATTING PHASE
+            yield f"data: {json.dumps({'type': 'status', 'message': 'Formatting Layout...'})}\n\n"
+            formatter = FormatterAgent(llm=agent.llm)
+            
+            # Clear the status indicator in the UI before streaming text
+            yield f"data: {json.dumps({'type': 'status', 'message': ''})}\n\n"
+
+            # Stream the final response
+            for chunk in formatter.stream_format(final_text_to_format):
                 text_chunk = chunk.content
                 if isinstance(text_chunk, list):
                     text_chunk = "".join(c.get("text", "") if isinstance(c, dict) else str(c) for c in text_chunk)
-                
-                buffer += text_chunk
-                
-                # Zero TTFT Prefix Divergence Logic
-                if not is_build:
-                    if "[BUILD]" in buffer:
-                        is_build = True
-                        continue
                     
-                    # If it starts with a subset of "[BUILD]", we MUST wait.
-                    # e.g., buffer = "[", or "[B", or "[BU"
-                    if len(buffer) > 0 and "[BUILD]".startswith(buffer):
-                        continue
-                        
-                    # If we reach here, it either doesn't start with "[" at all,
-                    # OR it started with "[" but diverged (e.g., "[Here...").
-                    # It is safe to stream immediately!
-                    if not flushed_initial:
-                        escaped_chunk = json.dumps({"type": "chat", "token": buffer})
-                        yield f"data: {escaped_chunk}\n\n"
-                        flushed_initial = True
-                    else:
-                        escaped_chunk = json.dumps({"type": "chat", "token": text_chunk})
-                        yield f"data: {escaped_chunk}\n\n"
+                yield f"data: {json.dumps({'type': 'chat', 'token': text_chunk})}\n\n"
             
-            # Flush remaining buffer if it's not a build and we never exceeded 10 chars
-            if not is_build and not flushed_initial:
-                escaped_chunk = json.dumps({"type": "chat", "token": buffer})
-                yield f"data: {escaped_chunk}\n\n"
-
-            # If it is a build, send the final parsed JSON
-            if is_build:
-                try:
-                    json_str = buffer.split("[BUILD]")[1].strip()
-                    parsed = json.loads(json_str, strict=False)
-                    escaped_chunk = json.dumps({"type": "build", "data": parsed})
-                    yield f"data: {escaped_chunk}\n\n"
-                except Exception as e:
-                    escaped_chunk = json.dumps({"type": "chat", "token": "\n\n(Error parsing build parameters. Please try again.)"})
-                    yield f"data: {escaped_chunk}\n\n"
-            
-            # 🟢 PHASE 3: Autonomous Memory Storage
-            if not is_build and "[MEMORY_ADD]" in buffer:
+            # 🟢 PHASE 3: Autonomous Memory Storage (Post-stream)
+            if "[MEMORY_ADD]" in final_text_to_format:
                 try:
                     import re
-                    memory_match = re.search(r'\[MEMORY_ADD\](.*)', buffer)
+                    memory_match = re.search(r'\[MEMORY_ADD\](.*)', final_text_to_format)
                     if memory_match:
                         new_fact = memory_match.group(1).strip()
                         from backend.memory.chroma_client import ChromaClient
