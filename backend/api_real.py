@@ -724,9 +724,9 @@ async def ai_chat(request_data: ChatRequest, request: Request):
 
             # 🟢 PHASE 4: Direct Streaming (With Real-Time Compliance Middleware)
             from backend.utils.compliance import StreamingComplianceEngine
-            compliance_engine = StreamingComplianceEngine(agent.llm.stream(messages))
+            compliance_engine = StreamingComplianceEngine(agent.llm.astream(messages))
             
-            for text_chunk in compliance_engine.process():
+            async for text_chunk in compliance_engine.process():
                 
                 draft_text += text_chunk
                 buffer = draft_text

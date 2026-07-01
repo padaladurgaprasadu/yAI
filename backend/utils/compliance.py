@@ -11,12 +11,12 @@ class StreamingComplianceEngine:
         self.sentence_count = 0
         self.current_paragraph = ""
 
-    def process(self):
+    async def process(self):
         """
         Yields chunks while monitoring sentence lengths.
         If a paragraph reaches 2 sentences, it automatically injects \n\n to force a break.
         """
-        for chunk in self.stream:
+        async for chunk in self.stream:
             text_chunk = chunk.content
             if isinstance(text_chunk, list):
                 text_chunk = "".join(c.get("text", "") if isinstance(c, dict) else str(c) for c in text_chunk)
