@@ -688,11 +688,19 @@ async def ai_chat(request_data: ChatRequest, request: Request):
 
             # 1. DRAFTING PHASE
             yield f"data: {json.dumps({'type': 'status', 'message': 'Drafting Response...'})}\n\n"
-            draft_response = agent.llm.invoke(messages)
-            draft_text = draft_response.content
-            if isinstance(draft_text, list):
-                draft_text = "".join(c.get("text", "") if isinstance(c, dict) else str(c) for c in draft_text)
+            draft_text = ""
+            chunk_count = 0
+            for chunk in agent.llm.stream(messages):
+                text_chunk = chunk.content
+                if isinstance(text_chunk, list):
+                    text_chunk = "".join(c.get("text", "") if isinstance(c, dict) else str(c) for c in text_chunk)
+                draft_text += text_chunk
+                chunk_count += 1
                 
+                # Send a heartbeat every 20 chunks to keep the SSE connection alive and prevent 3-minute timeouts
+                if chunk_count % 20 == 0:
+                    yield f"data: {json.dumps({'type': 'status', 'message': f'Drafting Response... ({len(draft_text)} bytes)'})}\n\n"
+                    
             # If it's a build command, bypass validation and formatting!
             if "[BUILD]" in draft_text:
                 try:

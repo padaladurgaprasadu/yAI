@@ -49,11 +49,11 @@ class BaseAgent:
                 max_tokens=4000
             )
         elif nvidia_key:
-            print("[DEBUG] Using NVIDIA NIM Endpoint (Llama 3.1 70B)")
+            print("[DEBUG] Using NVIDIA NIM Endpoint (Llama 3.1 8B)")
             self.llm = ChatOpenAI(
                 base_url="https://integrate.api.nvidia.com/v1",
                 api_key=nvidia_key.strip(),
-                model="meta/llama-3.1-70b-instruct",
+                model="meta/llama-3.1-8b-instruct",
                 temperature=self.temperature,
                 max_tokens=4000
             )
