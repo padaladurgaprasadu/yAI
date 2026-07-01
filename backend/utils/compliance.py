@@ -27,6 +27,11 @@ class StreamingComplianceEngine:
                 toggles = text_chunk.count("```")
                 for _ in range(toggles):
                     self.in_code_block = not self.in_code_block
+                    
+            if "<mermaid>" in text_chunk:
+                self.in_code_block = True
+            if "</mermaid>" in text_chunk:
+                self.in_code_block = False
 
             # If we are in a code block or list item/table, we don't force break
             # Heuristic: lists start with - or *, tables use |
