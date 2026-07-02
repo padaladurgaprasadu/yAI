@@ -433,9 +433,8 @@ function App() {
         body: JSON.stringify({ message: userMessage, history: chatMessages, image: imagePayload })
       })
       
-      setIsChatLoading(false) // Stop the spinner once stream starts
-      
       if (!response.ok) {
+        setIsChatLoading(false)
         let errorDetail = `⚠️ Error: Could not connect to AI.`;
         try {
             const errData = await response.json();
@@ -519,6 +518,7 @@ function App() {
           }
           return newMsgs;
       });
+      setIsChatLoading(false);
 
     } catch (err) {
       setIsChatLoading(false)
