@@ -728,7 +728,8 @@ async def ai_chat(request_data: ChatRequest, request: Request):
             system_prompt = f"""{base_prompt}
 
 [SYSTEM DIRECTIVES]:
-- **Mermaid Diagrams:** If the user explicitly asks for a Mermaid diagram, workflow, flowchart, or system design, you MUST output Mermaid.js syntax wrapped EXACTLY inside `<mermaid>` and `</mermaid>` XML tags. Do NOT use markdown backticks for the mermaid code. Use valid syntax: e.g., `A -->|Label| B`, NOT `A -->|Label|> B`. Avoid spaces in node IDs.
+- **Architecture Diagrams:** If the user asks for a diagram, workflow, flowchart, or system architecture, you MUST output a structured JSON block wrapped EXACTLY inside `<architecture>` and `</architecture>` tags. NEVER use Mermaid.
+  Schema: {{"nodes": [{{"id":"n1","label":"Gateway","type":"gateway","zone":"edge"}}], "edges": [{{"source":"n1","target":"n2","label":"HTTP","type":"sync"}}], "zones": [{{"id":"edge","label":"Edge"}}]}}. Types: gateway, microservice, database, external, queue, ai, cache, user. Edges: sync, async, data.
 - **Agent Hand-off:** If they are asking to build, develop, create, generate, OR research a complex project, return EXACTLY this format and nothing else:
 [BUILD] {{"goal": "The specific project they want", "agent_role": "Select the best role: Fullstack Web Developer, Machine Learning Engineer, Deep Learning Researcher, Data Scientist, Data Analyst, AI Systems Architect"}}
 - **Memory System:** If the user explicitly shares a new personal fact about themselves (e.g., their name, profession, goals, skill level, or preferences), you MUST secretly append exactly `[MEMORY_ADD] <fact>` to the VERY END of your response. 

@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import './App.css'
 import Auth from './components/Auth'
 import Chat from './components/Chat'
-import Mermaid from './Mermaid'
 import { supabase } from './lib/supabaseClient'
+import ArchitectureViewer from './components/ArchitectureViewer'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
@@ -97,7 +97,7 @@ const CodeBlock = ({ node, inline, className, children, ...props }) => {
 };
 
 const renderMessageContent = (content) => {
-  if (!content.includes('<mermaid>')) {
+  if (!content.includes('<architecture>')) {
       return (
           <div className="markdown-body" onClick={handleMarkdownClick}>
               <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={{ code: CodeBlock }}>
@@ -107,20 +107,15 @@ const renderMessageContent = (content) => {
       );
   }
   
-  const parts = content.split(/(<mermaid>[\s\S]*?<\/mermaid>)/);
+  const parts = content.split(/(<architecture>[\s\S]*?<\/architecture>)/);
   return parts.map((part, i) => {
-      if (part.startsWith('<mermaid>') && part.endsWith('</mermaid>')) {
-          const chart = part.replace('<mermaid>', '').replace('</mermaid>', '').trim();
-          if (!chart || chart.length < 5 || !chart.includes('\n')) {
-              return (
-                <div key={i} className="markdown-body" onClick={handleMarkdownClick}>
-                    <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={{ code: CodeBlock }}>
-                        {part}
-                    </ReactMarkdown>
-                </div>
-              );
-          }
-          return <Mermaid key={i} chart={chart} />;
+      if (part.startsWith('<architecture>') && part.endsWith('</architecture>')) {
+          const jsonStr = part.replace('<architecture>', '').replace('</architecture>', '').replace(/```json/g, '').replace(/```/g, '').trim();
+          return (
+            <div key={i} style={{ margin: '16px 0' }}>
+              <ArchitectureViewer architectureJson={jsonStr} />
+            </div>
+          );
       }
       return (
           <div key={i} className="markdown-body" onClick={handleMarkdownClick}>
