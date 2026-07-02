@@ -3,6 +3,61 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
 import Mermaid from '../Mermaid';
+import ArchitectureViewer from './ArchitectureViewer';
+const renderMessageContent = (content) => {
+  if (!content.includes('<architecture>')) {
+      return (
+        <ReactMarkdown 
+          remarkPlugins={[remarkGfm, remarkBreaks]}
+          components={{
+            pre: ({node, ...props}) => <pre style={{background: '#0d0d0d', padding: '12px', borderRadius: '4px', overflowX: 'auto', marginTop: '8px'}} {...props} />,
+            code: ({node, inline, className, children, ...props}) => {
+              const match = /language-(\w+)/.exec(className || '');
+              if (!inline && match && match[1] === 'mermaid') {
+                return <Mermaid chart={String(children).replace(/\n$/, '')} />;
+              }
+              return inline ? (
+                <code style={{background: '#222', padding: '2px 4px', borderRadius: '4px'}} {...props}>{children}</code>
+              ) : (
+                <code className={className} {...props}>{children}</code>
+              );
+            }
+          }}
+        >
+          {content}
+        </ReactMarkdown>
+      );
+  }
+  
+  const parts = content.split(/(<architecture>[\s\S]*?<\/architecture>)/);
+  return parts.map((part, i) => {
+      if (part.startsWith('<architecture>') && part.endsWith('</architecture>')) {
+          const jsonStr = part.replace('<architecture>', '').replace('</architecture>', '').replace(/```json/g, '').replace(/```/g, '').trim();
+          return <ArchitectureViewer key={i} architectureJson={jsonStr} />;
+      }
+      return (
+        <ReactMarkdown key={i}
+          remarkPlugins={[remarkGfm, remarkBreaks]}
+          components={{
+            pre: ({node, ...props}) => <pre style={{background: '#0d0d0d', padding: '12px', borderRadius: '4px', overflowX: 'auto', marginTop: '8px'}} {...props} />,
+            code: ({node, inline, className, children, ...props}) => {
+              const match = /language-(\w+)/.exec(className || '');
+              if (!inline && match && match[1] === 'mermaid') {
+                return <Mermaid chart={String(children).replace(/\n$/, '')} />;
+              }
+              return inline ? (
+                <code style={{background: '#222', padding: '2px 4px', borderRadius: '4px'}} {...props}>{children}</code>
+              ) : (
+                <code className={className} {...props}>{children}</code>
+              );
+            }
+          }}
+        >
+          {part}
+        </ReactMarkdown>
+      );
+  });
+};
 
 export default function Chat() {
   const [isOpen, setIsOpen] = useState(false);
@@ -143,25 +198,7 @@ export default function Chat() {
                 {msg.role === 'user' ? (
                   <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
                 ) : (
-                  <ReactMarkdown 
-                    remarkPlugins={[remarkGfm, remarkBreaks]}
-                    components={{
-                      pre: ({node, ...props}) => <pre style={{background: '#0d0d0d', padding: '12px', borderRadius: '4px', overflowX: 'auto', marginTop: '8px'}} {...props} />,
-                      code: ({node, inline, className, children, ...props}) => {
-                        const match = /language-(\w+)/.exec(className || '');
-                        if (!inline && match && match[1] === 'mermaid') {
-                          return <Mermaid chart={String(children).replace(/\n$/, '')} />;
-                        }
-                        return inline ? (
-                          <code style={{background: '#222', padding: '2px 4px', borderRadius: '4px'}} {...props}>{children}</code>
-                        ) : (
-                          <code className={className} {...props}>{children}</code>
-                        );
-                      }
-                    }}
-                  >
-                    {msg.content}
-                  </ReactMarkdown>
+                  renderMessageContent(msg.content)
                 )}
               </div>
             ))}
