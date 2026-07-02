@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useEffect, useState } from 'react';
+import React, { useCallback, useMemo, useEffect, useState, useRef } from 'react';
 import ReactFlow, { Background, Controls, MiniMap, useNodesState, useEdgesState, MarkerType, Handle, Position } from 'reactflow';
 import dagre from 'dagre';
 import 'reactflow/dist/style.css';
@@ -201,6 +201,15 @@ export default function ArchitectureViewer({ architectureJson, onNodeSelect }) {
   const [activeView, setActiveView] = useState('standard'); // standard, event, data, security
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const rfInstanceRef = useRef(null);
+
+  useEffect(() => {
+    if (rfInstanceRef.current) {
+      setTimeout(() => {
+        rfInstanceRef.current.fitView({ padding: 0.2, duration: 800 });
+      }, 100);
+    }
+  }, [isSidebarOpen, isFullscreen]);
 
   const handleExportTerraform = useCallback(() => {
     try {
@@ -440,6 +449,7 @@ export default function ArchitectureViewer({ architectureJson, onNodeSelect }) {
           nodesDraggable={isUnlocked}
           nodesConnectable={isUnlocked}
           nodeTypes={nodeTypes}
+          onInit={(instance) => { rfInstanceRef.current = instance; }}
           fitView
           fitViewOptions={{ padding: 0.2 }}
           attributionPosition="bottom-right"
