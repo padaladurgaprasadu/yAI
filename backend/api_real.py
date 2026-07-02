@@ -732,20 +732,24 @@ async def ai_chat(request_data: ChatRequest, request: Request):
   You MUST include a deep architectural review.
   Schema: 
   {{
-    "nodes": [{{"id":"n1","label":"Gateway","type":"gateway","zone":"edge"}}], 
+    "nodes": [{{"id":"n1","label":"API Gateway","type":"gateway","zone":"edge","tech":"Kong","status":"Healthy","description":"Entry point for all external traffic"}}], 
     "edges": [{{"source":"n1","target":"n2","label":"HTTP","type":"sync"}}], 
-    "zones": [{{"id":"edge","label":"Edge"}}],
+    "zones": [{{"id":"edge","label":"Edge Layer"}}],
     "review": {{
-      "score": 92,
-      "scalability": "Horizontal scaling enabled at edge...",
-      "security": "WAF at the gateway, private subnets...",
-      "bottlenecks": ["Primary database connection limits..."],
+      "score": 95,
+      "scalability": "Horizontal scaling enabled...",
+      "security": "WAF at the gateway...",
+      "bottlenecks": ["DB connection limits..."],
       "costDrivers": ["Always-on cache..."],
       "recommendations": ["Use read-replicas..."],
-      "tradeoffs": ["High availability vs Cost..."]
+      "tradeoffs": ["Consistency vs Availability..."]
     }}
   }}
   Types: gateway, microservice, database, external, queue, ai, cache, user. Edges: sync, async, data.
+  You MUST logically group services into `zones` (e.g. Edge Layer, API Layer, Data Layer).
+  Every node MUST belong to a valid zone ID.
+  Every node MUST include `tech`, `status`, and `description`.
+  Every service MUST own its database if applicable. Use Event-Driven patterns.
   THINK FIRST. Model the architecture, validate it, optimize it, then output the JSON. Every output must be presentation-ready for enterprise architecture discussions.
 - **Agent Hand-off:** If they are asking to build, develop, create, generate, OR research a complex project, return EXACTLY this format and nothing else:
 [BUILD] {{"goal": "The specific project they want", "agent_role": "Select the best role: Fullstack Web Developer, Machine Learning Engineer, Deep Learning Researcher, Data Scientist, Data Analyst, AI Systems Architect"}}
