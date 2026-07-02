@@ -29,10 +29,14 @@ class PlannerAgent(BaseAgent):
         
         if image_url:
             sys_prompt += "\n\nCRITICAL UI ARCHITECT RULE: The user has provided an image screenshot of a UI they want to build. You MUST analyze this screenshot visually. In your generated tasks/modules, explicitly include frontend components that match the layout, features, and interactive elements visible in the screenshot (e.g. 'HeroSection', 'SidebarNav', 'ProductGrid')."
-            human_content = [
-                {"type": "text", "text": f"Goal: {goal}"},
-                {"type": "image_url", "image_url": {"url": image_url}}
-            ]
+            human_content = [{"type": "text", "text": f"Goal: {goal}"}]
+            
+            # image_url might be a single string or a list of strings
+            if isinstance(image_url, list):
+                for img in image_url:
+                    human_content.append({"type": "image_url", "image_url": {"url": img}})
+            else:
+                human_content.append({"type": "image_url", "image_url": {"url": image_url}})
         else:
             human_content = f"Goal: {goal}"
             

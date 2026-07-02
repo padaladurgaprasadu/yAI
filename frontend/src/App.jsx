@@ -187,7 +187,7 @@ function App() {
   const [chatInput, setChatInput] = useState('')
   const [chatMessages, setChatMessages] = useState([])
   const [isChatLoading, setIsChatLoading] = useState(false)
-  const [selectedImage, setSelectedImage] = useState(null)
+  const [selectedImages, setSelectedImages] = useState([])
   const fileInputRef = useRef(null)
   
   // Sidebar History state
@@ -333,14 +333,21 @@ function App() {
   }
 
   const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
+    const files = Array.from(e.target.files);
+    
+    // Check if adding these files exceeds the limit of 4
+    if (selectedImages.length + files.length > 4) {
+      alert("You can only upload a maximum of 4 images.");
+      return;
+    }
+
+    files.forEach(file => {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setSelectedImage(reader.result);
+        setSelectedImages(prev => [...prev, reader.result]);
       };
       reader.readAsDataURL(file);
-    }
+    });
   }
 
   const startVoiceRecognition = () => {
@@ -368,10 +375,10 @@ function App() {
 
   const handleChatSubmit = async (e) => {
     e.preventDefault()
-    if (!chatInput.trim() && !selectedImage) return
-
+    if (!chatInput.trim() && selectedImages.length === 0) return
+    
     const userMessage = chatInput
-    const imagePayload = selectedImage
+    const imagePayload = selectedImages.length > 0 ? selectedImages : null
     
     // Add User message immediately
     const userMsgObj = { role: 'user', content: userMessage };
@@ -379,7 +386,7 @@ function App() {
     
     setChatMessages(prev => [...prev, userMsgObj])
     setChatInput('')
-    setSelectedImage(null)
+    setSelectedImages([])
     setIsChatLoading(true)
     
     // Add an empty AI message that we will stream into
@@ -939,22 +946,27 @@ function App() {
             padding: '0 20px'
           }}>
             {/* Image Preview Thumbnail */}
-            {selectedImage && (
+            {selectedImages.length > 0 && (
               <div style={{
                 position: 'relative',
                 marginBottom: '10px',
                 width: '100%',
                 maxWidth: '800px',
-                display: 'flex'
+                display: 'flex',
+                gap: '12px',
+                overflowX: 'auto',
+                padding: '4px 0'
               }}>
-                <div style={{ position: 'relative', display: 'inline-block' }}>
-                  <img src={selectedImage} alt="Upload preview" style={{ height: '60px', borderRadius: '8px', border: '2px solid #444', objectFit: 'cover' }} />
-                  <button 
-                    type="button"
-                    onClick={() => setSelectedImage(null)} 
-                    style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '22px', height: '22px', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 5px rgba(0,0,0,0.3)' }}
-                  >×</button>
-                </div>
+                {selectedImages.map((img, idx) => (
+                  <div key={idx} style={{ position: 'relative', display: 'inline-block' }}>
+                    <img src={img} alt={`Upload preview ${idx}`} style={{ height: '60px', borderRadius: '8px', border: '2px solid #444', objectFit: 'cover' }} />
+                    <button 
+                      type="button"
+                      onClick={() => setSelectedImages(prev => prev.filter((_, i) => i !== idx))} 
+                      style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '22px', height: '22px', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 5px rgba(0,0,0,0.3)' }}
+                    >×</button>
+                  </div>
+                ))}
               </div>
             )}
             
@@ -988,7 +1000,7 @@ function App() {
               border: '1px solid var(--border-color)',
               boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
             }}>
-              <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageUpload} style={{ display: 'none' }} />
+              <input type="file" multiple accept="image/*" ref={fileInputRef} onChange={handleImageUpload} style={{ display: 'none' }} />
               <button 
                 type="button" 
                 onClick={() => fileInputRef.current?.click()}

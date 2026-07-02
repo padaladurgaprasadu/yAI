@@ -11,6 +11,7 @@ class AiONState(TypedDict):
     modules: Optional[List[str]]
     dag_tasks: Optional[List[Dict[str, Any]]]
     blueprint: Optional[Dict[str, Any]]
+    image: Optional[List[str]]
     code_files: Optional[Dict[str, str]]
     error: Optional[str]
     runtime_error: Optional[str]
