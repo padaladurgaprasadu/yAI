@@ -1238,12 +1238,32 @@ function App() {
                 <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(10,10,10,0.95)', display: 'flex', flexDirection: 'column', zIndex: 50, padding: '30px', animation: 'fadeIn 0.3s ease-out' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                      <h3 style={{ margin: 0, fontWeight: '500', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div className="spinner" style={{ width: '20px', height: '20px' }}></div>
-                        Writing Code...
+                        {awaitingApproval ? (
+                           <div style={{ width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>⏸️</div>
+                        ) : (
+                           <div className="spinner" style={{ width: '20px', height: '20px' }}></div>
+                        )}
+                        {awaitingApproval ? 'Paused for Approval' : 'Writing Code...'}
                      </h3>
-                     <span style={{ color: 'var(--modal-text-color)', fontSize: '0.9rem' }}>
-                       {liveUpdates.length > 0 ? liveUpdates[liveUpdates.length - 1] : "Streaming Live from AiON Coder Agent"}
-                     </span>
+                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                       <span style={{ color: 'var(--modal-text-color)', fontSize: '0.9rem' }}>
+                         {liveUpdates.length > 0 ? liveUpdates[liveUpdates.length - 1] : "Streaming Live from AiON Coder Agent"}
+                       </span>
+                       {awaitingApproval && (
+                          <div style={{ display: 'flex', gap: '10px' }}>
+                             <button 
+                               onClick={() => handleResume('approve')}
+                               style={{ padding: '6px 12px', backgroundColor: 'var(--accent-color)', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '500', cursor: 'pointer', fontSize: '0.85rem' }}>
+                               Approve
+                             </button>
+                             <button 
+                               onClick={() => handleResume('abort')}
+                               style={{ padding: '6px 12px', backgroundColor: 'transparent', color: 'var(--modal-text-color)', border: '1px solid var(--border-color)', borderRadius: '6px', fontWeight: '500', cursor: 'pointer', fontSize: '0.85rem' }}>
+                               Abort
+                             </button>
+                          </div>
+                       )}
+                     </div>
                   </div>
                   
                   <div style={{ flex: 1, backgroundColor: 'var(--input-bg)', borderRadius: '12px', border: '1px solid var(--border-color)', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 40px rgba(0,0,0,0.5)' }}>
