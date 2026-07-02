@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import './App.css'
 import Auth from './components/Auth'
 import Chat from './components/Chat'
+import Mermaid from './Mermaid'
 import { supabase } from './lib/supabaseClient'
-import Whiteboard from './components/Whiteboard'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
@@ -97,13 +97,39 @@ const CodeBlock = ({ node, inline, className, children, ...props }) => {
 };
 
 const renderMessageContent = (content) => {
-  return (
-      <div className="markdown-body" onClick={handleMarkdownClick}>
-          <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={{ code: CodeBlock }}>
-              {content}
-          </ReactMarkdown>
-      </div>
-  );
+  if (!content.includes('<mermaid>')) {
+      return (
+          <div className="markdown-body" onClick={handleMarkdownClick}>
+              <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={{ code: CodeBlock }}>
+                  {content}
+              </ReactMarkdown>
+          </div>
+      );
+  }
+  
+  const parts = content.split(/(<mermaid>[\s\S]*?<\/mermaid>)/);
+  return parts.map((part, i) => {
+      if (part.startsWith('<mermaid>') && part.endsWith('</mermaid>')) {
+          const chart = part.replace('<mermaid>', '').replace('</mermaid>', '').trim();
+          if (!chart || chart.length < 5 || !chart.includes('\n')) {
+              return (
+                <div key={i} className="markdown-body" onClick={handleMarkdownClick}>
+                    <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={{ code: CodeBlock }}>
+                        {part}
+                    </ReactMarkdown>
+                </div>
+              );
+          }
+          return <Mermaid key={i} chart={chart} />;
+      }
+      return (
+          <div key={i} className="markdown-body" onClick={handleMarkdownClick}>
+              <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={{ code: CodeBlock }}>
+                  {part}
+              </ReactMarkdown>
+          </div>
+      );
+  });
 };
 
 function App() {
@@ -136,7 +162,6 @@ function App() {
   // Wizard state
   const [step, setStep] = useState(1) // 1: Prompt, 2: Review Blueprint, 3: Generation
   const [projectId, setProjectId] = useState(null)
-  const [activeTab, setActiveTab] = useState('chat')
   const [agentRole, setAgentRole] = useState("Fullstack Web Developer") // New: Agent Selector
   const [chatStatus, setChatStatus] = useState("") // New: Pipeline Status
   // Phase 4 additions
@@ -729,18 +754,6 @@ function App() {
           <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'linear-gradient(135deg, var(--accent), #2563eb)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold', fontSize: '1.2rem' }}>A</div>
           <h1 style={{ margin: 0, fontSize: '1.2rem', letterSpacing: '1px', fontWeight: '600' }}>AiON</h1>
         </div>
-        <div style={{ display: 'flex', background: 'var(--border-color)', borderRadius: '8px', padding: '4px' }}>
-          <button 
-            onClick={() => setActiveTab('chat')} 
-            style={{ padding: '6px 16px', background: activeTab === 'chat' ? 'var(--btn-bg)' : 'transparent', border: 'none', borderRadius: '6px', color: activeTab === 'chat' ? 'white' : 'var(--text-secondary)', cursor: 'pointer', fontWeight: activeTab === 'chat' ? 'bold' : 'normal', transition: 'all 0.2s' }}>
-            💬 Studio
-          </button>
-          <button 
-            onClick={() => setActiveTab('whiteboard')} 
-            style={{ padding: '6px 16px', background: activeTab === 'whiteboard' ? 'var(--btn-bg)' : 'transparent', border: 'none', borderRadius: '6px', color: activeTab === 'whiteboard' ? 'white' : 'var(--text-secondary)', cursor: 'pointer', fontWeight: activeTab === 'whiteboard' ? 'bold' : 'normal', transition: 'all 0.2s' }}>
-            🎨 Whiteboard
-          </button>
-        </div>
         <div style={{ display: 'flex', gap: '12px' }}>
           {/* Header right side is now empty, profile moved to sidebar */}
         </div>
@@ -803,14 +816,7 @@ function App() {
         </aside>
         )}
 
-        {/* CONDITIONALLY RENDER WHITEBOARD */}
-        {activeTab === 'whiteboard' ? (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-            <Whiteboard />
-          </div>
-        ) : (
-          <>
-            {/* CHAT SECTION (Centers when step=1, shrinks to 30% when step>1) */}
+        {/* CHAT SECTION (Centers when step=1, shrinks to 30% when step>1) */}
         <div className="chat-section" style={{ 
           flex: step === 1 ? '1' : '0 0 35%', 
           minHeight: 0,
@@ -1099,6 +1105,42 @@ function App() {
                 </div>
               )}
 
+      {/* STEP 1: WELCOME SCREEN */}
+      {step === 1 && !isLoading && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--text-secondary)' }}>
+          <div style={{ fontSize: '4rem', marginBottom: '20px' }}>🤖</div>
+          <h2>Welcome to the Omni-Chat Builder</h2>
+          <p>Talk to AiON Advisor on the left.</p>
+          <p>Ask questions, or ask it to "build a new project" and watch the magic happen!</p>
+        </div>
+      )}
+
+      {/* STEP 2: REVIEW BLUEPRINT */}
+      {step === 2 && !isLoading && (
+        <div className="results-section">
+          <div className="glass-panel result-card">
+            <h3>Architect's Blueprint</h3>
+            <p style={{marginBottom: '10px', color: 'var(--text-secondary)'}}>
+                You can edit this JSON to change the Tech Stack or add custom notes before generating!
+            </p>
+            <textarea 
+                style={{width: '100%', minHeight: '300px', backgroundColor: '#1e1e1e', color: 'var(--text-primary)', padding: '15px', fontFamily: 'monospace', borderRadius: '8px', border: '1px solid var(--border-color)'}}
+                value={blueprintJson}
+                onChange={(e) => setBlueprintJson(e.target.value)}
+                disabled={isLoading}
+            />
+            <div style={{display: 'flex', gap: '10px', marginTop: '15px'}}>
+                <button className="build-btn" style={{backgroundColor: 'var(--border-color)'}} onClick={() => setStep(1)} disabled={isLoading || isPlanning}>
+                    ⬅️ Go Back
+                </button>
+                <button className="build-btn" onClick={handleGenerate} disabled={isLoading || isPlanning}>
+                    {isPlanning ? 'Architect is typing...' : (isLoading ? 'Generating Code & Installing...' : '✅ Approve & Generate Code')}
+                </button>
+            </div>
+          </div>
+        </div>
+      )}
+
               {/* STEP 3: RESULTS */}
               {step === 3 && (
                 <div className="preview-section" style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.5s ease-out' }}>
@@ -1195,9 +1237,6 @@ function App() {
               )}
             </div>
           </div>
-        )}
-        
-        </>
         )}
         
         {/* SETTINGS MODAL */}
