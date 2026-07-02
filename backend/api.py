@@ -34,8 +34,11 @@ try:
 except Exception as e:
     # If it crashes, we capture the full stack trace
     startup_error = traceback.format_exc()
-    print("❌ Real API failed to load!")
-    print(startup_error)
+    print("[ERROR] Real API failed to load!")
+    try:
+        print(startup_error)
+    except:
+        pass
     
     @app.get("/")
     def health_fallback():

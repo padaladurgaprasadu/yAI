@@ -24,11 +24,7 @@ from slowapi.errors import RateLimitExceeded
 # Make sure Python can find our backend module when running from the CLI
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from backend.orchestrator.graph import build_plan_graph, build_generate_graph
 from backend.orchestrator.state import AiONState
-from backend.memory.neo4j_client import Neo4jClient
-from backend.memory.chroma_client import ChromaClient
-
 load_dotenv()
 
 app = FastAPI(
@@ -313,6 +309,7 @@ async def websocket_generate(websocket: WebSocket):
             semantic_context=None
         )
         
+        from backend.orchestrator.graph import build_generate_graph
         graph = build_generate_graph()
         
         def run_graph():
@@ -461,6 +458,7 @@ async def resume_generation(req: ResumeRequest, auth: dict = Depends(verify_toke
         raise HTTPException(status_code=404, detail="No active generation found for this project_id.")
         
     q = stream_queues[req.project_id]
+    from backend.orchestrator.graph import build_generate_graph
     graph = build_generate_graph()
     thread_config = {"configurable": {"thread_id": req.project_id}}
     
