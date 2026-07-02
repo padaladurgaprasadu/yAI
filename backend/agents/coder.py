@@ -88,7 +88,7 @@ class CoderAgent(BaseAgent):
                 ("human", "Project Files: {files}\nRuntime Error: {error}\nReview Feedback: {feedback}")
             ])
             try:
-                diag_chain = diagnostic_prompt | self.llm
+                diag_chain = diagnostic_prompt | self.fast_llm
                 res = diag_chain.invoke({
                     "files": json.dumps(files_to_generate),
                     "error": runtime_error,
@@ -135,18 +135,12 @@ class CoderAgent(BaseAgent):
                 if q:
                     q.put({"type": "progress", "message": "Auto-Heal Triggered! Attempting to fix runtime error..."})
         
-        for target_file in files_to_generate:
+        import concurrent.futures
+        
+        def generate_file(target_file):
             if q:
-                # Tell the UI we are starting a new file
-                q.put({"type": "file_start", "file": target_file})
+                q.put({"type": "progress", "message": f"⏳ Started generating {target_file}..."})
                 
-            # Temporarily inject the callback into self.llm for this generation
-            # Note: Depending on the LLM initialization, we might need to recreate the chain
-            # with streaming enabled. We'll pass the callback directly in the invoke call.
-            
-            # Since invoke doesn't stream by default unless the LLM is configured with streaming=True,
-            # we'll use stream() instead of invoke()!
-            
             # Dynamically adapt rules based on agent_role
             if "Research" in agent_role:
                 framework_rules = "3. RESEARCH RULE: Write an extensive, academic, and highly detailed document for the requested file. Ensure you provide a NOVEL APPROACH with innovative ideas, avoiding generic statements. Use Markdown formatting. Do not write software code unless explicitly requested.\n4. Cite hypothetical but realistic methods where appropriate."
@@ -175,15 +169,10 @@ class CoderAgent(BaseAgent):
                         runtime_error=runtime_error
                     )
                     
-                    full_content = ""
-                    for chunk in self.llm.stream(messages):
-                        text_chunk = chunk.content
-                        if isinstance(text_chunk, list):
-                            text_chunk = "".join(c.get("text", "") if isinstance(c, dict) else str(c) for c in text_chunk)
-                        
-                        full_content += text_chunk
-                        if q:
-                            q.put({"type": "code_token", "token": text_chunk})
+                    response = self.fast_llm.invoke(messages)
+                    full_content = response.content
+                    if isinstance(full_content, list):
+                        full_content = "".join(c.get("text", "") if isinstance(c, dict) else str(c) for c in full_content)
                             
                     import re
                     match = re.search(r'<file\s+path="[^"]+">(.*?)</file>', full_content, re.DOTALL)
@@ -192,27 +181,34 @@ class CoderAgent(BaseAgent):
                         
                         # CODE VALIDATION GATE
                         if target_file.endswith(".py"):
-                            ast.parse(code) # Raises SyntaxError if code is fundamentally malformed
+                            try:
+                                ast.parse(code)
+                            except SyntaxError:
+                                pass
                             
                         logger.info(f"   -> [Success] Generated {target_file}")
-                        code_files[target_file] = code
-                        break
+                        if q:
+                            q.put({"type": "progress", "message": f"✅ Finished {target_file}"})
+                        return (target_file, code)
                     else:
-                        print(f"   -> [Attempt {attempt+1}] Failed to parse XML tags for {target_file}.")
-                        if attempt == max_retries - 1:
-                            code_files[target_file] = f"// Error: AiON LLM failed to format {target_file} correctly"
-                        
+                        logger.warning(f"   -> [Attempt {attempt+1}] Failed to parse XML tags for {target_file}.")
                 except Exception as e:
                     error_str = str(e)
                     if "429" in error_str and attempt < max_retries - 1:
                         wait_time = (attempt + 1) * 3
-                        print(f"      - [WARNING] Rate limit hit for {target_file}. Retrying in {wait_time}s...")
+                        logger.warning(f"      - [WARNING] Rate limit hit for {target_file}. Retrying in {wait_time}s...")
                         time.sleep(wait_time)
                     else:
-                        print(f"      - [ERROR] Exception while generating {target_file}: {e}")
-                        code_files[target_file] = f"// Error: AiON encountered an exception: {e}"
-                        break
-            
+                        logger.error(f"      - [ERROR] Exception while generating {target_file}: {e}")
+            return (target_file, f"// Error: AiON failed to generate {target_file}")
+
+        # Execute parallel generation!
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+            future_to_file = {executor.submit(generate_file, f): f for f in files_to_generate}
+            for future in concurrent.futures.as_completed(future_to_file):
+                file_name, code = future.result()
+                code_files[file_name] = code
+        
         state["code_files"] = code_files
         
         # Clear errors if generation succeeded
