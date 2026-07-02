@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useEffect, useState } from 'react';
 import ReactFlow, { Background, Controls, MiniMap, useNodesState, useEdgesState, MarkerType, Handle, Position } from 'reactflow';
 import dagre from 'dagre';
 import 'reactflow/dist/style.css';
-import { Database, Server, Globe, ExternalLink, Mail, Zap, User, Code, Box, Maximize, Minimize, Info, Shield, Activity, X } from 'lucide-react';
+import { Database, Server, Globe, ExternalLink, Mail, Zap, User, Code, Box, Maximize, Minimize, Info, Shield, Activity, X, DownloadCloud } from 'lucide-react';
 
 const getLayoutedElements = (nodes, edges, zones = [], direction = 'LR') => {
   const dagreGraph = new dagre.graphlib.Graph({ compound: true });
@@ -199,6 +199,33 @@ export default function ArchitectureViewer({ architectureJson, onNodeSelect }) {
   const [reviewData, setReviewData] = useState(null);
   const [selectedNodeData, setSelectedNodeData] = useState(null);
   const [activeView, setActiveView] = useState('standard'); // standard, event, data, security
+  const [isUnlocked, setIsUnlocked] = useState(false);
+
+  const handleExportTerraform = useCallback(() => {
+    try {
+      const data = typeof architectureJson === 'string' ? JSON.parse(architectureJson) : architectureJson;
+      let tfContent = `# Auto-generated Terraform Scaffolding by AiON Architecture Studio\n\n`;
+      data.nodes.forEach(node => {
+        const resourceName = node.label.toLowerCase().replace(/[^a-z0-9]/g, '_');
+        if (node.type === 'database') {
+          tfContent += `resource "aws_db_instance" "${resourceName}" {\n  allocated_storage = 20\n  engine = "postgres"\n  instance_class = "db.t3.micro"\n}\n\n`;
+        } else if (node.type === 'microservice' || node.type === 'gateway') {
+          tfContent += `resource "aws_ecs_service" "${resourceName}" {\n  name = "${node.label}"\n  cluster = aws_ecs_cluster.main.id\n}\n\n`;
+        } else {
+          tfContent += `# Resource placeholder for ${node.label} (${node.type})\n\n`;
+        }
+      });
+      const blob = new Blob([tfContent], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'infrastructure.tf';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error("Export failed", e);
+    }
+  }, [architectureJson]);
 
   useEffect(() => {
     try {
@@ -348,6 +375,9 @@ export default function ArchitectureViewer({ architectureJson, onNodeSelect }) {
             <button onClick={() => setActiveView('standard')} style={{ padding: '6px 12px', borderRadius: '8px', background: activeView === 'standard' ? '#3b82f6' : 'transparent', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '12px' }}>Standard View</button>
             <button onClick={() => setActiveView('event')} style={{ padding: '6px 12px', borderRadius: '8px', background: activeView === 'event' ? '#10b981' : 'transparent', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '12px' }}>Event Flow</button>
             <button onClick={() => setActiveView('data')} style={{ padding: '6px 12px', borderRadius: '8px', background: activeView === 'data' ? '#f59e0b' : 'transparent', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '12px' }}>Data View</button>
+            <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)', margin: '0 4px' }} />
+            <button onClick={() => setIsUnlocked(!isUnlocked)} style={{ padding: '6px 12px', borderRadius: '8px', background: isUnlocked ? '#ec4899' : 'transparent', color: 'white', border: '1px solid rgba(255,255,255,0.2)', cursor: 'pointer', fontWeight: 600, fontSize: '12px' }}>{isUnlocked ? 'Lock Canvas' : 'Unlock Canvas'}</button>
+            <button onClick={handleExportTerraform} style={{ padding: '6px 12px', borderRadius: '8px', background: '#10b981', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}><DownloadCloud size={14} /> Export IaC</button>
         </div>
 
         <button 
@@ -387,6 +417,8 @@ export default function ArchitectureViewer({ architectureJson, onNodeSelect }) {
               if (onNodeSelect) onNodeSelect(node.data);
             }
           }}
+          nodesDraggable={isUnlocked}
+          nodesConnectable={isUnlocked}
           nodeTypes={nodeTypes}
           fitView
           fitViewOptions={{ padding: 0.2 }}
