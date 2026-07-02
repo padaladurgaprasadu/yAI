@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react'
 import './App.css'
 import Auth from './components/Auth'
 import Chat from './components/Chat'
-import Mermaid from './Mermaid'
 import { supabase } from './lib/supabaseClient'
 import Whiteboard from './components/Whiteboard'
 import ReactMarkdown from 'react-markdown'
@@ -98,39 +97,13 @@ const CodeBlock = ({ node, inline, className, children, ...props }) => {
 };
 
 const renderMessageContent = (content) => {
-  if (!content.includes('<mermaid>')) {
-      return (
-          <div className="markdown-body" onClick={handleMarkdownClick}>
-              <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={{ code: CodeBlock }}>
-                  {content}
-              </ReactMarkdown>
-          </div>
-      );
-  }
-  
-  const parts = content.split(/(<mermaid>[\s\S]*?<\/mermaid>)/);
-  return parts.map((part, i) => {
-      if (part.startsWith('<mermaid>') && part.endsWith('</mermaid>')) {
-          const chart = part.replace('<mermaid>', '').replace('</mermaid>', '').trim();
-          if (!chart || chart.length < 5 || !chart.includes('\n')) {
-              return (
-                <div key={i} className="markdown-body" onClick={handleMarkdownClick}>
-                    <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={{ code: CodeBlock }}>
-                        {part}
-                    </ReactMarkdown>
-                </div>
-              );
-          }
-          return <Mermaid key={i} chart={chart} />;
-      }
-      return (
-          <div key={i} className="markdown-body" onClick={handleMarkdownClick}>
-              <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={{ code: CodeBlock }}>
-                  {part}
-              </ReactMarkdown>
-          </div>
-      );
-  });
+  return (
+      <div className="markdown-body" onClick={handleMarkdownClick}>
+          <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={{ code: CodeBlock }}>
+              {content}
+          </ReactMarkdown>
+      </div>
+  );
 };
 
 function App() {
