@@ -60,14 +60,17 @@ import redis.asyncio as aioredis
 # Initialize Database Tables
 Base.metadata.create_all(bind=engine)
 
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])
 def health_check():
     return {"status": "ok", "message": "AiON Backend is running with PostgreSQL & Redis"}
 
 # Initialize Redis for Rate Limiting
 # Note: slowapi requires an async redis connection string for storage
 try:
-    limiter = Limiter(key_func=get_remote_address, storage_uri=REDIS_URL.replace("redis://", "redis+asyncio://"))
+    if REDIS_URL:
+        limiter = Limiter(key_func=get_remote_address, storage_uri=REDIS_URL.replace("redis://", "redis+asyncio://"))
+    else:
+        limiter = Limiter(key_func=get_remote_address)
 except Exception as e:
     print(f"[WARNING] Failed to connect to Redis for Rate Limiting. Falling back to memory: {e}")
     limiter = Limiter(key_func=get_remote_address)
