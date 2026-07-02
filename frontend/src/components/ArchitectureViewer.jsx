@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useEffect, useState } from 'react';
 import ReactFlow, { Background, Controls, MiniMap, useNodesState, useEdgesState, MarkerType, Handle, Position } from 'reactflow';
 import dagre from 'dagre';
 import 'reactflow/dist/style.css';
-import { Database, Server, Globe, ExternalLink, Mail, Zap, User, Code, Box, Maximize, Minimize, Info, Shield, Activity, X, DownloadCloud } from 'lucide-react';
+import { Database, Server, Globe, ExternalLink, Mail, Zap, User, Code, Box, Maximize, Minimize, Info, Shield, Activity, X, DownloadCloud, PanelRightClose, PanelRightOpen } from 'lucide-react';
 
 const getLayoutedElements = (nodes, edges, zones = [], direction = 'LR') => {
   const dagreGraph = new dagre.graphlib.Graph({ compound: true });
@@ -200,6 +200,7 @@ export default function ArchitectureViewer({ architectureJson, onNodeSelect }) {
   const [selectedNodeData, setSelectedNodeData] = useState(null);
   const [activeView, setActiveView] = useState('standard'); // standard, event, data, security
   const [isUnlocked, setIsUnlocked] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const handleExportTerraform = useCallback(() => {
     try {
@@ -380,30 +381,49 @@ export default function ArchitectureViewer({ architectureJson, onNodeSelect }) {
             <button onClick={handleExportTerraform} style={{ padding: '6px 12px', borderRadius: '8px', background: '#10b981', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}><DownloadCloud size={14} /> Export IaC</button>
         </div>
 
-        <button 
-          onClick={() => setIsFullscreen(!isFullscreen)}
-          style={{
-            position: 'absolute',
-            top: '24px',
-            right: '24px',
-            zIndex: 10,
-            background: 'rgba(24, 24, 27, 0.8)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            color: 'white',
-            padding: '10px 16px',
-            borderRadius: '12px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            backdropFilter: 'blur(8px)',
-            boxShadow: '0 8px 16px rgba(0, 0, 0, 0.4)',
-            fontWeight: 600
-          }}
-        >
-          {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
-          {isFullscreen ? 'Exit Fullscreen' : 'Expand View'}
-        </button>
+        <div style={{ position: 'absolute', top: '24px', right: '24px', zIndex: 10, display: 'flex', gap: '12px' }}>
+          <button 
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            style={{
+              background: 'rgba(24, 24, 27, 0.8)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              color: 'white',
+              padding: '10px 16px',
+              borderRadius: '12px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              backdropFilter: 'blur(8px)',
+              boxShadow: '0 8px 16px rgba(0, 0, 0, 0.4)',
+              fontWeight: 600
+            }}
+          >
+            {isSidebarOpen ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
+            {isSidebarOpen ? 'Hide Review' : 'Show Review'}
+          </button>
+          
+          <button 
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            style={{
+              background: 'rgba(24, 24, 27, 0.8)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              color: 'white',
+              padding: '10px 16px',
+              borderRadius: '12px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              backdropFilter: 'blur(8px)',
+              boxShadow: '0 8px 16px rgba(0, 0, 0, 0.4)',
+              fontWeight: 600
+            }}
+          >
+            {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
+            {isFullscreen ? 'Exit Fullscreen' : 'Expand View'}
+          </button>
+        </div>
 
         <ReactFlow
           key={isFullscreen ? 'fs' : 'normal'}
@@ -430,7 +450,7 @@ export default function ArchitectureViewer({ architectureJson, onNodeSelect }) {
       </div>
 
       {/* RIGHT: Architecture Validation Sidebar */}
-      {reviewData && (
+      {reviewData && isSidebarOpen && (
         <div style={{
           width: '380px',
           background: 'rgba(15,15,20,0.98)',
