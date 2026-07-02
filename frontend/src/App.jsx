@@ -4,6 +4,7 @@ import Auth from './components/Auth'
 import Chat from './components/Chat'
 import { supabase } from './lib/supabaseClient'
 import ArchitectureViewer from './components/ArchitectureViewer'
+import PreviewViewer from './components/PreviewViewer'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
@@ -1306,40 +1307,15 @@ function App() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px', borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--sidebar-bg)' }}>
                         <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '500' }}>Live Preview</h3>
                         <div style={{ display: 'flex', gap: '10px' }}>
-                            {!isPreviewRunning ? (
-                                <button onClick={handleStartPreview} disabled={isLoading} style={{ padding: '6px 14px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 'bold', border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #10b981, #059669)', color: 'var(--text-primary)' }}>
-                                    ▶ Start
-                                </button>
-                            ) : (
-                                <button onClick={handleStopPreview} style={{ padding: '6px 14px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 'bold', border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #ef4444, #dc2626)', color: 'var(--text-primary)' }}>
-                                    ⏹ Stop
-                                </button>
-                            )}
-                            {isPreviewRunning && !isLoading && (
-                                <button onClick={() => window.open(`http://localhost:${previewPort}`, '_blank')} style={{ padding: '6px 14px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 'bold', border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #a855f7, #9333ea)', color: 'var(--text-primary)' }}>
-                                    ↗ New Tab
-                                </button>
-                            )}
                             <button onClick={() => window.location.href = `${API_URL}/api/download`} style={{ padding: '6px 14px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 'bold', border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #3b82f6, #2563eb)', color: 'var(--text-primary)' }}>
-                                ↓ Download
+                                ↓ Download ZIP
                             </button>
                         </div>
                     </div>
                     
-                    {isPreviewRunning && !isLoading && (
-                        <div style={{ width: '100%', height: '500px', backgroundColor: '#fff', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
-                            <iframe 
-                                src={`http://localhost:${previewPort}`} 
-                                width="100%" height="100%" frameBorder="0" title="Live Preview" 
-                            />
-                        </div>
-                    )}
-                    {isPreviewRunning && isLoading && (
-                        <div style={{ width: '100%', height: '200px', display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column', gap: '15px' }}>
-                            <div className="spinner" style={{ width: '30px', height: '30px' }}></div>
-                            <p style={{ color: 'var(--modal-text-color)' }}>Booting up server and opening tab...</p>
-                        </div>
-                    )}
+                    <div style={{ width: '100%', height: '600px', backgroundColor: '#fff', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative', zIndex: 1 }}>
+                        <PreviewViewer codeFiles={codeFiles} />
+                    </div>
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
