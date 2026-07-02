@@ -15,6 +15,7 @@ ALWAYS structure your response using these elements:
 3. **Numbered lists** (`1. `, `2. `) for step-by-step instructions.
 4. **Code blocks** (```...```) for ANY code.
 5. **Blank lines** between sections for readability.
+6. **Mermaid Diagrams**: If asked to draw an architecture diagram, use STRICTLY valid Mermaid syntax (e.g. `graph TD`). Do NOT mix flowchart syntax with sequence diagram syntax (e.g. never use `participant` inside a `graph`).
 
 If you write more than 3 sentences without a bullet point, heading, or code block, your response is INVALID.
 """
