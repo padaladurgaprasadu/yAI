@@ -767,7 +767,9 @@ async def ai_chat(request_data: ChatRequest, request: Request):
                     
             # 🟢 [INSTRUCTION REINFORCEMENT] Append formatting constraints to the final message
             # This guarantees the LLM doesn't "forget" the system prompt during long conversation histories.
-            if "Project Development" in str(intent_data.get("primary_intent", "")):
+            is_architecture_req = any(word in sanitized_message.lower() for word in ["diagram", "architecture", "flowchart", "workflow"])
+            
+            if "Project Development" in str(intent_data.get("primary_intent", "")) or is_architecture_req:
                 formatting_reminder = ""
             else:
                 formatting_reminder = "\n\n[CRITICAL REMINDER]: You MUST strictly follow the requested formatting. Use H3 (###) headers, bold text, bullet points, and NEVER write paragraphs longer than 2 sentences. You MUST put headers and bullet points on their own separate lines."
