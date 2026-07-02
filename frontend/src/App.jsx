@@ -1135,16 +1135,82 @@ function App() {
               )}
 
               {/* STEP 4: ARCHITECTURE STUDIO */}
-              {step === 4 && activeArchitecture && (
-                <div style={{ animation: 'fadeIn 0.5s ease-out', width: '100%', height: 'calc(100dvh - 60px)', display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                    <h2 style={{ margin: 0, fontWeight: '500' }}>AiON Architect Studio</h2>
+              {step === 4 && activeArchitecture && (() => {
+                const archData = typeof activeArchitecture === 'string' ? JSON.parse(activeArchitecture) : activeArchitecture;
+                const review = archData.review;
+                
+                return (
+                  <div style={{ animation: 'fadeIn 0.5s ease-out', width: '100%', height: 'calc(100dvh - 60px)', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                      <h2 style={{ margin: 0, fontWeight: '500' }}>AiON Architect Studio</h2>
+                      {review && review.score && (
+                        <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid #10b981', color: '#10b981', padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span>🏆 Architecture Score:</span> {review.score}/100
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ flex: 1, display: 'flex', gap: '20px', overflow: 'hidden' }}>
+                      <div style={{ flex: 1, backgroundColor: '#0a0a0a', borderRadius: '12px', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
+                        <ArchitectureViewer architectureJson={activeArchitecture} />
+                      </div>
+                      
+                      {review && (
+                        <div style={{ width: '340px', backgroundColor: '#121212', borderRadius: '12px', border: '1px solid var(--border-color)', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+                          <div style={{ padding: '16px', borderBottom: '1px solid var(--border-color)', backgroundColor: '#18181b', position: 'sticky', top: 0, zIndex: 10 }}>
+                            <h3 style={{ margin: 0, fontSize: '1rem', color: '#f4f4f5', display: 'flex', alignItems: 'center', gap: '8px' }}>🔍 Architectural Review</h3>
+                          </div>
+                          <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                            {review.scalability && (
+                              <div>
+                                <h4 style={{ margin: '0 0 8px 0', fontSize: '13px', color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>📈 Scalability</h4>
+                                <p style={{ margin: 0, fontSize: '13px', color: '#a1a1aa', lineHeight: 1.5 }}>{review.scalability}</p>
+                              </div>
+                            )}
+                            {review.security && (
+                              <div>
+                                <h4 style={{ margin: '0 0 8px 0', fontSize: '13px', color: '#f87171', textTransform: 'uppercase', letterSpacing: '0.5px' }}>🛡️ Security</h4>
+                                <p style={{ margin: 0, fontSize: '13px', color: '#a1a1aa', lineHeight: 1.5 }}>{review.security}</p>
+                              </div>
+                            )}
+                            {review.bottlenecks && review.bottlenecks.length > 0 && (
+                              <div>
+                                <h4 style={{ margin: '0 0 8px 0', fontSize: '13px', color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>⚠️ Bottlenecks</h4>
+                                <ul style={{ margin: 0, paddingLeft: '16px', color: '#a1a1aa', fontSize: '13px', lineHeight: 1.5 }}>
+                                  {review.bottlenecks.map((b, i) => <li key={i}>{b}</li>)}
+                                </ul>
+                              </div>
+                            )}
+                            {review.costDrivers && review.costDrivers.length > 0 && (
+                              <div>
+                                <h4 style={{ margin: '0 0 8px 0', fontSize: '13px', color: '#34d399', textTransform: 'uppercase', letterSpacing: '0.5px' }}>💰 Cost Drivers</h4>
+                                <ul style={{ margin: 0, paddingLeft: '16px', color: '#a1a1aa', fontSize: '13px', lineHeight: 1.5 }}>
+                                  {review.costDrivers.map((c, i) => <li key={i}>{c}</li>)}
+                                </ul>
+                              </div>
+                            )}
+                            {review.tradeoffs && review.tradeoffs.length > 0 && (
+                              <div>
+                                <h4 style={{ margin: '0 0 8px 0', fontSize: '13px', color: '#c084fc', textTransform: 'uppercase', letterSpacing: '0.5px' }}>⚖️ Trade-offs</h4>
+                                <ul style={{ margin: 0, paddingLeft: '16px', color: '#a1a1aa', fontSize: '13px', lineHeight: 1.5 }}>
+                                  {review.tradeoffs.map((t, i) => <li key={i}>{t}</li>)}
+                                </ul>
+                              </div>
+                            )}
+                            {review.recommendations && review.recommendations.length > 0 && (
+                              <div>
+                                <h4 style={{ margin: '0 0 8px 0', fontSize: '13px', color: '#fbbf24', textTransform: 'uppercase', letterSpacing: '0.5px' }}>💡 Recommendations</h4>
+                                <ul style={{ margin: 0, paddingLeft: '16px', color: '#a1a1aa', fontSize: '13px', lineHeight: 1.5 }}>
+                                  {review.recommendations.map((r, i) => <li key={i}>{r}</li>)}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div style={{ flex: 1, backgroundColor: '#0a0a0a', borderRadius: '12px', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
-                    <ArchitectureViewer architectureJson={activeArchitecture} />
-                  </div>
-                </div>
-              )}
+                );
+              })()}
 
       {/* STEP 1: WELCOME SCREEN */}
       {step === 1 && !isLoading && (
