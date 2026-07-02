@@ -21,5 +21,5 @@ COPY . .
 # Expose the API port
 EXPOSE 5000
 
-# Start the FastAPI server
-CMD ["uvicorn", "api_real:app", "--host", "0.0.0.0", "--port", "5000"]
+# Start the FastAPI server using the PORT environment variable provided by Render
+CMD sh -c "uvicorn api_real:app --host 0.0.0.0 --port ${PORT:-5000}"
