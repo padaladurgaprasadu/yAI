@@ -6,7 +6,7 @@ import { Database, Server, Globe, ExternalLink, Mail, Zap, User, Code, Box, Maxi
 
 const getLayoutedElements = (nodes, edges, zones = [], direction = 'LR') => {
   const dagreGraph = new dagre.graphlib.Graph({ compound: true });
-  dagreGraph.setGraph({ rankdir: direction, nodesep: 80, ranksep: 250, edgesep: 100, ranker: 'network-simplex' });
+  dagreGraph.setGraph({ rankdir: direction, nodesep: 40, ranksep: 120, edgesep: 40, ranker: 'network-simplex' });
   dagreGraph.setDefaultEdgeLabel(() => ({}));
 
   const isHorizontal = direction === 'LR';
@@ -37,8 +37,8 @@ const getLayoutedElements = (nodes, edges, zones = [], direction = 'LR') => {
         id: zone.id,
         type: 'zone',
         data: { label: zone.label },
-        position: { x: zNode.x - zNode.width / 2 - 40, y: zNode.y - zNode.height / 2 - 60 },
-        style: { width: zNode.width + 80, height: zNode.height + 100, zIndex: -1 },
+        position: { x: zNode.x - zNode.width / 2 - 20, y: zNode.y - zNode.height / 2 - 40 },
+        style: { width: zNode.width + 40, height: zNode.height + 60, zIndex: -1 },
         draggable: false,
         selectable: false
       });
@@ -278,6 +278,7 @@ export default function ArchitectureViewer({ architectureJson, onNodeSelect }) {
       </button>
 
       <ReactFlow
+        key={isFullscreen ? 'fs' : 'normal'}
         nodes={nodes}
         edges={edges}
         onNodesChange={onNodesChange}
