@@ -205,9 +205,11 @@ export default function ArchitectureViewer({ architectureJson, onNodeSelect }) {
 
   useEffect(() => {
     if (rfInstanceRef.current) {
-      setTimeout(() => {
-        rfInstanceRef.current.fitView({ padding: 0.2, duration: 800 });
-      }, 100);
+      [50, 200, 500].forEach(delay => {
+        setTimeout(() => {
+          rfInstanceRef.current?.fitView({ padding: 0.2, duration: 800 });
+        }, delay);
+      });
     }
   }, [isSidebarOpen, isFullscreen]);
 
@@ -308,6 +310,10 @@ export default function ArchitectureViewer({ architectureJson, onNodeSelect }) {
       
       setNodes(layoutedNodes);
       setEdges(layoutedEdges);
+      
+      if (rfInstanceRef.current) {
+        setTimeout(() => rfInstanceRef.current.fitView({ padding: 0.2, duration: 800 }), 100);
+      }
     } catch (err) {
       console.error("Failed to parse architecture JSON", err);
     }
