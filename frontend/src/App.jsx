@@ -1241,7 +1241,9 @@ function App() {
                         <div className="spinner" style={{ width: '20px', height: '20px' }}></div>
                         Writing Code...
                      </h3>
-                     <span style={{ color: 'var(--modal-text-color)', fontSize: '0.9rem' }}>Streaming Live from AiON Coder Agent</span>
+                     <span style={{ color: 'var(--modal-text-color)', fontSize: '0.9rem' }}>
+                       {liveUpdates.length > 0 ? liveUpdates[liveUpdates.length - 1] : "Streaming Live from AiON Coder Agent"}
+                     </span>
                   </div>
                   
                   <div style={{ flex: 1, backgroundColor: 'var(--input-bg)', borderRadius: '12px', border: '1px solid var(--border-color)', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 40px rgba(0,0,0,0.5)' }}>
