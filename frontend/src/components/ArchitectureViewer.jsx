@@ -1,8 +1,8 @@
-import React, { useCallback, useMemo, useEffect } from 'react';
+import React, { useCallback, useMemo, useEffect, useState } from 'react';
 import ReactFlow, { Background, Controls, MiniMap, useNodesState, useEdgesState, MarkerType } from 'reactflow';
 import dagre from 'dagre';
 import 'reactflow/dist/style.css';
-import { Database, Server, Globe, ExternalLink, Mail, Zap, User, Code, Box } from 'lucide-react';
+import { Database, Server, Globe, ExternalLink, Mail, Zap, User, Code, Box, Maximize, Minimize } from 'lucide-react';
 
 // Dagre Layout Engine
 const dagreGraph = new dagre.graphlib.Graph();
@@ -103,6 +103,7 @@ const nodeTypes = {
 export default function ArchitectureViewer({ architectureJson }) {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
     try {
@@ -148,7 +149,53 @@ export default function ArchitectureViewer({ architectureJson }) {
   }, [architectureJson]);
 
   return (
-    <div style={{ width: '100%', height: '500px', background: '#0a0a0a', borderRadius: '12px', border: '1px solid #27272a', overflow: 'hidden', marginTop: '16px', marginBottom: '16px' }}>
+    <div style={{ 
+      ...(isFullscreen ? {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        zIndex: 99999,
+        background: '#0a0a0a',
+        padding: '20px'
+      } : {
+        width: '100%', 
+        height: '500px', 
+        minWidth: '300px',
+        background: '#0a0a0a', 
+        borderRadius: '12px', 
+        border: '1px solid #27272a', 
+        overflow: 'hidden', 
+        marginTop: '16px', 
+        marginBottom: '16px',
+        position: 'relative'
+      })
+    }}>
+      <button 
+        onClick={() => setIsFullscreen(!isFullscreen)}
+        style={{
+          position: 'absolute',
+          top: '16px',
+          right: '16px',
+          zIndex: 10,
+          background: 'rgba(24, 24, 27, 0.8)',
+          border: '1px solid #3f3f46',
+          color: 'white',
+          padding: '8px 12px',
+          borderRadius: '8px',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          backdropFilter: 'blur(4px)',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+        }}
+      >
+        {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
+        {isFullscreen ? 'Exit Fullscreen' : 'Expand to Fullscreen'}
+      </button>
+
       <ReactFlow
         nodes={nodes}
         edges={edges}

@@ -96,7 +96,7 @@ const CodeBlock = ({ node, inline, className, children, ...props }) => {
   );
 };
 
-const renderMessageContent = (content) => {
+const renderMessageContent = (content, onOpenArchitecture) => {
   if (!content.includes('<architecture>')) {
       return (
           <div className="markdown-body" onClick={handleMarkdownClick}>
@@ -113,7 +113,24 @@ const renderMessageContent = (content) => {
           const jsonStr = part.replace('<architecture>', '').replace('</architecture>', '').replace(/```json/g, '').replace(/```/g, '').trim();
           return (
             <div key={i} style={{ margin: '16px 0' }}>
-              <ArchitectureViewer architectureJson={jsonStr} />
+              <button 
+                onClick={() => onOpenArchitecture(jsonStr)}
+                style={{
+                  background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '12px 24px',
+                  borderRadius: '8px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+                }}
+              >
+                <span>📐</span> View Architecture Diagram in Workspace
+              </button>
             </div>
           );
       }
@@ -159,6 +176,7 @@ function App() {
   const [projectId, setProjectId] = useState(null)
   const [agentRole, setAgentRole] = useState("Fullstack Web Developer") // New: Agent Selector
   const [chatStatus, setChatStatus] = useState("") // New: Pipeline Status
+  const [activeArchitecture, setActiveArchitecture] = useState(null) // New: Architecture Mode
   // Phase 4 additions
   const [blueprintJson, setBlueprintJson] = useState('')
   const [codeFiles, setCodeFiles] = useState(null)
@@ -207,6 +225,22 @@ function App() {
         console.error("Failed to load chat history", e);
     }
   }, []);
+
+  // Effect to automatically open architecture if the AI outputs it
+  useEffect(() => {
+    if (chatMessages.length > 0) {
+      const lastMessage = chatMessages[chatMessages.length - 1];
+      if (lastMessage.role === 'ai' && lastMessage.content.includes('<architecture>')) {
+        const parts = lastMessage.content.split(/(<architecture>[\s\S]*?<\/architecture>)/);
+        const archPart = parts.find(p => p.startsWith('<architecture>') && p.endsWith('</architecture>'));
+        if (archPart) {
+          const jsonStr = archPart.replace('<architecture>', '').replace('</architecture>', '').replace(/```json/g, '').replace(/```/g, '').trim();
+          setActiveArchitecture(jsonStr);
+          setStep(4);
+        }
+      }
+    }
+  }, [chatMessages]);
 
   // Save current chat to localStorage whenever it updates
   useEffect(() => {
@@ -871,7 +905,7 @@ function App() {
                         <img src={msg.visual.url} alt={msg.visual.alt} style={{ maxWidth: '400px', maxHeight: '300px', width: '100%', objectFit: 'cover', display: 'block' }} />
                       </div>
                     )}
-                    {renderMessageContent(msg.content + (idx === chatMessages.length - 1 && isChatLoading && msg.role === 'ai' ? ' ▋' : ''))}
+                    {renderMessageContent(msg.content + (idx === chatMessages.length - 1 && isChatLoading && msg.role === 'ai' ? ' ▋' : ''), (jsonStr) => { setActiveArchitecture(jsonStr); setStep(4); })}
                     {msg.role === 'ai' && (
                       <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
                         <button 
@@ -1097,6 +1131,18 @@ function App() {
                       onChange={(e) => setBlueprintJson(e.target.value)}
                       disabled={isLoading}
                   />
+                </div>
+              )}
+
+              {/* STEP 4: ARCHITECTURE STUDIO */}
+              {step === 4 && activeArchitecture && (
+                <div style={{ animation: 'fadeIn 0.5s ease-out', width: '100%', height: 'calc(100dvh - 60px)', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <h2 style={{ margin: 0, fontWeight: '500' }}>AiON Architect Studio</h2>
+                  </div>
+                  <div style={{ flex: 1, backgroundColor: '#0a0a0a', borderRadius: '12px', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
+                    <ArchitectureViewer architectureJson={activeArchitecture} />
+                  </div>
                 </div>
               )}
 
