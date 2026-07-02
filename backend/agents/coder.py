@@ -140,6 +140,7 @@ class CoderAgent(BaseAgent):
         def generate_file(target_file):
             if q:
                 q.put({"type": "progress", "message": f"⏳ Started generating {target_file}..."})
+                q.put({"type": "file_start", "file": target_file})
                 
             # Dynamically adapt rules based on agent_role
             if "Research" in agent_role:
@@ -169,11 +170,13 @@ class CoderAgent(BaseAgent):
                         runtime_error=runtime_error
                     )
                     
-                    response = self.fast_llm.invoke(messages)
-                    full_content = response.content
-                    if isinstance(full_content, list):
-                        full_content = "".join(c.get("text", "") if isinstance(c, dict) else str(c) for c in full_content)
-                            
+                    response_text = ""
+                    for chunk in self.fast_llm.stream(messages):
+                        if q and chunk.content:
+                            q.put({"type": "code_token", "file": target_file, "token": chunk.content})
+                        response_text += chunk.content
+                    
+                    full_content = response_text
                     import re
                     match = re.search(r'<file\s+path="[^"]+">(.*?)</file>', full_content, re.DOTALL)
                     if match:

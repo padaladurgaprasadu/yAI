@@ -661,12 +661,11 @@ function App() {
           setLiveUpdates(prev => [...prev, `Writing code for ${data.file}...`])
         } else if (data.type === "code_token") {
           setLiveCodeFiles(prev => {
-             const fileKeys = Object.keys(prev);
-             if (fileKeys.length === 0) return prev;
-             const lastFile = fileKeys[fileKeys.length - 1];
+             const targetFile = data.file || (Object.keys(prev).length > 0 ? Object.keys(prev)[Object.keys(prev).length - 1] : null);
+             if (!targetFile) return prev;
              return {
                  ...prev,
-                 [lastFile]: prev[lastFile] + data.token
+                 [targetFile]: (prev[targetFile] || "") + data.token
              };
           })
         } else if (data.type === "complete") {
