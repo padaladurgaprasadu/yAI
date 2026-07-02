@@ -73,41 +73,46 @@ const CustomNode = ({ data, isConnectable }) => {
   
   return (
     <div style={{
-      padding: '16px',
+      width: '260px',
+      background: 'rgba(15, 15, 20, 0.95)',
       borderRadius: '12px',
-      background: 'rgba(24, 24, 27, 0.95)',
       border: `1px solid rgba(255, 255, 255, 0.1)`,
-      borderLeft: `4px solid ${style.accent}`,
-      color: '#fff',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '16px',
-      width: '240px',
-      boxShadow: `0 4px 20px -2px rgba(0, 0, 0, 0.8), 0 0 15px -3px ${style.glow}`,
-      backdropFilter: 'blur(8px)',
-      transition: 'all 0.3s ease',
-      position: 'relative'
-    }}>
-      <Handle type="target" position={Position.Left} isConnectable={isConnectable} style={{ background: '#3f3f46', width: '8px', height: '8px', border: 'none', left: '-6px' }} />
+      borderTop: `4px solid ${style.accent}`,
+      boxShadow: `0 8px 32px rgba(0, 0, 0, 0.6), 0 0 20px -5px ${style.glow}`,
+      backdropFilter: 'blur(12px)',
+      position: 'relative',
+      overflow: 'hidden',
+      transition: 'transform 0.2s, box-shadow 0.2s'
+    }}
+    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 12px 40px rgba(0, 0, 0, 0.7), 0 0 25px -2px ${style.glow}`; }}
+    onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = `0 8px 32px rgba(0, 0, 0, 0.6), 0 0 20px -5px ${style.glow}`; }}
+    >
+      {/* Subtle grid overlay */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: 'radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px)', backgroundSize: '12px 12px', opacity: 0.3 }} />
       
-      <div style={{ 
-        padding: '10px', 
-        background: `linear-gradient(135deg, ${style.accent}22, ${style.accent}00)`, 
-        borderRadius: '10px', 
-        display: 'flex',
-        color: style.accent,
-        border: `1px solid ${style.accent}33`
-      }}>
-        {getIconForType(data.type)}
-      </div>
-      <div>
-        <div style={{ fontWeight: '600', fontSize: '15px', lineHeight: '1.3', letterSpacing: '0.2px' }}>{data.label}</div>
-        <div style={{ fontSize: '11px', color: '#9ca3af', textTransform: 'uppercase', marginTop: '4px', letterSpacing: '1px', fontWeight: '500' }}>
-          {data.type}
+      <Handle type="target" position={Position.Left} isConnectable={isConnectable} style={{ background: '#18181b', border: `2px solid ${style.accent}`, width: '12px', height: '12px', left: '-6px' }} />
+      
+      <div style={{ padding: '16px 20px', position: 'relative', zIndex: 1 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: style.accent, fontSize: '11px', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '1px' }}>
+            <div style={{ padding: '4px', background: `linear-gradient(135deg, ${style.accent}33, ${style.accent}00)`, borderRadius: '6px', border: `1px solid ${style.accent}44` }}>
+              {getIconForType(data.type)}
+            </div>
+            {data.type}
+          </div>
+          {data.zone && (
+            <div style={{ fontSize: '9px', fontWeight: 600, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', padding: '3px 8px', borderRadius: '12px', color: '#a1a1aa', textTransform: 'uppercase' }}>
+              {data.zone}
+            </div>
+          )}
+        </div>
+        
+        <div style={{ color: '#f4f4f5', fontSize: '16px', fontWeight: 600, letterSpacing: '0.3px', lineHeight: 1.4, textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+          {data.label}
         </div>
       </div>
 
-      <Handle type="source" position={Position.Right} isConnectable={isConnectable} style={{ background: '#3f3f46', width: '8px', height: '8px', border: 'none', right: '-6px' }} />
+      <Handle type="source" position={Position.Right} isConnectable={isConnectable} style={{ background: '#18181b', border: `2px solid ${style.accent}`, width: '12px', height: '12px', right: '-6px' }} />
     </div>
   );
 };
@@ -144,6 +149,7 @@ export default function ArchitectureViewer({ architectureJson }) {
           source: e.source,
           target: e.target,
           label: e.label,
+          type: 'smoothstep',
           animated,
           style: { stroke: color, strokeWidth: 3, opacity: 0.8, filter: `drop-shadow(0 0 8px ${color}88)` },
           labelStyle: { fill: '#ffffff', fontWeight: 600, fontSize: 12 },
@@ -176,13 +182,13 @@ export default function ArchitectureViewer({ architectureJson }) {
         width: '100vw',
         height: '100vh',
         zIndex: 99999,
-        background: '#0a0a0a',
+        background: 'radial-gradient(circle at 50% 50%, #1e1e24 0%, #050505 100%)',
         padding: '20px'
       } : {
         width: '100%', 
-        height: '500px', 
-        minWidth: '300px',
-        background: '#0a0a0a', 
+        height: '100%', 
+        minHeight: '600px',
+        background: 'radial-gradient(circle at 50% 50%, #1e1e24 0%, #050505 100%)', 
         borderRadius: '12px', 
         border: '1px solid #27272a', 
         overflow: 'hidden', 
