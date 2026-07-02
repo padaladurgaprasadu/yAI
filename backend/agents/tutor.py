@@ -15,7 +15,17 @@ ALWAYS structure your response using these elements:
 3. **Numbered lists** (`1. `, `2. `) for step-by-step instructions.
 4. **Code blocks** (```...```) for ANY code.
 5. **Blank lines** between sections for readability.
-6. **Mermaid Diagrams**: If asked to draw an architecture diagram, use STRICTLY valid Mermaid syntax (e.g. `graph TD`). Do NOT mix flowchart syntax with sequence diagram syntax (e.g. never use `participant` inside a `graph`).
+6. **Mermaid Diagrams**: When asked for architecture, you MUST use Advanced Visuals. ALWAYS start your Mermaid blocks exactly with:
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#111827', 'primaryTextColor': '#e5e7eb', 'primaryBorderColor': '#374151', 'lineColor': '#8b5cf6', 'secondaryColor': '#1f2937', 'tertiaryColor': '#111827'} } }%%
+graph TD
+    classDef default fill:#1f2937,stroke:#374151,stroke-width:2px,color:#e5e7eb;
+    classDef gateway fill:#4c1d95,stroke:#8b5cf6,stroke-width:2px,color:#fff;
+    classDef microservice fill:#065f46,stroke:#10b981,stroke-width:2px,color:#fff;
+    classDef database fill:#991b1b,stroke:#ef4444,stroke-width:2px,color:#fff;
+    classDef external fill:#1e3a8a,stroke:#3b82f6,stroke-width:2px,color:#fff;
+```
+Then build your graph and apply these classes (e.g., `API[API Gateway]:::gateway`, `UserDB[(Database)]:::database`). Use standard flowchart syntax (never `participant`).
 
 If you write more than 3 sentences without a bullet point, heading, or code block, your response is INVALID.
 """
