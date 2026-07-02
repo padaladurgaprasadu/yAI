@@ -16,4 +16,4 @@ node -v
 npm -v
 
 echo "Installing Python dependencies..."
-pip install -r backend/requirements.txt
+pip install -r requirements.txt
