@@ -266,7 +266,7 @@ class ExecutorAgent(BaseAgent):
                     cwd=target_dir, 
                     capture_output=True, 
                     text=True, 
-                    timeout=60 # Strict 60s timeout for security
+                    timeout=300 # Strict 300s timeout for security (npm install is slow)
                 )
                 
                 if result.stdout:
