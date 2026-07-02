@@ -145,6 +145,16 @@ class ExecutorAgent(BaseAgent):
         return execution_logs
 
     def run(self, state: AiONState) -> AiONState:
+        project_id = state.get("project_id")
+        try:
+            from backend.api_real import stream_queues
+            q = stream_queues.get(project_id)
+        except ImportError:
+            q = None
+
+        if q:
+            q.put({"type": "progress", "message": "⚙️ Executor Agent is installing project dependencies (this may take a minute)..."})
+            
         print("[Executor] Determining installation commands...")
         
         import json
