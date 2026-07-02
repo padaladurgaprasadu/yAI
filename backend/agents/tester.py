@@ -16,6 +16,18 @@ class TesterAgent(BaseAgent):
 
     @measure_time(logger)
     def run(self, state: AiONState) -> AiONState:
+        project_id = state.get("project_id")
+        try:
+            from backend.api_real import stream_queues
+            q = stream_queues.get(project_id)
+        except ImportError:
+            q = None
+
+        if q:
+            q.put({"type": "progress", "message": "🧪 Tester Agent is generating Unit Tests..."})
+            
+        print("[Tester] Generating unit tests...")
+        
         agent_role = state.get("agent_role", "Fullstack Web Developer")
         code_files = state.get("code_files", {})
         

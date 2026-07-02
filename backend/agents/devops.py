@@ -26,6 +26,16 @@ class DevOpsAgent(BaseAgent):
         self.chain = self.prompt | self.llm
 
     def run(self, state: AiONState) -> AiONState:
+        project_id = state.get("project_id")
+        try:
+            from backend.api_real import stream_queues
+            q = stream_queues.get(project_id)
+        except ImportError:
+            q = None
+
+        if q:
+            q.put({"type": "progress", "message": "🐳 DevOps Agent is generating Docker & CI/CD pipelines..."})
+            
         print("[DevOps] Generating deployment files (Docker, CI/CD)...")
         
         # Format files for the prompt (TOKEN OPTIMIZATION)
