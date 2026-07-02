@@ -17,3 +17,12 @@ npm -v
 
 echo "Installing Python dependencies..."
 pip install -r requirements.txt
+
+echo "Pre-building Master Vite Cache for Zero-Latency AI Scaffolding..."
+mkdir -p aion_vite_cache
+cd aion_vite_cache
+npx -y create-vite@latest client --template react
+cd client
+npm install --legacy-peer-deps
+npm install react-router-dom axios @material-ui/core @material-ui/icons lucide-react recharts tailwindcss --legacy-peer-deps
+echo "Cache built successfully!"

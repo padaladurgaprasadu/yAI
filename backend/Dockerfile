@@ -15,6 +15,14 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Pre-build the Master Vite Cache so AI scaffolding is instant (Zero-Latency)
+RUN mkdir -p aion_vite_cache \
+    && cd aion_vite_cache \
+    && npx -y create-vite@latest client --template react \
+    && cd client \
+    && npm install --legacy-peer-deps \
+    && npm install react-router-dom axios @material-ui/core @material-ui/icons lucide-react recharts tailwindcss --legacy-peer-deps
+
 # Copy the rest of the backend code
 COPY . .
 

@@ -416,7 +416,7 @@ async def websocket_generate(websocket: WebSocket):
             port = preview_data.get("port", 3000)
             await websocket.send_json({
                 "type": "PREVIEW_READY",
-                "url": f"http://localhost:{port}"
+                "url": preview_data.get("url", f"http://localhost:{port}")
             })
         except Exception as preview_err:
             print(f"Warning: Auto-start preview failed: {preview_err}")
@@ -491,43 +491,14 @@ async def resume_generation(req: ResumeRequest, auth: dict = Depends(verify_toke
     return {"status": "resumed"}
 
 
+
 @app.post("/api/start-preview/{project_id}")
-async def start_preview(project_id: str):
+async def start_preview(project_id: str, request: Request):
     """
-    Starts the backend and frontend servers for a generated project,
-    then opens the browser automatically.
+    Starts the backend and frontend servers for a generated project.
+    On cloud, compiles the app statically.
     """
-    
     import asyncio
-    
-    # 1. Check if already running
-    if project_id in active_servers:
-        return {
-            "status": "already_running", 
-            "port": 3000,
-            "message": "Preview is already running! Refreshing browser..."
-        }
-    
-    # 1.5 Kill any existing zombie processes on our target ports (3000, 5000, 5173)
-    def kill_port(port):
-        import subprocess
-        try:
-            if os.name == 'nt':
-                output = subprocess.check_output(f"netstat -ano | findstr :{port}", shell=True).decode()
-                for line in output.splitlines():
-                    if "LISTENING" in line:
-                        pid = line.strip().split()[-1]
-                        subprocess.run(f"taskkill /F /PID {pid}", shell=True, capture_output=True)
-            else:
-                subprocess.run(f"lsof -ti:{port} | xargs kill -9", shell=True, capture_output=True)
-        except Exception:
-            pass
-            
-    print("🧹 Cleaning up old ports to prevent EADDRINUSE...")
-    kill_port(3000)
-    kill_port(3001)
-    kill_port(5000)
-    kill_port(5174)
     
     # 2. Define project path
     project_path = os.path.join(os.getcwd(), "generated_projects", project_id)
@@ -536,92 +507,56 @@ async def start_preview(project_id: str):
     if not os.path.exists(project_path):
         raise HTTPException(status_code=404, detail="Project not found. Please generate code first.")
     
-    processes = []
-    
     try:
-        # Check package.json to see if 'dev' script exists
-        import json
-        run_cmd = "npm start"
-        try:
-            with open(os.path.join(project_path, "package.json"), "r") as f:
-                pkg_data = json.load(f)
-                if "dev" in pkg_data.get("scripts", {}):
-                    run_cmd = "npm run dev"
-        except:
-            pass
-
-        # 3. Start Backend / App
-        print(f"🚀 Starting Backend/App with {run_cmd}...")
-        app_env = os.environ.copy()
-        app_env["BROWSER"] = "none" # Prevent automatic browser tab opening!
+        # Instead of starting a dev server on port 3000 (which gets trapped in the cloud),
+        # we compile the React app and serve it directly from FastAPI!
+        print("   -> [Preview] Compiling React application for Live Preview...")
         
-        backend_proc = subprocess.Popen(
-            run_cmd,
-            cwd=project_path,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            shell=True,
-            env=app_env
+        # Run the build process synchronously with relative base paths
+        process = await asyncio.create_subprocess_shell(
+            "npx vite build --base=./",
+            cwd=client_path,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
         )
-        processes.append(backend_proc)
         
-        # 4. Start Frontend (only if we didn't run a 'dev' script that handles both)
-        if run_cmd != "npm run dev" and os.path.exists(client_path):
-            print("🚀 Starting Frontend fallback...")
-            env = os.environ.copy()
-            env["BROWSER"] = "none" # Prevent automatic browser tab opening!
-            
-            client_run_cmd = "npm start"
-            try:
-                with open(os.path.join(client_path, "package.json"), "r") as f:
-                    client_pkg = json.load(f)
-                    if "dev" in client_pkg.get("scripts", {}):
-                        client_run_cmd = "npm run dev"
-            except:
-                pass
-                
-            frontend_proc = subprocess.Popen(
-                client_run_cmd,
-                cwd=client_path,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                shell=True,
-                env=env
-            )
-            processes.append(frontend_proc)
-        elif run_cmd != "npm run dev":
-            print("⚠️ Client folder not found. Skipping frontend.")
+        stdout, stderr = await process.communicate()
         
-        # 5. Determine the Port
-        preview_port = 3000
-        try:
-            with open(os.path.join(client_path, "package.json"), "r") as f:
-                client_pkg = json.load(f)
-                if "vite" in client_pkg.get("devDependencies", {}) or "vite" in client_pkg.get("dependencies", {}):
-                    preview_port = 5174
-        except:
-            pass
-
-        # 6. Store processes for later cleanup
-        active_servers[project_id] = processes
+        print("   -> [Preview] Application compiled successfully!")
         
-        # 7. Add a small delay so React and Node have time to boot and bind to their ports
-        print(f"⏳ Waiting for React to boot on port {preview_port}...")
-        await asyncio.sleep(6)
+        # Determine the base URL (Render URL if on cloud, localhost if local)
+        base_url = str(request.base_url).rstrip('/')
         
         return {
-            "status": "started",
-            "port": preview_port,
-            "message": "✅ Preview servers started!"
+            "status": "started", 
+            "port": 80,
+            "message": "Preview compiled and ready!",
+            "url": f"{base_url}/live/{project_id}/index.html"
         }
-        
     except Exception as e:
-        for proc in processes:
-            try:
-                proc.terminate()
-            except:
-                pass
         raise HTTPException(status_code=500, detail=f"Failed to start preview: {str(e)}")
+
+from fastapi.responses import FileResponse
+
+@app.get("/live/{project_id}/{file_path:path}")
+async def serve_live_preview(project_id: str, file_path: str):
+    """
+    Serves the statically compiled React application from the dist directory.
+    This entirely bypasses the need for multiple ports or complex tunneling!
+    """
+    if not file_path or file_path == "":
+        file_path = "index.html"
+        
+    project_path = os.path.join(os.getcwd(), "generated_projects", project_id)
+    dist_path = os.path.join(project_path, "client", "dist")
+    
+    full_path = os.path.abspath(os.path.join(dist_path, file_path))
+    
+    if not os.path.exists(full_path):
+        # SPA Fallback: If it's a React Router path, serve index.html
+        return FileResponse(os.path.join(dist_path, "index.html"))
+        
+    return FileResponse(full_path)
 
 @app.post("/api/stop-preview/{project_id}")
 async def stop_preview(project_id: str):
