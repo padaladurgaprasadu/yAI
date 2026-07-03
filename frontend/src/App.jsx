@@ -668,8 +668,14 @@ function App() {
                  [targetFile]: (prev[targetFile] || "") + data.token
              };
           })
-        } else if (data.type === "complete") {
+        } else if (data.type === "code_complete") {
+          // [ZERO-LATENCY] Instantly unlock the UI and show the Artifact Viewer!
           setCodeFiles(data.code_files)
+          setStep(3)
+          setIsLoading(false)
+        } else if (data.type === "complete") {
+          // The background executor has finished. Update any final logs.
+          if (data.code_files) setCodeFiles(data.code_files)
           setExecutionLogs(data.execution_logs)
           setStep(3)
           setIsLoading(false)

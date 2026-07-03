@@ -145,5 +145,5 @@ def build_generate_graph():
     workflow.add_edge("devops", "executor")
     workflow.add_conditional_edges("executor", should_retry_execution, {"coder": "coder", END: END})
     
-    # Compile with memory saver and interrupt before devops
-    return workflow.compile(checkpointer=workflow_memory, interrupt_before=["devops"])
+    # Compile with memory saver (no interrupts, fully autonomous)
+    return workflow.compile(checkpointer=workflow_memory)

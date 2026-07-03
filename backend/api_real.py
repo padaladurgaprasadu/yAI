@@ -327,6 +327,14 @@ async def websocket_generate(websocket: WebSocket):
                         "node": node_name,
                         "message": f"{node_name.capitalize()} agent completed its task..."
                     })
+                    
+                    # [ZERO-LATENCY ARTIFACTS] Instantly broadcast code to frontend
+                    # This allows the UI to unlock immediately while the Executor runs in the background!
+                    if node_name == "coder" and final_st and "code_files" in final_st:
+                        q.put({
+                            "type": "code_complete",
+                            "code_files": final_st["code_files"]
+                        })
                 
                 # Check if it was interrupted
                 state_snapshot = graph.get_state(thread_config)
