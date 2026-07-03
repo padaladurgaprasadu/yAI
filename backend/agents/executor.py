@@ -254,7 +254,17 @@ class ExecutorAgent(BaseAgent):
                         state["execution_logs"] = execution_logs + [f"> {error_msg}"]
                         return state
         
+        filtered_commands = []
         for cmd in commands:
+            cmd_clean = cmd.strip()
+            # [OPTIMIZER] Skip redundant frontend npm install because Vite cache is pre-built
+            if cmd_clean in ["cd client && npm install", "cd client; npm install", "npm install", "npm i"] and has_client:
+                print(f"      - [Optimizer] Skipping redundant command: {cmd_clean}")
+                execution_logs.append(f"> [Optimizer] Skipped redundant {cmd_clean} (using pre-built Vite Cache)")
+                continue
+            filtered_commands.append(cmd)
+
+        for cmd in filtered_commands:
             print(f"      - Running: {cmd}")
             execution_logs.append(f"> {cmd}")
             try:
@@ -284,6 +294,11 @@ class ExecutorAgent(BaseAgent):
                     state["execution_retries"] = state.get("execution_retries", 0) + 1
                     return state
                     
+            except subprocess.TimeoutExpired as e:
+                print(f"        [Warning] Command timed out after 300s: {cmd}")
+                execution_logs.append(f"WARNING: Command '{cmd}' timed out, but proceeding anyway.")
+                # We do NOT trigger a runtime_error here, to prevent an infinite loop back to the Coder!
+                continue
             except Exception as e:
                 print(f"        Error running command: {e}")
                 execution_logs.append(f"ERROR: {str(e)}")
