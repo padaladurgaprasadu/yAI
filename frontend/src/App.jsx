@@ -4,7 +4,7 @@ import Auth from './components/Auth'
 import Chat from './components/Chat'
 import { supabase } from './lib/supabaseClient'
 import ArchitectureViewer from './components/ArchitectureViewer'
-import PreviewViewer from './components/PreviewViewer'
+import ArtifactViewer from './components/ArtifactViewer'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
@@ -1196,40 +1196,16 @@ function App() {
         </div>
       )}
 
-              {/* STEP 3: RESULTS */}
+              {/* STEP 3: ARTIFACT VIEWER (CODE + PREVIEW) */}
               {step === 3 && (
-                <div className="preview-section" style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.5s ease-out' }}>
-                  
-                  {/* Phase 7: Live Preview */}
-                  <div style={{ backgroundColor: 'var(--sidebar-bg)', borderRadius: '12px', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px', borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--sidebar-bg)' }}>
-                        <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '500' }}>Live Preview</h3>
-                        <div style={{ display: 'flex', gap: '10px' }}>
-                            <button onClick={() => window.location.href = `${API_URL}/api/download`} style={{ padding: '6px 14px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 'bold', border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #3b82f6, #2563eb)', color: 'var(--text-primary)' }}>
-                                ↓ Download ZIP
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div style={{ width: '100%', height: '600px', backgroundColor: '#fff', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative', zIndex: 1 }}>
-                        <PreviewViewer codeFiles={codeFiles} />
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
-                      {/* Code Files (Simplified for Workspace) */}
-                      <div style={{ backgroundColor: 'var(--sidebar-bg)', borderRadius: '12px', border: '1px solid var(--border-color)', padding: '20px' }}>
-                        <h3 style={{ margin: '0 0 15px 0', fontSize: '1.1rem', fontWeight: '500' }}>Generated Files</h3>
-                        <div style={{ maxHeight: '400px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                          {Object.entries(codeFiles || {}).map(([path, content]) => (
-                            <div key={path} style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden' }}>
-                              <div style={{ backgroundColor: 'var(--sidebar-bg)', padding: '8px 12px', borderBottom: '1px solid var(--border-color)', fontSize: '0.85rem', color: 'var(--modal-text-color)', fontFamily: 'monospace' }}>📄 {path}</div>
-                              <pre style={{ margin: 0, padding: '15px', backgroundColor: 'var(--input-bg)', color: '#a6accd', fontSize: '0.85rem', overflowX: 'auto' }}>{content}</pre>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                  </div>
+                <div style={{ height: 'calc(100dvh - 60px)', animation: 'fadeIn 0.5s ease-out' }}>
+                  <ArtifactViewer 
+                    codeFiles={codeFiles} 
+                    projectId={projectId} 
+                    isPreviewRunning={isPreviewRunning}
+                    previewPort={previewPort}
+                    API_URL={API_URL}
+                  />
                 </div>
               )}
               
