@@ -39,8 +39,16 @@ class BaseAgent:
             self.llm_pool.append(fallback)
             self.fast_llm_pool.append(fallback)
             
-        self.llm = self.llm_pool[0]
-        self.fast_llm = self.fast_llm_pool[0]
+        # Bind the fallbacks so LangChain automatically switches if one provider hits a rate limit or 402
+        if len(self.llm_pool) > 1:
+            self.llm = self.llm_pool[0].with_fallbacks(self.llm_pool[1:])
+        else:
+            self.llm = self.llm_pool[0]
+            
+        if len(self.fast_llm_pool) > 1:
+            self.fast_llm = self.fast_llm_pool[0].with_fallbacks(self.fast_llm_pool[1:])
+        else:
+            self.fast_llm = self.fast_llm_pool[0]
 
     def _initialize_providers(self):
         """Initializes all available providers based on API keys, ordered by preference."""
@@ -75,8 +83,9 @@ class BaseAgent:
 
         # 5. OpenRouter (Premium or Free fallback)
         if openrouter_key:
-            self.llm_pool.append(ChatOpenAI(base_url="https://openrouter.ai/api/v1", api_key=openrouter_key.strip(), model="anthropic/claude-3.5-sonnet", temperature=self.temperature, max_tokens=4096))
-            self.fast_llm_pool.append(ChatOpenAI(base_url="https://openrouter.ai/api/v1", api_key=openrouter_key.strip(), model="meta-llama/llama-3.1-8b-instruct", temperature=0.1, max_tokens=2048))
+            # Using highly capable free models to ensure users without credits don't crash
+            self.llm_pool.append(ChatOpenAI(base_url="https://openrouter.ai/api/v1", api_key=openrouter_key.strip(), model="google/gemini-2.0-pro-exp-02-05:free", temperature=self.temperature, max_tokens=4096))
+            self.fast_llm_pool.append(ChatOpenAI(base_url="https://openrouter.ai/api/v1", api_key=openrouter_key.strip(), model="google/gemini-2.0-flash-lite-preview-02-05:free", temperature=0.1, max_tokens=2048))
 
     def bind_tools(self, tools: List[Any]):
         """Dynamically binds a list of tools to the active primary LLMs."""
