@@ -519,11 +519,10 @@ function App() {
                     } else if (data.type === 'status') {
                         setChatStatus(data.message);
                     } else if (data.type === 'visual') {
-                        // Inject the visual element directly into the AI's message stream as Markdown!
+                        // Use the beautiful dedicated visual card renderer
                         setChatMessages(prev => {
                             const newMsgs = [...prev];
-                            const currentContent = newMsgs[newMsgs.length - 1].content;
-                            newMsgs[newMsgs.length - 1].content = currentContent + `\n\n![${data.alt || 'AI Visual'}](${data.url})\n\n`;
+                            newMsgs[newMsgs.length - 1].visual = data;
                             return newMsgs;
                         });
                     } else if (data.type === 'fast_build') {

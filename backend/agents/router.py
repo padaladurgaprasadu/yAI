@@ -39,11 +39,16 @@ RULES:
   "primary_intent": "General categorization of the request",
   "needs_images": true/false,
   "needs_diagrams": true/false (True ONLY for architecture, algorithms, or workflows),
-  "visual_type": "'real' for real-world places/people, 'generative' for abstract/UI, 'sketch' for pencil sketches/diagrams",
-  "visual_query": "The exact name of the entity to search for images. Null if needs_images is false.",
+  "visual_type": "'real' for real-world places/people, 'generative' for AI generated images/art, 'sketch' for pencil sketches/diagrams",
+  "visual_query": "The exact name or description of the entity to generate/search. If the user asks to draw or sketch something, put their exact descriptive prompt here.",
   "visual_count": "integer between 1 and 5 indicating how many images to fetch (default 1). Choose >1 if user asks for multiple images or a gallery."
 }
 2. Output raw JSON without markdown formatting.
+
+Visual Generation Rules (MANDATORY):
+- If the user asks to "draw", "sketch", "generate an image", or "show a picture", you MUST set "needs_images": true.
+- Use "visual_type": "sketch" for pencil sketches. Use "generative" for general AI art.
+- The "visual_query" MUST be a detailed prompt based on the user's request.
 
 Clarification Rules (MANDATORY):
 - Answer the user's question immediately whenever possible.
