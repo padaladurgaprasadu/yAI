@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const ArtifactViewer = ({ codeFiles, projectId, isPreviewRunning, API_URL }) => {
+const ArtifactViewer = ({ codeFiles, projectId, isPreviewRunning, API_URL, executionLogs }) => {
   const [activeTab, setActiveTab] = useState('preview');
   const [selectedFile, setSelectedFile] = useState(null);
 
@@ -80,6 +80,26 @@ const ArtifactViewer = ({ codeFiles, projectId, isPreviewRunning, API_URL }) => 
             }}
           >
             <span style={{ color: '#60a5fa' }}>🌐</span> Preview
+          </button>
+          <button
+            onClick={() => setActiveTab('terminal')}
+            style={{
+              padding: '8px 24px',
+              borderRadius: '6px',
+              border: 'none',
+              background: activeTab === 'terminal' ? '#2a2a2a' : 'transparent',
+              color: activeTab === 'terminal' ? '#fff' : '#888',
+              fontSize: '0.9rem',
+              fontWeight: '500',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: activeTab === 'terminal' ? '0 2px 8px rgba(0,0,0,0.2)' : 'none'
+            }}
+          >
+            <span style={{ color: '#f59e0b' }}>🖥️</span> Terminal
           </button>
         </div>
         
@@ -202,6 +222,26 @@ const ArtifactViewer = ({ codeFiles, projectId, isPreviewRunning, API_URL }) => 
             }}>
               <span style={{ color: '#10b981' }}>🔒</span>
               <span style={{ fontFamily: 'monospace' }}>{previewUrl.split('://')[1]?.split('/')[0] || 'localhost'}/live</span>
+            </div>
+          </div>
+        )}
+
+        {/* TERMINAL TAB */}
+        {activeTab === 'terminal' && (
+          <div style={{ flex: 1, backgroundColor: '#000', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '12px 20px', borderBottom: '1px solid #222', color: '#888', fontSize: '0.85rem', display: 'flex', justifyContent: 'space-between' }}>
+               <span>Executor Agent Logs</span>
+               <span style={{ color: '#10b981' }}>● Live</span>
+            </div>
+            <div style={{ flex: 1, overflow: 'auto', padding: '20px', display: 'flex', flexDirection: 'column-reverse' }}>
+               <pre style={{ margin: 0, color: '#a6accd', fontFamily: 'monospace', fontSize: '0.9rem', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
+                 {/* Determine the props name based on what we passed in App.jsx */}
+                 {/* App.jsx passes executionLogs={executionLogs} */}
+                 {/* But we forgot to destructure it in ArtifactViewer parameters! Let's do that next */}
+                 {executionLogs && executionLogs.length > 0 
+                    ? executionLogs.join('\n') 
+                    : "> Waiting for execution logs...\n"}
+               </pre>
             </div>
           </div>
         )}

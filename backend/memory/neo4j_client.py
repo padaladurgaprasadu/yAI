@@ -14,15 +14,27 @@ class Neo4jClient:
         if password == "your_neo4j_password_here":
             print("[WARNING] Please update your NEO4J_PASSWORD in the .env file!")
             
-        self.driver = GraphDatabase.driver(uri, auth=(user, password))
+        try:
+            # Set a fast timeout so if Aura is paused, it fails instantly instead of hanging
+            self.driver = GraphDatabase.driver(uri, auth=(user, password), connection_timeout=3.0)
+        except Exception as e:
+            print(f"[Neo4j WARNING] Could not connect to Neo4j Aura (is it paused?). Memory logging disabled. Error: {e}")
+            self.driver = None
 
     def close(self):
-        self.driver.close()
+        if self.driver:
+            self.driver.close()
 
     def run_query(self, query, parameters=None):
-        with self.driver.session() as session:
-            result = session.run(query, parameters)
-            return [record.data() for record in result]
+        if not self.driver:
+            return []
+        try:
+            with self.driver.session() as session:
+                result = session.run(query, parameters)
+                return [record.data() for record in result]
+        except Exception as e:
+            print(f"[Neo4j WARNING] Query failed (Aura might be paused): {e}")
+            return []
 
     def log_project(self, project_id, goal):
         """Creates a Project node in the database."""

@@ -420,17 +420,27 @@ function App() {
     setSelectedImages([])
     setIsChatLoading(true)
     
-    // Add an empty AI message that we will stream into
-    setChatMessages(prev => [...prev, { role: 'ai', content: '' }])
-
     try {
+      setChatMessages(prev => [...prev, { role: 'ai', content: '' }])
+      
+      const payload = { 
+        message: userMessage, 
+        history: chatMessages, 
+        image: imagePayload 
+      };
+      
+      // If we are in ArtifactViewer (Step 3), pass the projectId so backend knows to Refine
+      if (step === 3 && projectId) {
+        payload.projectId = projectId;
+      }
+
       const response = await fetch(`${API_URL}/api/chat`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session?.access_token || 'mock-token-for-local-dev'}`
         },
-        body: JSON.stringify({ message: userMessage, history: chatMessages, image: imagePayload })
+        body: JSON.stringify(payload)
       })
       
       if (!response.ok) {
@@ -490,6 +500,17 @@ function App() {
                         setGoal(data.data.goal);
                         setAgentRole(data.data.agent_role);
                         handlePlan(data.data.goal, data.data.agent_role, imagePayload);
+                    } else if (data.type === 'refine_file') {
+                        // Seamlessly update codeFiles without a full rebuild!
+                        setCodeFiles(prev => ({
+                            ...prev,
+                            [data.file]: data.content
+                        }));
+                    } else if (data.type === 'refine_done') {
+                        setChatStatus('');
+                        // Trigger an iframe refresh by toggling isPreviewRunning
+                        setIsPreviewRunning(false);
+                        setTimeout(() => setIsPreviewRunning(true), 500);
                     } else if (data.type === 'visual') {
                         setChatMessages(prev => {
                             const newMsgs = [...prev];
@@ -1211,6 +1232,7 @@ function App() {
                     isPreviewRunning={isPreviewRunning}
                     previewPort={previewPort}
                     API_URL={API_URL}
+                    executionLogs={executionLogs}
                   />
                 </div>
               )}

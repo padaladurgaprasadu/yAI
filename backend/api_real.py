@@ -591,6 +591,7 @@ class ChatRequest(BaseModel):
     history: list = []
     image: typing.Optional[str] = None
     memory: typing.Optional[str] = None
+    projectId: typing.Optional[str] = None
 
 @app.post("/api/chat")
 @limiter.limit("50/minute")
@@ -614,6 +615,65 @@ async def ai_chat(request_data: ChatRequest, request: Request):
         try:
             start_time = time.time()
             
+            # === ZERO-LATENCY ITERATIVE REFINING MODE ===
+            if request_data.projectId:
+                yield f"data: {json.dumps({'type': 'status', 'message': '✨ Refining Project...'})}\n\n"
+                project_dir = os.path.join(os.getcwd(), "generated_projects", request_data.projectId)
+                code_files_str = ""
+                
+                # Load current project state
+                for root, dirs, files in os.walk(project_dir):
+                    for file in files:
+                        filepath = os.path.join(root, file)
+                        rel_path = os.path.relpath(filepath, project_dir).replace(os.sep, "/")
+                        if any(x in rel_path for x in ["node_modules", "aion_vite_cache", ".git"]): continue
+                        if rel_path.endswith((".png", ".jpg", ".jpeg", ".gif", ".ico", ".svg")): continue
+                        try:
+                            with open(filepath, "r", encoding="utf-8") as f:
+                                code_files_str += f'<file path="{rel_path}">\n{f.read()}\n</file>\n\n'
+                        except: pass
+
+                system_prompt = f"""You are a Senior Full-Stack Developer refining an existing project.
+The user wants to make a change.
+Here are the current files:
+{code_files_str}
+
+IMPORTANT RULES:
+1. Output the file(s) you modified EXACTLY in this format:
+<file path="path/to/file">
+[FULL UPDATED FILE CONTENT]
+</file>
+2. Do NOT use JSON. Do NOT write markdown outside of the file tags.
+3. You must output the ENTIRE updated file content. Do not use placeholders like "rest of code remains the same"."""
+                
+                messages = [SystemMessage(content=system_prompt), HumanMessage(content=sanitized_message)]
+                
+                draft_text = ""
+                async for text_chunk in agent.llm.astream(messages):
+                    draft_text += text_chunk
+                    yield f"data: {json.dumps({'type': 'chat', 'token': text_chunk})}\n\n"
+                
+                import re
+                matches = re.finditer(r'<file\s+path="([^"]+)">(.*?)</file>', draft_text, re.DOTALL)
+                for match in matches:
+                    file_path = match.group(1).strip()
+                    file_content = match.group(2).strip()
+                    safe_path = file_path.replace("..", "").replace(":\\", "").lstrip("/")
+                    full_path = os.path.abspath(os.path.join(project_dir, safe_path.replace("/", os.sep)))
+                    if full_path.startswith(os.path.abspath(project_dir)):
+                        os.makedirs(os.path.dirname(full_path), exist_ok=True)
+                        with open(full_path, "w", encoding="utf-8") as f:
+                            f.write(file_content)
+                        yield f"data: {json.dumps({'type': 'refine_file', 'file': safe_path, 'content': file_content})}\n\n"
+                        
+                yield f"data: {json.dumps({'type': 'status', 'message': '✨ Rebuilding Preview...'})}\n\n"
+                import asyncio
+                client_path = os.path.join(project_dir, "client")
+                process = await asyncio.create_subprocess_shell("npx vite build --base=./", cwd=client_path, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+                await process.communicate()
+                yield f"data: {json.dumps({'type': 'refine_done'})}\n\n"
+                return
+
             # Immediately yield heartbeat to prevent frontend timeout
             yield f"data: {json.dumps({'type': 'status', 'message': '✨ Analyzing Intent...'})}\n\n"
             api_logger.info(f"TTFT_heartbeat: {(time.time() - start_time) * 1000:.2f}ms")
