@@ -200,8 +200,21 @@ class CoderAgent(BaseAgent):
                     import re
                     # Robust regex that matches <file path="xxx">...</file> regardless of quotes or exact whitespace
                     match = re.search(r'<file[^>]*>(.*?)</file>', full_content, re.DOTALL | re.IGNORECASE)
+                    
                     if match:
                         code = match.group(1).strip()
+                    else:
+                        # FALLBACK: If the LLM forgot XML tags, extract the first markdown code block!
+                        md_match = re.search(r'```(?:[a-zA-Z0-9_-]+)?\s*(.*?)```', full_content, re.DOTALL)
+                        if md_match:
+                            code = md_match.group(1).strip()
+                            logger.warning(f"   -> [Attempt {attempt+1}] Used fallback markdown extraction for {target_file}.")
+                        else:
+                            # Absolute fallback: Just use the raw content if no backticks found
+                            code = full_content.strip()
+                            logger.warning(f"   -> [Attempt {attempt+1}] Used raw content fallback for {target_file}.")
+                        
+                    if code:
                         
                         # CODE VALIDATION GATE
                         if target_file.endswith(".py"):
@@ -219,11 +232,13 @@ class CoderAgent(BaseAgent):
                 except Exception as e:
                     error_str = str(e)
                     if "429" in error_str and attempt < max_retries - 1:
-                        wait_time = (attempt + 1) * 3
+                        # Massive backoff for free-tier quotas (15 RPM). Wait 20s then 40s.
+                        wait_time = (attempt + 1) * 20
                         logger.warning(f"      - [WARNING] Rate limit hit for {target_file}. Retrying in {wait_time}s...")
                         time.sleep(wait_time)
                     else:
                         logger.error(f"      - [ERROR] Exception while generating {target_file}: {e}")
+                        # If it's a 429 on the last attempt, don't crash the whole UI with empty files, just return the error string.
             return (target_file, f"// Error: AiON failed to generate {target_file}")
 
         # Execute sequential generation to prevent API rate limits (429) on free tiers!
