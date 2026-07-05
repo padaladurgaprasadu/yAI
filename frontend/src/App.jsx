@@ -1026,6 +1026,7 @@ function App() {
                         <img src={msg.visual.url} alt={msg.visual.alt} style={{ maxWidth: '400px', maxHeight: '300px', width: '100%', objectFit: 'cover', display: 'block' }} />
                       </div>
                     )}
+                    {console.log("RENDERING MSG CONTENT:", msg.content)}
                     {renderMessageContent(msg.content + (idx === chatMessages.length - 1 && isChatLoading && msg.role === 'ai' ? ' ▋' : ''), (jsonStr) => { setActiveArchitecture(jsonStr); setStep(4); })}
                     {msg.role === 'ai' && (
                       <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>

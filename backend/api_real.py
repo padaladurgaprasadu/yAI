@@ -821,7 +821,7 @@ IMPORTANT RULES:
 
             # 🟢 PHASE 4: Direct Streaming (With Real-Time Compliance Middleware)
             from backend.utils.compliance import StreamingComplianceEngine
-            compliance_engine = StreamingComplianceEngine(agent.llm.astream(messages))
+            compliance_engine = StreamingComplianceEngine(active_llm.astream(messages))
             
             async for text_chunk in compliance_engine.process():
                 
