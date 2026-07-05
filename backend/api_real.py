@@ -501,7 +501,7 @@ async def resume_generation(req: ResumeRequest, auth: dict = Depends(verify_toke
 
 
 @app.post("/api/start-preview/{project_id}")
-async def start_preview(project_id: str, request: Request):
+async def start_preview(project_id: str, request: Request = None):
     """
     Starts the backend and frontend servers for a generated project.
     On cloud, compiles the app statically.
@@ -522,7 +522,7 @@ async def start_preview(project_id: str, request: Request):
         
         # Run the build process synchronously with relative base paths
         process = await asyncio.create_subprocess_shell(
-            "npx vite build --base=./",
+            "npm install && npx --yes vite build --base=./",
             cwd=client_path,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
@@ -530,10 +530,15 @@ async def start_preview(project_id: str, request: Request):
         
         stdout, stderr = await process.communicate()
         
+        if process.returncode != 0:
+            err = stderr.decode() if stderr else stdout.decode() if stdout else "Unknown build error"
+            print(f"   -> [Preview Error] {err}")
+            raise HTTPException(status_code=500, detail=f"Build failed. The Executor might still be installing dependencies. Please try again in 10 seconds.")
+            
         print("   -> [Preview] Application compiled successfully!")
         
         # Determine the base URL (Render URL if on cloud, localhost if local)
-        base_url = str(request.base_url).rstrip('/')
+        base_url = str(request.base_url).rstrip('/') if request else ""
         
         return {
             "status": "started", 
@@ -669,7 +674,7 @@ IMPORTANT RULES:
                 yield f"data: {json.dumps({'type': 'status', 'message': '✨ Rebuilding Preview...'})}\n\n"
                 import asyncio
                 client_path = os.path.join(project_dir, "client")
-                process = await asyncio.create_subprocess_shell("npx vite build --base=./", cwd=client_path, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+                process = await asyncio.create_subprocess_shell("npm install && npx --yes vite build --base=./", cwd=client_path, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
                 await process.communicate()
                 yield f"data: {json.dumps({'type': 'refine_done'})}\n\n"
                 return

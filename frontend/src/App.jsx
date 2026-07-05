@@ -783,6 +783,9 @@ function App() {
           setIsLoading(true);
           const response = await fetch(`${API_URL}/api/start-preview/${projectId}`, { method: 'POST' });
           const data = await response.json();
+          if (!response.ok) {
+              throw new Error(data.detail || "Failed to compile preview. Please try again.");
+          }
           setPreviewPort(data.port);
           setIsPreviewRunning(true);
           
