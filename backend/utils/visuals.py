@@ -41,12 +41,17 @@ def get_real_world_image(query: str, count: int = 1):
         if not data.get('query', {}).get('search'):
             return None
             
-        results = data['query']['search'][:count]
+        results = data['query']['search'][:max(count*2, 10)]
+        
+        # Sort to deprioritize inscriptions or texts if possible
+        titles = [item['title'] for item in results]
+        good_titles = [t for t in titles if 'inscription' not in t.lower() and 'text' not in t.lower() and not t.lower().endswith('.pdf')]
+        bad_titles = [t for t in titles if t not in good_titles]
+        sorted_titles = good_titles + bad_titles
+        
         image_urls = []
         
-        for item in results:
-            title = item['title']
-            
+        for title in sorted_titles:
             # Fetch the direct image URL for the found file
             img_url_req = f"https://commons.wikimedia.org/w/api.php?action=query&prop=imageinfo&iiprop=url&titles={urllib.parse.quote(title)}&format=json"
             req2 = urllib.request.Request(img_url_req, headers={'User-Agent': 'AiON/1.0 (contact@aion.ai)'})
@@ -59,6 +64,8 @@ def get_real_world_image(query: str, count: int = 1):
                 page_id = list(pages.keys())[0]
                 if 'imageinfo' in pages[page_id]:
                     image_urls.append(pages[page_id]['imageinfo'][0]['url'])
+                    if len(image_urls) >= count:
+                        break
         
         if count == 1:
             return image_urls[0] if image_urls else None
