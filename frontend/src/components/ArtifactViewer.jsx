@@ -12,117 +12,91 @@ const ArtifactViewer = ({ codeFiles, projectId, isPreviewRunning, API_URL, execu
     }
   }, [codeFiles, selectedFile]);
 
-  // Format files for Sandpack
-  const sandpackFiles = {};
-  let hasIndexCss = false;
+  const sandpackFiles = {
+    "/index.html": `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AiON Preview</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>`,
+    "/src/main.jsx": `import React from 'react'
+import ReactDOM from 'react-dom/client'
+import App from './App.jsx'
+import './index.css'
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+)`,
+    "/src/index.css": `@tailwind base;
+@tailwind components;
+@tailwind utilities;`
+  };
+  
   let dynamicDependencies = {
-    "lucide-react": "^0.263.1",
-    "react-router-dom": "^6.22.3" // Fallback defaults
+    "lucide-react": "latest",
+    "recharts": "latest",
+    "react-router-dom": "latest",
+    "framer-motion": "latest"
   };
   
   if (codeFiles) {
-    // Attempt to extract dynamic dependencies from package.json
-    const pkgFiles = Object.keys(codeFiles).filter(f => f.endsWith('package.json'));
+    const pkgFiles = Object.keys(codeFiles).filter(f => f.endsWith('package.json') && f.includes('client'));
     if (pkgFiles.length > 0) {
       try {
         const pkgData = JSON.parse(codeFiles[pkgFiles[0]]);
         if (pkgData.dependencies) {
           dynamicDependencies = { ...dynamicDependencies, ...pkgData.dependencies };
-          
-          // CRITICAL FIX: Sandpack crashes if we override its internal React bindings
           delete dynamicDependencies['react'];
           delete dynamicDependencies['react-dom'];
-          delete dynamicDependencies['react-scripts'];
         }
       } catch (e) {
-        console.warn("Failed to parse package.json for dynamic dependencies");
+        console.warn("Failed to parse package.json");
       }
     }
 
     Object.entries(codeFiles).forEach(([filePath, content]) => {
-       if (filePath.startsWith('client/src/')) {
-          // Map Vite src folder to Sandpack root
-          let sandpackPath = filePath.replace('client/src/', '/');
+       if (filePath.startsWith('client/')) {
+          // Map client/ folder directly to Sandpack root
+          let sandpackPath = filePath.replace('client', '');
           
-          // Overwrite Sandpack's default App.js to avoid "Hello world" conflicts
-          if (sandpackPath === '/App.jsx' || sandpackPath === '/App.js') {
-             sandpackPath = '/App.js';
-          }
+          // Ensure App is always .jsx for Vite
+          if (sandpackPath === '/src/App.js') sandpackPath = '/src/App.jsx';
           
-          sandpackFiles[sandpackPath] = content;
-          if (sandpackPath === '/index.css') hasIndexCss = true;
-       } else if (filePath.startsWith('client/')) {
-          // Map other files (if any) to root
-          const sandpackPath = filePath.replace('client/', '/');
           sandpackFiles[sandpackPath] = content;
        }
        
        // AUTO-DETECT DEPENDENCIES FOR SANDPACK
        if (filePath.endsWith('.js') || filePath.endsWith('.jsx')) {
           const importRegex = /import\s+.*?\s+from\s+['"]([^'"]+)['"]/g;
-          const requireRegex = /require\(['"]([^'"]+)['"]\)/g;
-          
-          const extractPackages = (regex) => {
-              let match;
-              while ((match = regex.exec(content)) !== null) {
-                  let pkgName = match[1];
-                  // Ignore relative/absolute imports
-                  if (!pkgName.startsWith('.') && !pkgName.startsWith('/')) {
-                      // Extract base package (handle scoped packages like @mui/material)
-                      if (pkgName.startsWith('@')) {
-                          const parts = pkgName.split('/');
-                          if (parts.length >= 2) pkgName = `${parts[0]}/${parts[1]}`;
-                      } else {
-                          pkgName = pkgName.split('/')[0];
-                      }
-                      
-                      // Ignore Sandpack builtins
-                      if (pkgName !== 'react' && pkgName !== 'react-dom' && pkgName !== 'react-scripts') {
-                          if (!dynamicDependencies[pkgName]) {
-                              dynamicDependencies[pkgName] = "latest";
-                          }
+          let match;
+          while ((match = importRegex.exec(content)) !== null) {
+              let pkgName = match[1];
+              if (!pkgName.startsWith('.') && !pkgName.startsWith('/')) {
+                  if (pkgName.startsWith('@')) {
+                      const parts = pkgName.split('/');
+                      if (parts.length >= 2) pkgName = `${parts[0]}/${parts[1]}`;
+                  } else {
+                      pkgName = pkgName.split('/')[0];
+                  }
+                  if (pkgName !== 'react' && pkgName !== 'react-dom') {
+                      if (!dynamicDependencies[pkgName]) {
+                          dynamicDependencies[pkgName] = "latest";
                       }
                   }
               }
-          };
-          
-          extractPackages(importRegex);
-          extractPackages(requireRegex);
+          }
        }
     });
   }
-  
-  // Override Sandpack's default entry point to link to the AI generated App.jsx
-  sandpackFiles["/index.js"] = `
-import React, { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
-${hasIndexCss ? 'import "./index.css";' : ''}
-import App from "./App";
-
-const root = createRoot(document.getElementById("root"));
-root.render(
-  <StrictMode>
-    <App />
-  </StrictMode>
-);
-`;
-
-  // Inject Tailwind CSS via CDN for instant styling support
-  sandpackFiles["/public/index.html"] = `
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>AiON App</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-  </head>
-  <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="root"></div>
-  </body>
-</html>
-  `;
 
   return (
     <div style={{
@@ -299,7 +273,7 @@ root.render(
         {activeTab === 'preview' && (
           <div style={{ width: '100%', height: '100%', backgroundColor: '#151515', position: 'relative' }}>
             <Sandpack 
-              template="react" 
+              template="vite-react" 
               theme="dark"
               files={sandpackFiles}
               options={{
