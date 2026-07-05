@@ -13,6 +13,7 @@ class AiONState(TypedDict):
     blueprint: Optional[Dict[str, Any]]
     image: Optional[List[str]]
     code_files: Optional[Dict[str, str]]
+    missing_dependencies: Optional[List[str]]
     error: Optional[str]
     runtime_error: Optional[str]
     review_feedback: Optional[str]

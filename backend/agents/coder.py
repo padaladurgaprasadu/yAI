@@ -74,14 +74,20 @@ class CoderAgent(BaseAgent):
     def run(self, state: AiONState, q=None) -> AiONState:
         # If we already have code files (e.g. from Reviewer loop), we might only regenerate the ones with issues.
         # For simplicity, we just regenerate all or use the target files.
-        files_to_generate = state["blueprint"].get("file_structure", ["src/server.js", "package.json"])
+        files_to_generate = state.get("blueprint", {}).get("file_structure", [])
+        blueprint_str = json.dumps(state.get("blueprint", {}))
         
-        blueprint_str = json.dumps(state["blueprint"])
         feedback = state.get("review_feedback")
         runtime_error = state.get("runtime_error")
+        missing_deps = state.get("missing_dependencies", [])
         
         # --- NEXT-GEN AUTO-HEALING DIAGNOSTIC ---
-        if runtime_error or feedback:
+        if missing_deps:
+            print(f"[Coder] Build Verification failed. Generating missing files: {missing_deps}")
+            files_to_generate = missing_deps
+            # Clear missing dependencies state so we don't infinitely loop if generation fails
+            state["missing_dependencies"] = []
+        elif runtime_error or feedback:
             print(f"[Coder] Next-Gen Auto-Healing: Diagnosing failing files...")
             diagnostic_prompt = ChatPromptTemplate.from_messages([
                 ("system", "You are an elite debugging AI. Given a list of files in the project, and a runtime error or review feedback, identify exactly which files need to be modified to fix the issue. Output EXACTLY a JSON list of strings (the exact file paths from the provided list) and nothing else."),
@@ -131,7 +137,7 @@ class CoderAgent(BaseAgent):
                     q.put({"type": "code_token", "token": token})
 
         # Increment revision count if we are looping
-        if feedback or runtime_error:
+        if feedback or runtime_error or missing_deps:
             state["revision_count"] = state.get("revision_count", 0) + 1
             if runtime_error:
                 print(f"[Coder] Auto-Heal Triggered! Attempting to fix runtime error...")

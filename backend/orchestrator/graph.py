@@ -10,6 +10,7 @@ from backend.agents.ml_trainer import AIMLModelTrainingAgent
 from backend.agents.hyperparameter_tuner import AutoHyperparameterTuningAgent
 from backend.agents.researcher import ResearchAgent
 from backend.agents.tester import TesterAgent
+from backend.agents.dependency_checker import DependencyCheckerAgent
 
 def should_continue(state: AiONState):
     """
@@ -26,6 +27,21 @@ def should_continue(state: AiONState):
         return "devops"
         
     return "coder"
+
+def check_dependencies(state: AiONState):
+    """
+    Routing function to loop back to Coder if there are missing dependencies.
+    """
+    missing = state.get("missing_dependencies", [])
+    revision_count = state.get("revision_count", 0)
+    
+    if missing and revision_count < 3:
+        print(f"   -> [Graph] Routing back to Coder to generate missing files: {missing}")
+        return "coder"
+    elif missing:
+        print(f"   -> [Graph] Max revisions reached while fixing dependencies. Proceeding anyway.")
+        
+    return "ml_trainer"
 
 def should_retry_execution(state: AiONState):
     """
@@ -46,13 +62,14 @@ def should_retry_execution(state: AiONState):
 def build_graph():
     """
     Builds and returns the LangGraph state machine.
-    Flow: Planner -> Architect -> Coder <-> Reviewer -> DevOps -> Executor -> END
+    Flow: Planner -> Architect -> Coder <-> DependencyChecker -> ML Trainer -> ... -> END
     """
     workflow = StateGraph(AiONState)
 
     planner = PlannerAgent()
     architect = ArchitectAgent()
     coder = CoderAgent()
+    dep_checker = DependencyCheckerAgent()
     reviewer = ReviewerAgent()
     devops = DevOpsAgent()
     executor = ExecutorAgent()
@@ -66,6 +83,7 @@ def build_graph():
     workflow.add_node("researcher", researcher.run)
     workflow.add_node("architect", architect.run)
     workflow.add_node("coder", coder.run)
+    workflow.add_node("dependency_checker", dep_checker.run)
     workflow.add_node("ml_trainer", ml_trainer.run)
     workflow.add_node("hp_tuner", hp_tuner.run)
     workflow.add_node("tester", tester.run)
@@ -78,7 +96,9 @@ def build_graph():
     workflow.add_edge("researcher", "architect")
     workflow.add_edge("architect", "coder")
     
-    workflow.add_edge("coder", "ml_trainer")
+    workflow.add_edge("coder", "dependency_checker")
+    workflow.add_conditional_edges("dependency_checker", check_dependencies, {"coder": "coder", "ml_trainer": "ml_trainer"})
+    
     workflow.add_edge("ml_trainer", "hp_tuner")
     workflow.add_edge("hp_tuner", "tester")
     workflow.add_edge("tester", "reviewer")
