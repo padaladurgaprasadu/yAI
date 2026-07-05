@@ -22,10 +22,11 @@ def get_generative_image(query: str) -> str:
         logger.error(f"Visuals: Failed to generate AI image for {query} - {e}")
         return None
 
-def get_real_world_image(query: str) -> str:
+def get_real_world_image(query: str, count: int = 1):
     """
     Searches Wikimedia Commons for highly accurate, real-world photographs
     of actual places (e.g. Vijayawada, Eiffel Tower) or real people.
+    Returns a single URL string if count=1, or a list of URL strings if count>1.
     """
     if not query:
         return None
@@ -40,21 +41,29 @@ def get_real_world_image(query: str) -> str:
         if not data.get('query', {}).get('search'):
             return None
             
-        title = data['query']['search'][0]['title']
+        results = data['query']['search'][:count]
+        image_urls = []
         
-        # Fetch the direct image URL for the found file
-        img_url_req = f"https://commons.wikimedia.org/w/api.php?action=query&prop=imageinfo&iiprop=url&titles={urllib.parse.quote(title)}&format=json"
-        req2 = urllib.request.Request(img_url_req, headers={'User-Agent': 'AiON/1.0 (contact@aion.ai)'})
+        for item in results:
+            title = item['title']
+            
+            # Fetch the direct image URL for the found file
+            img_url_req = f"https://commons.wikimedia.org/w/api.php?action=query&prop=imageinfo&iiprop=url&titles={urllib.parse.quote(title)}&format=json"
+            req2 = urllib.request.Request(img_url_req, headers={'User-Agent': 'AiON/1.0 (contact@aion.ai)'})
+            
+            with urllib.request.urlopen(req2) as response2:
+                img_data = json.loads(response2.read().decode())
+                
+            pages = img_data.get('query', {}).get('pages', {})
+            if pages:
+                page_id = list(pages.keys())[0]
+                if 'imageinfo' in pages[page_id]:
+                    image_urls.append(pages[page_id]['imageinfo'][0]['url'])
         
-        with urllib.request.urlopen(req2) as response2:
-            img_data = json.loads(response2.read().decode())
-            
-        pages = img_data.get('query', {}).get('pages', {})
-        if pages:
-            page_id = list(pages.keys())[0]
-            return pages[page_id]['imageinfo'][0]['url']
-            
-        return None
+        if count == 1:
+            return image_urls[0] if image_urls else None
+        return image_urls
+        
     except Exception as e:
         logger.error(f"Visuals: Failed to fetch real-world image for {query} - {e}")
         return None

@@ -701,12 +701,24 @@ IMPORTANT RULES:
                 
                 try:
                     v_type = str(intent_data.get("visual_type", "real")).lower()
+                    v_count = int(intent_data.get("visual_count", 1))
+                    
                     if v_type == "generative":
-                        img_url = await asyncio.to_thread(get_generative_image, intent_data["visual_query"])
+                        img_urls = []
+                        # Generative currently only supports 1 image properly via Pollinations without caching conflicts, but we can do a loop with random seeds if needed.
+                        # For simplicity, we just fetch one if it's generative.
+                        url = await asyncio.to_thread(get_generative_image, intent_data["visual_query"])
+                        if url: img_urls.append(url)
                     else:
-                        img_url = await asyncio.to_thread(get_real_world_image, intent_data["visual_query"])
+                        res = await asyncio.to_thread(get_real_world_image, intent_data["visual_query"], v_count)
+                        if isinstance(res, list):
+                            img_urls = res
+                        elif res:
+                            img_urls = [res]
+                        else:
+                            img_urls = []
                         
-                    if img_url:
+                    for img_url in img_urls:
                         visual_payload = {
                             "type": "visual",
                             "media_type": "image",
@@ -714,6 +726,8 @@ IMPORTANT RULES:
                             "alt": intent_data["visual_query"]
                         }
                         yield f"data: {json.dumps(visual_payload)}\n\n"
+                        # Small delay between yields for smooth UI
+                        await asyncio.sleep(0.1)
                 except Exception as e:
                     api_logger.warning(f"Error fetching visuals: {e}")
             # -------------------------------------------
