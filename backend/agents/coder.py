@@ -87,18 +87,23 @@ class CoderAgent(BaseAgent):
             files_to_generate = missing_deps
             # Clear missing dependencies state so we don't infinitely loop if generation fails
             state["missing_dependencies"] = []
-        elif runtime_error or feedback:
-            print(f"[Coder] Next-Gen Auto-Healing: Diagnosing failing files...")
+        elif runtime_error or feedback or state.get("execution_mode") in ["lightning", "fast"]:
+            print(f"[Coder] Next-Gen Auto-Healing / Fast Mode: Diagnosing failing files...")
             diagnostic_prompt = ChatPromptTemplate.from_messages([
-                ("system", "You are an elite debugging AI. Given a list of files in the project, and a runtime error or review feedback, identify exactly which files need to be modified to fix the issue. Output EXACTLY a JSON list of strings (the exact file paths from the provided list) and nothing else."),
-                ("human", "Project Files: {files}\nRuntime Error: {error}\nReview Feedback: {feedback}")
+                ("system", "You are an elite debugging AI. Given a list of files in the project, and a runtime error, goal, or review feedback, identify exactly which files need to be modified to fix the issue or implement the feature. Output EXACTLY a JSON list of strings (the exact file paths from the provided list) and nothing else."),
+                ("human", "Project Files: {files}\nRuntime Error: {error}\nReview Feedback / Goal: {feedback}")
             ])
             try:
+                available_files = list(state.get("code_files", {}).keys())
+                # If there are no existing files, fallback to blueprint
+                if not available_files:
+                    available_files = state.get("blueprint", {}).get("file_structure", [])
+                    
                 diag_chain = diagnostic_prompt | self.fast_llm
                 res = diag_chain.invoke({
-                    "files": json.dumps(files_to_generate),
+                    "files": json.dumps(available_files),
                     "error": runtime_error,
-                    "feedback": feedback
+                    "feedback": feedback if feedback else state.get("goal")
                 })
                 content = res.content.replace("```json", "").replace("```", "").strip()
                 files_to_fix = json.loads(content)

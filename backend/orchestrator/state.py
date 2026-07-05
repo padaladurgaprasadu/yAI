@@ -21,3 +21,8 @@ class AiONState(TypedDict):
     execution_retries: int
     execution_logs: Optional[list[str]]
     semantic_context: Optional[str]
+    
+    # Phase 1: Omni Intelligence Engine
+    execution_mode: Optional[str] # Lightning, Fast, Deep, Autonomous
+    complexity: Optional[str]
+    compressed_context: Optional[str]

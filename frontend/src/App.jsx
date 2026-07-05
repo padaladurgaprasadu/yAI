@@ -507,6 +507,15 @@ function App() {
                         });
                     } else if (data.type === 'status') {
                         setChatStatus(data.message);
+                    } else if (data.type === 'fast_build') {
+                        setChatMessages(prev => {
+                            const newMsgs = [...prev];
+                            newMsgs[newMsgs.length - 1].content = `⚡ 0-Shot Fast Lane Execution...\nGoal: ${data.data.goal}`;
+                            return newMsgs;
+                        });
+                        setGoal(data.data.goal);
+                        // Trigger fast generation directly
+                        handleFastGenerate(data.data.goal, data.data.agent_role);
                     } else if (data.type === 'build') {
                         // It's a build command, remove the empty AI message and trigger build
                         setChatMessages(prev => {
@@ -658,6 +667,86 @@ function App() {
       setStep(1)
     } finally {
       setIsPlanning(false)
+    }
+  }
+
+  const handleFastGenerate = async (fastGoal, role) => {
+    setIsLoading(true);
+    setError(null);
+    setLiveUpdates([]);
+    setAgentState({ activeAgent: 'coder', timeline: [] });
+    setAwaitingApproval(false);
+    setStep(2); // Move to coding view
+    
+    let parsedBlueprint = { tech_stack: [], file_structure: [], blueprint_notes: "" };
+    try {
+        if (blueprintJson) parsedBlueprint = JSON.parse(blueprintJson);
+    } catch (e) {
+        console.warn("No valid blueprint found, proceeding zero-shot.");
+    }
+    
+    // Auto-generate project ID if this is a true 0-shot without prior context
+    const currentProjectId = projectId || `proj-${Math.random().toString(36).substr(2, 8)}`;
+    if (!projectId) setProjectId(currentProjectId);
+
+    try {
+      const ws = new WebSocket(`${WS_URL}/api/ws/generate`)
+      
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ 
+            project_id: currentProjectId,
+            goal: fastGoal,
+            blueprint: parsedBlueprint,
+            agent_role: role,
+            execution_mode: "fast",
+            code_files: codeFiles // Pass existing files so backend can edit them
+        }))
+      }
+      
+      // We will reuse the same message handler for generation
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data)
+        if (data.type === 'token') {
+          // Ignore architect tokens in fast mode
+        } else if (data.type === 'agent_state') {
+          setAgentState(prev => ({ ...prev, activeAgent: data.agent }))
+        } else if (data.type === 'timeline') {
+          setAgentState(prev => ({
+            ...prev,
+            timeline: [...prev.timeline, { title: data.title, reason: data.reason, status: data.status }]
+          }))
+        } else if (data.type === 'timeline_update') {
+          setAgentState(prev => {
+            const newTimeline = [...prev.timeline]
+            if (newTimeline.length > 0) {
+              newTimeline[newTimeline.length - 1].status = data.status
+            }
+            return { ...prev, timeline: newTimeline }
+          })
+        } else if (data.type === 'progress') {
+          setLiveUpdates(prev => [...prev.slice(-4), data.message])
+        } else if (data.type === 'file_created') {
+          setCodeFiles(prev => ({ ...prev, [data.file]: data.content }))
+        } else if (data.type === 'error') {
+          setError(data.message)
+          setIsLoading(false)
+        } else if (data.type === 'done') {
+          setIsLoading(false)
+          setStep(3)
+        }
+      }
+      
+      ws.onerror = () => {
+        setError("WebSocket connection failed")
+        setIsLoading(false)
+      }
+      
+      ws.onclose = () => {
+        if (isLoading) setIsLoading(false)
+      }
+    } catch (err) {
+      setError(err.message)
+      setIsLoading(false)
     }
   }
 

@@ -135,9 +135,12 @@ workflow_memory = MemorySaver()
 
 def build_generate_graph():
     """
-    Builds the second half of the graph (Phase 4): Coder <-> Reviewer -> DevOps -> Executor -> END
+    Builds the second half of the graph (Phase 4): ContextOrchestrator -> Coder <-> Reviewer -> DevOps -> Executor -> END
     """
     workflow = StateGraph(AiONState)
+    from backend.memory.context_orchestrator import ContextOrchestratorAgent
+    
+    ctx_orchestrator = ContextOrchestratorAgent()
     coder = CoderAgent()
     reviewer = ReviewerAgent()
     devops = DevOpsAgent()
@@ -146,6 +149,7 @@ def build_generate_graph():
     hp_tuner = AutoHyperparameterTuningAgent()
     tester = TesterAgent()
     
+    workflow.add_node("context_orchestrator", ctx_orchestrator.run)
     workflow.add_node("coder", coder.run)
     workflow.add_node("ml_trainer", ml_trainer.run)
     workflow.add_node("hp_tuner", hp_tuner.run)
@@ -154,8 +158,9 @@ def build_generate_graph():
     workflow.add_node("devops", devops.run)
     workflow.add_node("executor", executor.run)
     
-    workflow.set_entry_point("coder")
+    workflow.set_entry_point("context_orchestrator")
     
+    workflow.add_edge("context_orchestrator", "coder")
     workflow.add_edge("coder", "ml_trainer")
     workflow.add_edge("ml_trainer", "hp_tuner")
     workflow.add_edge("hp_tuner", "tester")

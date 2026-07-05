@@ -283,9 +283,11 @@ async def websocket_generate(websocket: WebSocket):
         goal = data.get("goal")
         blueprint = data.get("blueprint")
         agent_role = data.get("agent_role", "Fullstack Web Developer")
+        execution_mode = data.get("execution_mode", "Deep")
+        code_files = data.get("code_files", {})
         
-        if not project_id or not blueprint:
-            await websocket.send_json({"type": "error", "message": "project_id and blueprint are required"})
+        if not project_id:
+            await websocket.send_json({"type": "error", "message": "project_id is required"})
             await websocket.close()
             return
             
@@ -302,14 +304,17 @@ async def websocket_generate(websocket: WebSocket):
             modules=[],
             dag_tasks=[],
             blueprint=blueprint,
-            code_files={},
+            code_files=code_files,
             error=None,
             runtime_error=None,
             review_feedback=None,
             revision_count=0,
             execution_retries=0,
             execution_logs=[],
-            semantic_context=None
+            semantic_context=None,
+            execution_mode=execution_mode,
+            complexity="Low" if execution_mode in ["lightning", "fast"] else "High",
+            compressed_context=None
         )
         
         from backend.orchestrator.graph import build_generate_graph
@@ -678,7 +683,8 @@ IMPORTANT RULES:
             api_logger.info(f"TTFT_heartbeat: {(time.time() - start_time) * 1000:.2f}ms")
 
             # 🟢 PHASE 2: Fast Intent Routing (Using fast_llm)
-            router = IntentRouter(llm=agent.fast_llm)
+            from backend.agents.router import OmniIntelligenceEngine
+            router = OmniIntelligenceEngine(llm=agent.fast_llm)
             intent_data = router.detect_intent(sanitized_message, request_data.history)
             
             missing_info = intent_data.get("missing_info_question")
@@ -838,7 +844,12 @@ IMPORTANT RULES:
                 try:
                     json_str = draft_text.split("[BUILD]")[1].strip()
                     parsed = json.loads(json_str, strict=False)
-                    yield f"data: {json.dumps({'type': 'build', 'data': parsed})}\n\n"
+                    
+                    mode = str(intent_data.get("execution_mode", "Deep")).lower()
+                    if mode in ["lightning", "fast"]:
+                        yield f"data: {json.dumps({'type': 'fast_build', 'data': parsed})}\n\n"
+                    else:
+                        yield f"data: {json.dumps({'type': 'build', 'data': parsed})}\n\n"
                 except Exception as e:
                     yield f"data: {json.dumps({'type': 'chat', 'token': '(Error parsing build request)'})}\n\n"
                 return
