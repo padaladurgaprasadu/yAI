@@ -69,6 +69,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           // Map client/ folder directly to Sandpack root
           let sandpackPath = filePath.replace('client', '');
           
+          // CRITICAL FIX: Skip if it is a directory (no file extension) to prevent EISDIR crash
+          if (!sandpackPath.includes('.')) return;
+          
           // Ensure App is always .jsx for Vite
           if (sandpackPath === '/src/App.js') sandpackPath = '/src/App.jsx';
           
