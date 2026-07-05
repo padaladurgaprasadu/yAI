@@ -201,6 +201,11 @@ export default function ArchitectureViewer({ architectureJson, onNodeSelect }) {
   const [activeView, setActiveView] = useState('standard'); // standard, event, data, security
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  
+  // Simulation State
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [activeEdgeId, setActiveEdgeId] = useState(null);
+  
   const rfInstanceRef = useRef(null);
 
   useEffect(() => {
@@ -214,7 +219,44 @@ export default function ArchitectureViewer({ architectureJson, onNodeSelect }) {
       
       return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
     }
-  }, [isSidebarOpen, isFullscreen, nodes]);
+  }, [isSidebarOpen, isFullscreen, nodes.length]);
+
+  // Handle Simulation Interval
+  useEffect(() => {
+    let interval;
+    if (isSimulating && edges.length > 0) {
+      let currentIndex = 0;
+      interval = setInterval(() => {
+        setActiveEdgeId(edges[currentIndex].id);
+        currentIndex = (currentIndex + 1) % edges.length;
+      }, 1200); // Shift every 1.2s to simulate flow
+    } else {
+      setActiveEdgeId(null);
+    }
+    return () => clearInterval(interval);
+  }, [isSimulating, edges]);
+
+  // Compute Display Edges based on simulation state
+  const displayEdges = useMemo(() => {
+    if (!isSimulating) return edges;
+    
+    return edges.map(e => {
+      const isActive = e.id === activeEdgeId;
+      return {
+        ...e,
+        animated: isActive,
+        style: {
+          ...e.style,
+          opacity: isActive ? 1 : 0.1,
+          strokeWidth: isActive ? 4 : 1,
+          filter: isActive ? `drop-shadow(0 0 15px ${e.markerEnd?.color || '#fff'})` : 'none',
+          transition: 'all 0.3s ease'
+        },
+        labelStyle: { ...e.labelStyle, opacity: isActive ? 1 : 0.1 },
+        labelBgStyle: { ...e.labelBgStyle, opacity: isActive ? 1 : 0.1 }
+      };
+    });
+  }, [edges, isSimulating, activeEdgeId]);
 
   const handleExportTerraform = useCallback(() => {
     try {
@@ -314,9 +356,6 @@ export default function ArchitectureViewer({ architectureJson, onNodeSelect }) {
       setNodes(layoutedNodes);
       setEdges(layoutedEdges);
       
-      if (rfInstanceRef.current) {
-        setTimeout(() => rfInstanceRef.current.fitView({ padding: 0.2, duration: 800 }), 100);
-      }
     } catch (err) {
       console.error("Failed to parse architecture JSON", err);
     }
@@ -391,11 +430,11 @@ export default function ArchitectureViewer({ architectureJson, onNodeSelect }) {
         
         {/* Toolbar Overlay */}
         <div style={{ position: 'absolute', top: '24px', left: '24px', zIndex: 10, display: 'flex', gap: '8px', background: 'rgba(24,24,27,0.8)', padding: '8px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(8px)' }}>
-            <button onClick={() => setActiveView('standard')} style={{ padding: '6px 12px', borderRadius: '8px', background: activeView === 'standard' ? '#3b82f6' : 'transparent', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '12px' }}>Standard View</button>
-            <button onClick={() => setActiveView('event')} style={{ padding: '6px 12px', borderRadius: '8px', background: activeView === 'event' ? '#10b981' : 'transparent', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '12px' }}>Event Flow</button>
-            <button onClick={() => setActiveView('data')} style={{ padding: '6px 12px', borderRadius: '8px', background: activeView === 'data' ? '#f59e0b' : 'transparent', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '12px' }}>Data View</button>
+            <button onClick={() => { setActiveView('standard'); setIsSimulating(false); }} style={{ padding: '6px 12px', borderRadius: '8px', background: activeView === 'standard' && !isSimulating ? '#3b82f6' : 'transparent', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '12px' }}>Standard View</button>
+            <button onClick={() => { setActiveView('event'); setIsSimulating(false); }} style={{ padding: '6px 12px', borderRadius: '8px', background: activeView === 'event' ? '#10b981' : 'transparent', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '12px' }}>Event Flow</button>
+            <button onClick={() => { setActiveView('data'); setIsSimulating(false); }} style={{ padding: '6px 12px', borderRadius: '8px', background: activeView === 'data' ? '#f59e0b' : 'transparent', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '12px' }}>Data View</button>
             <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)', margin: '0 4px' }} />
-            <button onClick={() => setIsUnlocked(!isUnlocked)} style={{ padding: '6px 12px', borderRadius: '8px', background: isUnlocked ? '#ec4899' : 'transparent', color: 'white', border: '1px solid rgba(255,255,255,0.2)', cursor: 'pointer', fontWeight: 600, fontSize: '12px' }}>{isUnlocked ? 'Lock Canvas' : 'Unlock Canvas'}</button>
+            <button onClick={() => setIsSimulating(!isSimulating)} style={{ padding: '6px 12px', borderRadius: '8px', background: isSimulating ? '#ec4899' : 'transparent', color: 'white', border: '1px solid rgba(255,255,255,0.2)', cursor: 'pointer', fontWeight: 600, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}><Zap size={14} /> {isSimulating ? 'Stop Simulation' : 'Live Traffic'}</button>
             <button onClick={handleExportTerraform} style={{ padding: '6px 12px', borderRadius: '8px', background: '#10b981', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}><DownloadCloud size={14} /> Export IaC</button>
         </div>
 
@@ -446,7 +485,7 @@ export default function ArchitectureViewer({ architectureJson, onNodeSelect }) {
         <ReactFlow
           key={isFullscreen ? 'fs' : 'normal'}
           nodes={nodes}
-          edges={edges}
+          edges={displayEdges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onNodeClick={(e, node) => {
