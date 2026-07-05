@@ -696,11 +696,16 @@ IMPORTANT RULES:
             # --- VISUAL DECISION ENGINE INTEGRATION ---
             if intent_data.get("needs_images") and intent_data.get("visual_query") and intent_data.get("visual_query").lower() not in ["null", "none"]:
                 yield f"data: {json.dumps({'type': 'status', 'message': '📸 Fetching Visuals...'})}\n\n"
-                from backend.utils.visuals import get_wiki_image
+                from backend.utils.visuals import get_generative_image, get_real_world_image
                 import asyncio
                 
                 try:
-                    img_url = await asyncio.to_thread(get_wiki_image, intent_data["visual_query"])
+                    v_type = str(intent_data.get("visual_type", "real")).lower()
+                    if v_type == "generative":
+                        img_url = await asyncio.to_thread(get_generative_image, intent_data["visual_query"])
+                    else:
+                        img_url = await asyncio.to_thread(get_real_world_image, intent_data["visual_query"])
+                        
                     if img_url:
                         visual_payload = {
                             "type": "visual",

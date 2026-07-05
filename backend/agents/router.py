@@ -39,7 +39,8 @@ RULES:
   "primary_intent": "General categorization of the request",
   "needs_images": true/false,
   "needs_diagrams": true/false (True ONLY for architecture, algorithms, or workflows),
-  "visual_query": "The exact name of the entity to search for images (e.g. 'Adiyogi Statue', 'Albert Einstein'). Null if needs_images is false."
+  "visual_type": "'real' for real-world places/people (e.g. Vijayawada, Eiffel Tower), 'generative' for abstract concepts/UI/code (e.g. dashboard, cyberpunk)",
+  "visual_query": "The exact name of the entity to search for images (e.g. 'Adiyogi Statue', 'dashboard UI'). Null if needs_images is false."
 }
 2. Output raw JSON without markdown formatting.
 

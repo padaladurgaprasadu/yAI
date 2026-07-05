@@ -1,29 +1,60 @@
 import urllib.parse
+import urllib.request
+import json
 from backend.utils.logger import get_logger
 
 logger = get_logger("AiON_Visuals")
 
-def get_wiki_image(query: str) -> str:
+def get_generative_image(query: str) -> str:
     """
-    Upgraded Visual Intelligence: Uses Pollinations Generative AI to create 
-    the absolute 'best, latest, recent' image perfectly matching the query,
-    rather than scraping outdated thumbnails from Wikipedia.
+    Uses Pollinations Generative AI to create the absolute 'best, latest, recent' 
+    image for abstract concepts, UI designs, and digital art.
     """
     if not query:
         return None
-        
     try:
-        # Enhance the query for better visual generation
         enhanced_query = f"{query} high quality, modern, photorealistic, best, latest"
         encoded_query = urllib.parse.quote(enhanced_query)
-        
-        # We return the direct URL which the frontend will render in an <img> tag.
-        # Pollinations dynamically generates and caches the image.
         img_url = f"https://image.pollinations.ai/prompt/{encoded_query}?width=800&height=600&nologo=true"
-        
         logger.info(f"Visuals: Generated AI Image URL for query: {query}")
         return img_url
-        
     except Exception as e:
         logger.error(f"Visuals: Failed to generate AI image for {query} - {e}")
+        return None
+
+def get_real_world_image(query: str) -> str:
+    """
+    Searches Wikimedia Commons for highly accurate, real-world photographs
+    of actual places (e.g. Vijayawada, Eiffel Tower) or real people.
+    """
+    if not query:
+        return None
+    try:
+        # Search Wikimedia Commons for real photos
+        url = f"https://commons.wikimedia.org/w/api.php?action=query&list=search&srsearch={urllib.parse.quote(query)}&srnamespace=6&utf8=&format=json"
+        req = urllib.request.Request(url, headers={'User-Agent': 'AiON/1.0 (contact@aion.ai)'})
+        
+        with urllib.request.urlopen(req) as response:
+            data = json.loads(response.read().decode())
+            
+        if not data.get('query', {}).get('search'):
+            return None
+            
+        title = data['query']['search'][0]['title']
+        
+        # Fetch the direct image URL for the found file
+        img_url_req = f"https://commons.wikimedia.org/w/api.php?action=query&prop=imageinfo&iiprop=url&titles={urllib.parse.quote(title)}&format=json"
+        req2 = urllib.request.Request(img_url_req, headers={'User-Agent': 'AiON/1.0 (contact@aion.ai)'})
+        
+        with urllib.request.urlopen(req2) as response2:
+            img_data = json.loads(response2.read().decode())
+            
+        pages = img_data.get('query', {}).get('pages', {})
+        if pages:
+            page_id = list(pages.keys())[0]
+            return pages[page_id]['imageinfo'][0]['url']
+            
+        return None
+    except Exception as e:
+        logger.error(f"Visuals: Failed to fetch real-world image for {query} - {e}")
         return None
