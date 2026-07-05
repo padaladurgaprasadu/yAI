@@ -198,7 +198,8 @@ class CoderAgent(BaseAgent):
                     
                     full_content = response_text
                     import re
-                    match = re.search(r'<file\s+path="[^"]+">(.*?)</file>', full_content, re.DOTALL)
+                    # Robust regex that matches <file path="xxx">...</file> regardless of quotes or exact whitespace
+                    match = re.search(r'<file[^>]*>(.*?)</file>', full_content, re.DOTALL | re.IGNORECASE)
                     if match:
                         code = match.group(1).strip()
                         
@@ -225,9 +226,9 @@ class CoderAgent(BaseAgent):
                         logger.error(f"      - [ERROR] Exception while generating {target_file}: {e}")
             return (target_file, f"// Error: AiON failed to generate {target_file}")
 
-        # Execute parallel generation!
-        # WARNING: max_workers=10 causes OOM on 512MB RAM instances. Keep it at 3 to balance speed and memory footprint.
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        # Execute sequential generation to prevent API rate limits (429) on free tiers!
+        # WARNING: Parallel execution causes 429 Too Many Requests and OOM. DO NOT USE max_workers > 1.
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
             future_to_file = {executor.submit(generate_file, f): f for f in files_to_generate}
             for future in concurrent.futures.as_completed(future_to_file):
                 file_name, code = future.result()
