@@ -209,7 +209,8 @@ class CoderAgent(BaseAgent):
             return (target_file, f"// Error: AiON failed to generate {target_file}")
 
         # Execute parallel generation!
-        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        # WARNING: max_workers=10 causes OOM on 512MB RAM instances. Keep it at 3 to balance speed and memory footprint.
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
             future_to_file = {executor.submit(generate_file, f): f for f in files_to_generate}
             for future in concurrent.futures.as_completed(future_to_file):
                 file_name, code = future.result()
