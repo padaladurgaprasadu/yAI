@@ -24,14 +24,38 @@ def get_generative_image(query: str) -> str:
 
 def get_real_world_image(query: str, count: int = 1):
     """
-    Searches Wikimedia Commons for highly accurate, real-world photographs
-    of actual places (e.g. Vijayawada, Eiffel Tower) or real people.
+    Searches Wikipedia for hand-curated page images of real-world places and people.
+    Falls back to Wikimedia Commons if no encyclopedia entry matches.
     Returns a single URL string if count=1, or a list of URL strings if count>1.
     """
     if not query:
         return None
+        
+    image_urls = []
+    
+    # STEP 1: Try Wikipedia PageImages First (Curated by editors, much higher quality)
     try:
-        # Search Wikimedia Commons for real photos
+        wiki_url = f"https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch={urllib.parse.quote(query)}&prop=pageimages&pithumbsize=800&format=json"
+        req = urllib.request.Request(wiki_url, headers={'User-Agent': 'AiON/1.0 (contact@aion.ai)'})
+        with urllib.request.urlopen(req) as response:
+            data = json.loads(response.read().decode())
+        
+        pages = data.get('query', {}).get('pages', {})
+        for page_id, page in pages.items():
+            if 'thumbnail' in page:
+                image_urls.append(page['thumbnail']['source'])
+                if len(image_urls) >= count:
+                    break
+    except Exception as e:
+        logger.error(f"Visuals: Wikipedia PageImages failed for {query} - {e}")
+        
+    if image_urls:
+        if count == 1:
+            return image_urls[0]
+        return image_urls
+
+    # STEP 2: Fallback to Wikimedia Commons Search if Wikipedia has no pages
+    try:
         url = f"https://commons.wikimedia.org/w/api.php?action=query&list=search&srsearch={urllib.parse.quote(query)}&srnamespace=6&utf8=&format=json"
         req = urllib.request.Request(url, headers={'User-Agent': 'AiON/1.0 (contact@aion.ai)'})
         
@@ -48,8 +72,6 @@ def get_real_world_image(query: str, count: int = 1):
         good_titles = [t for t in titles if 'inscription' not in t.lower() and 'text' not in t.lower() and not t.lower().endswith('.pdf')]
         bad_titles = [t for t in titles if t not in good_titles]
         sorted_titles = good_titles + bad_titles
-        
-        image_urls = []
         
         for title in sorted_titles:
             # Fetch the direct image URL for the found file
@@ -72,26 +94,5 @@ def get_real_world_image(query: str, count: int = 1):
         return image_urls
         
     except Exception as e:
-        logger.error(f"Visuals: Failed to fetch real-world image for {query} - {e}")
-        
-    # Fallback to Wikipedia PageImages if Commons fails or is empty
-    try:
-        wiki_url = f"https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch={urllib.parse.quote(query)}&prop=pageimages&pithumbsize=800&format=json"
-        req = urllib.request.Request(wiki_url, headers={'User-Agent': 'AiON/1.0 (contact@aion.ai)'})
-        with urllib.request.urlopen(req) as response:
-            data = json.loads(response.read().decode())
-        
-        pages = data.get('query', {}).get('pages', {})
-        wiki_urls = []
-        for page_id, page in pages.items():
-            if 'thumbnail' in page:
-                wiki_urls.append(page['thumbnail']['source'])
-                if len(wiki_urls) >= count:
-                    break
-                    
-        if count == 1:
-            return wiki_urls[0] if wiki_urls else None
-        return wiki_urls
-    except Exception as e2:
-        logger.error(f"Visuals: Wikipedia fallback failed for {query} - {e2}")
+        logger.error(f"Visuals: Commons fallback failed for {query} - {e}")
         return None
