@@ -108,33 +108,45 @@ const renderMessageContent = (content, onOpenArchitecture) => {
       );
   }
   
-  const parts = content.split(/(<architecture>[\s\S]*?<\/architecture>)/);
+  const parts = content.split(/(<architecture>[\s\S]*?(?:<\/architecture>|$))/);
   return parts.map((part, i) => {
-      if (part.startsWith('<architecture>') && part.endsWith('</architecture>')) {
-          const jsonStr = part.replace('<architecture>', '').replace('</architecture>', '').replace(/```json/g, '').replace(/```/g, '').trim();
-          return (
-            <div key={i} style={{ margin: '16px 0' }}>
-              <button 
-                onClick={() => onOpenArchitecture(jsonStr)}
-                style={{
-                  background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '12px 24px',
-                  borderRadius: '8px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
-                }}
-              >
-                <span>📐</span> View Architecture Diagram in Workspace
-              </button>
-            </div>
-          );
+      if (part.startsWith('<architecture>')) {
+          if (part.endsWith('</architecture>')) {
+              const jsonStr = part.replace('<architecture>', '').replace('</architecture>', '').replace(/```json/g, '').replace(/```/g, '').trim();
+              return (
+                <div key={i} style={{ margin: '16px 0' }}>
+                  <button 
+                    onClick={() => onOpenArchitecture(jsonStr)}
+                    style={{
+                      background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                      color: 'white',
+                      border: 'none',
+                      padding: '12px 24px',
+                      borderRadius: '8px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+                    }}
+                  >
+                    <span>📐</span> View Architecture Diagram in Workspace
+                  </button>
+                </div>
+              );
+          } else {
+              // Streaming/Incomplete state
+              return (
+                <div key={i} style={{ margin: '16px 0', padding: '12px 20px', backgroundColor: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '12px', color: '#60a5fa' }}>
+                  <div className="spinner" style={{ width: '16px', height: '16px', borderWidth: '2px', borderTopColor: '#60a5fa' }}></div>
+                  <span style={{ fontWeight: '500' }}>Designing your architecture...</span>
+                </div>
+              );
+          }
       }
+      
+      if (!part.trim()) return null;
       return (
           <div key={i} className="markdown-body" onClick={handleMarkdownClick}>
               <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={{ code: CodeBlock }}>
