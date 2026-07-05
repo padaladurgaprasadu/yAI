@@ -759,12 +759,29 @@ function App() {
     setAwaitingApproval(false)
     
     let parsedBlueprint;
+    let rawJson = blueprintJson.trim();
     try {
-        parsedBlueprint = JSON.parse(blueprintJson);
+        // Strip out any trailing markdown ticks if present
+        rawJson = rawJson.replace(/```json/g, '').replace(/```/g, '').trim();
+        parsedBlueprint = JSON.parse(rawJson);
     } catch (e) {
-        setError("Invalid JSON format in Blueprint! Please fix it.");
-        setIsLoading(false);
-        return;
+        try {
+            // Attempt auto-repair for truncated JSON arrays/objects
+            if (rawJson.endsWith(',')) rawJson = rawJson.slice(0, -1);
+            if (rawJson.endsWith('"')) rawJson += ']}'; // cut off mid-string
+            else if (!rawJson.endsWith('}')) {
+                if (rawJson.includes('"file_structure": [') && !rawJson.includes(']')) {
+                    rawJson += ']}';
+                } else {
+                    rawJson += '}';
+                }
+            }
+            parsedBlueprint = JSON.parse(rawJson);
+        } catch (repairError) {
+            setError("Invalid JSON format in Blueprint! Scroll down and fix the missing brackets or trailing commas.");
+            setIsLoading(false);
+            return;
+        }
     }
 
     try {
@@ -1286,6 +1303,11 @@ function App() {
         <div className="results-section">
           <div className="glass-panel result-card">
             <h3>Architect's Blueprint</h3>
+            {error && (
+                <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.2)', border: '1px solid #ef4444', color: '#fca5a5', padding: '12px', borderRadius: '8px', marginBottom: '15px', fontWeight: 'bold' }}>
+                    {error}
+                </div>
+            )}
             <p style={{marginBottom: '10px', color: 'var(--text-secondary)'}}>
                 You can edit this JSON to change the Tech Stack or add custom notes before generating!
             </p>
