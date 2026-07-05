@@ -14,14 +14,59 @@ const ArtifactViewer = ({ codeFiles, projectId, isPreviewRunning, API_URL, execu
 
   // Format files for Sandpack
   const sandpackFiles = {};
+  let hasIndexCss = false;
   if (codeFiles) {
     Object.entries(codeFiles).forEach(([filePath, content]) => {
-       if (filePath.startsWith('client/')) {
+       if (filePath.startsWith('client/src/')) {
+          // Map Vite src folder to Sandpack root
+          let sandpackPath = filePath.replace('client/src/', '/');
+          
+          // Overwrite Sandpack's default App.js to avoid "Hello world" conflicts
+          if (sandpackPath === '/App.jsx' || sandpackPath === '/App.js') {
+             sandpackPath = '/App.js';
+          }
+          
+          sandpackFiles[sandpackPath] = content;
+          if (sandpackPath === '/index.css') hasIndexCss = true;
+       } else if (filePath.startsWith('client/')) {
+          // Map other files (if any) to root
           const sandpackPath = filePath.replace('client/', '/');
           sandpackFiles[sandpackPath] = content;
        }
     });
   }
+  
+  // Override Sandpack's default entry point to link to the AI generated App.jsx
+  sandpackFiles["/index.js"] = `
+import React, { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+${hasIndexCss ? 'import "./index.css";' : ''}
+import App from "./App";
+
+const root = createRoot(document.getElementById("root"));
+root.render(
+  <StrictMode>
+    <App />
+  </StrictMode>
+);
+`;
+
+  // Inject Tailwind CSS via CDN for instant styling support
+  sandpackFiles["/public/index.html"] = `
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AiON App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+  </body>
+</html>
+  `;
 
   return (
     <div style={{
