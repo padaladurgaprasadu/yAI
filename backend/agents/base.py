@@ -29,7 +29,7 @@ class BaseAgent:
         
         if not self.llm_pool:
             # Absolute fallback
-            openrouter_key = os.getenv("OPENROUTER_API_KEY", "dummy_key")
+            openrouter_key = os.getenv("OPENROUTER_API_KEY", "").strip() or "dummy_key"
             fallback = ChatOpenAI(
                 base_url="https://openrouter.ai/api/v1",
                 api_key=openrouter_key,
@@ -52,12 +52,12 @@ class BaseAgent:
 
     def _initialize_providers(self):
         """Initializes all available providers based on API keys, ordered by preference."""
-        openai_key = os.getenv("OPENAI_API_KEY")
-        nvidia_key = os.getenv("NVIDIA_API_KEY")
-        gemini_key = os.getenv("GEMINI_API_KEY")
-        groq_keys_str = os.getenv("GROQ_API_KEYS") or os.getenv("GROQ_API_KEY")
-        openrouter_key = os.getenv("OPENROUTER_API_KEY")
-        ollama_model = os.getenv("OLLAMA_MODEL")
+        openai_key = os.getenv("OPENAI_API_KEY", "").strip()
+        nvidia_key = os.getenv("NVIDIA_API_KEY", "").strip()
+        gemini_key = os.getenv("GEMINI_API_KEY", "").strip()
+        groq_keys_str = os.getenv("GROQ_API_KEYS", "").strip() or os.getenv("GROQ_API_KEY", "").strip()
+        openrouter_key = os.getenv("OPENROUTER_API_KEY", "").strip()
+        ollama_model = os.getenv("OLLAMA_MODEL", "").strip()
         
         # 1. OpenAI (Native)
         if openai_key:

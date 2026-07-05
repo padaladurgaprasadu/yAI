@@ -897,7 +897,8 @@ IMPORTANT RULES:
             if "429" in error_msg:
                 yield f"data: {json.dumps({'type': 'chat', 'token': '⚠️ Error: Insufficient Quota.'})}\n\n"
             else:
-                yield f"data: {json.dumps({'type': 'chat', 'token': '⚠️ Error connecting to AI.'})}\n\n"
+                # Expose the actual error for debugging
+                yield f"data: {json.dumps({'type': 'chat', 'token': f'⚠️ AI Error: {str(e)}'})}\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
