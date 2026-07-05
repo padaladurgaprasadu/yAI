@@ -184,7 +184,7 @@ app.add_middleware(
 class PlanRequest(BaseModel):
     goal: str
     agent_role: str = "Fullstack Web Developer"
-    image: typing.Optional[str] = None
+    image: typing.Optional[typing.Union[str, typing.List[str]]] = None
 
 class GenerateRequest(BaseModel):
     project_id: str
@@ -605,7 +605,7 @@ async def stop_preview(project_id: str):
 class ChatRequest(BaseModel):
     message: str
     history: list = []
-    image: typing.Optional[str] = None
+    image: typing.Optional[typing.Union[str, typing.List[str]]] = None
     memory: typing.Optional[str] = None
     projectId: typing.Optional[str] = None
 
@@ -815,10 +815,11 @@ IMPORTANT RULES:
                 formatting_reminder = "\n\n[CRITICAL REMINDER]: You MUST strictly follow the requested formatting. Use H3 (###) headers, bold text, bullet points, and NEVER write paragraphs longer than 2 sentences. You MUST put headers and bullet points on their own separate lines."
             
             if request_data.image:
-                messages.append(HumanMessage(content=[
-                    {"type": "text", "text": sanitized_message + formatting_reminder},
-                    {"type": "image_url", "image_url": {"url": request_data.image}}
-                ]))
+                human_content = [{"type": "text", "text": sanitized_message + formatting_reminder}]
+                images = request_data.image if isinstance(request_data.image, list) else [request_data.image]
+                for img in images:
+                    human_content.append({"type": "image_url", "image_url": {"url": img}})
+                messages.append(HumanMessage(content=human_content))
             else:
                 messages.append(HumanMessage(content=sanitized_message + formatting_reminder))
             
