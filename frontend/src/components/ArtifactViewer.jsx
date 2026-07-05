@@ -240,20 +240,20 @@ ReactDOM.createRoot(document.getElementById('root')).render(
                     key={path}
                     onClick={() => setSelectedFile(path)}
                     style={{
-                      padding: '10px 15px',
-                      fontSize: '0.85rem',
-                      color: selectedFile === path ? '#fff' : '#aaa',
-                      backgroundColor: selectedFile === path ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
-                      borderLeft: selectedFile === path ? '3px solid #3b82f6' : '3px solid transparent',
+                      padding: '8px 15px',
                       cursor: 'pointer',
-                      fontFamily: 'monospace',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis'
+                      fontSize: '0.80rem',
+                      color: selectedFile === path ? '#fff' : '#aaa',
+                      backgroundColor: selectedFile === path ? '#222' : 'transparent',
+                      borderLeft: selectedFile === path ? '3px solid #3b82f6' : '3px solid transparent',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      wordBreak: 'break-all'
                     }}
                     title={path}
                   >
-                    📄 {path.split('/').pop()}
+                    📄 {path}
                   </div>
                 ))}
               </div>
