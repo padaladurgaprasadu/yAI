@@ -266,9 +266,39 @@ function App() {
         })
         .then(res => res.json())
         .then(data => {
+            const savedHistoryStr = localStorage.getItem('aion_chat_history');
+            let localData = savedHistoryStr ? JSON.parse(savedHistoryStr) : [];
+            
             if (data && data.history && data.history.length > 0) {
-                setChatHistoryList(data.history);
-                localStorage.setItem('aion_chat_history', JSON.stringify(data.history));
+                // Merge cloud and local data
+                let merged = [...data.history];
+                let hasLocalChanges = false;
+                
+                localData.forEach(localChat => {
+                    const exists = merged.find(c => c.id === localChat.id);
+                    if (!exists) {
+                        merged.push(localChat);
+                        hasLocalChanges = true;
+                    } else if (localChat.timestamp > exists.timestamp) {
+                        // If local chat is newer, overwrite the cloud version
+                        merged = merged.map(c => c.id === localChat.id ? localChat : c);
+                        hasLocalChanges = true;
+                    }
+                });
+                
+                // Sort by timestamp descending
+                merged.sort((a, b) => b.timestamp - a.timestamp);
+                
+                setChatHistoryList(merged);
+                localStorage.setItem('aion_chat_history', JSON.stringify(merged));
+                
+                // Sync back to cloud if we merged local data
+                if (hasLocalChanges) {
+                    syncToCloud(merged);
+                }
+            } else if (localData.length > 0) {
+                // Cloud is empty, push local data to cloud
+                syncToCloud(localData);
             }
         })
         .catch(err => console.error("Failed to load chat history from cloud", err));
