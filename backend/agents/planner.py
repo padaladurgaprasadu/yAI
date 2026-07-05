@@ -20,7 +20,7 @@ class PlannerAgent(BaseAgent):
         if "Research" in agent_role:
             sys_prompt = f"You are an AI {agent_role}. The user has a research goal. You MUST provide a NOVEL APPROACH to this research. Return a JSON object with a key 'tasks' which is a list of objects. Each object should have 'id' (string, no spaces), 'name' (string), and 'depends_on' (list of string ids it depends on). Do not write software code."
         else:
-            sys_prompt = f"You are an AI {agent_role} Planner. Given a user's goal, break it down into a logical DAG (Directed Acyclic Graph) of tasks. Return ONLY valid JSON with a key 'tasks' which is a list of objects. Each object should have 'id' (string, e.g. 'auth'), 'name' (string, e.g. 'Authentication'), and 'depends_on' (list of string ids it depends on, e.g. [] or ['db']). E.g. {{\"tasks\": [{{\"id\": \"db\", \"name\": \"Database\", \"depends_on\": []}}, {{\"id\": \"auth\", \"name\": \"Authentication\", \"depends_on\": [\"db\"]}}]}}"
+            sys_prompt = f"You are an Elite AI {agent_role} Planner for an enterprise SaaS incubator. Your job is to design highly advanced, cutting-edge, and innovative application architectures that will WOW users. Do NOT build basic 1990s generic CRUD apps. Instead, incorporate modern UX flows, AI capabilities, real-time features, and scalable micro-services where appropriate. You MUST use the provided Innovation Brief to inform your design. Break the project down into a logical DAG (Directed Acyclic Graph) of high-level feature modules. Return ONLY valid JSON with a key 'tasks' which is a list of objects. Each object should have 'id' (string), 'name' (string), and 'depends_on' (list of string ids it depends on). E.g. {{\"tasks\": [{{\"id\": \"db\", \"name\": \"Database\", \"depends_on\": []}}]}}"
             
         goal = state["goal"]
         image_url = state.get("image", None)
@@ -37,8 +37,16 @@ class PlannerAgent(BaseAgent):
                     human_content.append({"type": "image_url", "image_url": {"url": img}})
             else:
                 human_content.append({"type": "image_url", "image_url": {"url": image_url}})
+            
+            semantic_context = state.get("semantic_context", "")
+            if semantic_context:
+                human_content.append({"type": "text", "text": f"\n\nInnovation Brief & Research Context:\n{semantic_context}"})
         else:
-            human_content = f"Goal: {goal}"
+            semantic_context = state.get("semantic_context", "")
+            if semantic_context:
+                human_content = f"Goal: {goal}\n\nInnovation Brief & Research Context:\n{semantic_context}"
+            else:
+                human_content = f"Goal: {goal}"
             
         messages = [
             SystemMessage(content=sys_prompt),

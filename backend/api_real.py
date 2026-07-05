@@ -216,19 +216,21 @@ async def plan_project(request_data: PlanRequest, request: Request, auth: dict =
     except Exception as e:
         print(f"Warning: Could not log to Neo4j: {e}")
 
-    # 1. Run Planner synchronously
-    planner = PlannerAgent()
-    state = AiONState(goal=goal, project_id=project_id, agent_role=request_data.agent_role, modules=[])
-    if request_data.image:
-        state["image"] = request_data.image
-    planned_state = planner.run(state)
-    modules = planned_state.get("modules", [])
-
-    # 1.5 Run Research Agent (Innovation Engine) synchronously
+    # 1. Run Research Agent (Innovation Engine) FIRST to gather novel approaches
     from backend.agents.researcher import ResearchAgent
     researcher = ResearchAgent()
-    researched_state = researcher.run(planned_state)
+    initial_state = AiONState(goal=goal, project_id=project_id, agent_role=request_data.agent_role, modules=[])
+    if request_data.image:
+        initial_state["image"] = request_data.image
+        
+    researched_state = researcher.run(initial_state)
     semantic_context = researched_state.get("semantic_context", "")
+
+    # 2. Run Planner synchronously using the Research insights
+    from backend.agents.planner import PlannerAgent
+    planner = PlannerAgent()
+    planned_state = planner.run(researched_state)
+    modules = planned_state.get("modules", [])
 
     # 2. Setup Architect Stream
     architect = ArchitectAgent()
@@ -243,7 +245,7 @@ async def plan_project(request_data: PlanRequest, request: Request, auth: dict =
     else:
         tech_rule = "CRITICAL ARCHITECTURE RULE: You MUST build a Python-based application using frameworks suitable for ML/Data Science (e.g., Streamlit, FastAPI, Flask). Do NOT use React or Express. The app must run on port 3000 for the iframe preview (e.g., streamlit run app.py --server.port=3000). You MUST include a 'requirements.txt' file and a 'start.sh' or 'start.bat' script to launch it."
         
-    system_prompt = f"You are a Senior Systems Architect acting as a {agent_role}. Given a goal and a list of modules, design a technology stack and a blueprint. Use the provided Past Projects as inspiration if relevant.\n\n{tech_rule}\n\nReturn ONLY valid JSON with three keys: 'tech_stack' (a list of strings), 'blueprint_notes' (a short string), and 'file_structure' (a list of 5 to 10 file paths needed for the app). Do not include markdown formatting or backticks, just the raw JSON."
+    system_prompt = f"You are an Elite Enterprise Systems Architect acting as a {agent_role}. Given a goal, a list of modules, and an Innovation Brief, design a highly advanced, cutting-edge, and production-ready technology stack and blueprint. Do NOT build simple 1990s CRUD apps; incorporate modern UX, AI where relevant, scalable structures, and robust data models. Use the provided Past Projects and Research Context as inspiration.\n\n{tech_rule}\n\nReturn ONLY valid JSON with three keys: 'tech_stack' (a list of exact technologies), 'blueprint_notes' (a detailed string explaining the advanced architectural decisions), and 'file_structure' (a comprehensive list of all necessary file paths). Do not include markdown formatting or backticks, just the raw JSON."
 
     try:
         vector_db = ChromaClient()
