@@ -518,6 +518,14 @@ function App() {
                         });
                     } else if (data.type === 'status') {
                         setChatStatus(data.message);
+                    } else if (data.type === 'visual') {
+                        // Inject the visual element directly into the AI's message stream as Markdown!
+                        setChatMessages(prev => {
+                            const newMsgs = [...prev];
+                            const currentContent = newMsgs[newMsgs.length - 1].content;
+                            newMsgs[newMsgs.length - 1].content = currentContent + `\n\n![${data.alt || 'AI Visual'}](${data.url})\n\n`;
+                            return newMsgs;
+                        });
                     } else if (data.type === 'fast_build') {
                         setChatMessages(prev => {
                             const newMsgs = [...prev];
