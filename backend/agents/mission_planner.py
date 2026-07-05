@@ -46,6 +46,17 @@ class MissionPlanner:
         
         logger.info(f"[MissionPlanner] Planned {len(modules)} modules/tasks.")
 
+        # STEP 1.5: Innovation & Research Phase
+        logger.info("[MissionPlanner] Running Research Agent...")
+        from backend.agents.researcher import ResearchAgent
+        researcher = ResearchAgent()
+        researched_state = await asyncio.to_thread(researcher.run, planned_state)
+        semantic_context = researched_state.get("semantic_context", "")
+
+        # Save research to Digital Twin so later swarm coders can use it
+        self.twin.state["research"] = semantic_context
+        self.twin._save_state()
+
         # STEP 2: Architecture Phase
         architect = ArchitectAgent()
         sys_prompt = f"You are a Senior Systems Architect acting as a {self.agent_role}. Given a goal and a list of modules, design a technology stack and a blueprint.\n\nCRITICAL ARCHITECTURE RULE: You MUST ALWAYS build a FULLSTACK application with a Node.js (Express) backend and a React frontend.\n\nReturn ONLY valid JSON with three keys: 'tech_stack' (a list of strings), 'blueprint_notes' (a short string), and 'file_structure' (a list of 5 to 10 file paths needed for the app). Do not include markdown formatting or backticks, just the raw JSON."
@@ -53,7 +64,7 @@ class MissionPlanner:
         from langchain_core.messages import SystemMessage, HumanMessage
         messages = [
             SystemMessage(content=sys_prompt),
-            HumanMessage(content=f"Goal: {self.goal}\nModules: {','.join(modules)}\n")
+            HumanMessage(content=f"Goal: {self.goal}\nModules: {','.join(modules)}\n\nResearch Context (Innovation Brief):\n{semantic_context}\n")
         ]
         
         logger.info("[MissionPlanner] Running Architect...")

@@ -224,6 +224,12 @@ async def plan_project(request_data: PlanRequest, request: Request, auth: dict =
     planned_state = planner.run(state)
     modules = planned_state.get("modules", [])
 
+    # 1.5 Run Research Agent (Innovation Engine) synchronously
+    from backend.agents.researcher import ResearchAgent
+    researcher = ResearchAgent()
+    researched_state = researcher.run(planned_state)
+    semantic_context = researched_state.get("semantic_context", "")
+
     # 2. Setup Architect Stream
     architect = ArchitectAgent()
     
@@ -248,7 +254,7 @@ async def plan_project(request_data: PlanRequest, request: Request, auth: dict =
 
     messages = [
         SystemMessage(content=system_prompt),
-        HumanMessage(content=f"Goal: {goal}\nModules: {','.join(modules)}\n\nPast Projects Context:\n{context}")
+        HumanMessage(content=f"Goal: {goal}\nModules: {','.join(modules)}\n\nResearch Context (Innovation Brief):\n{semantic_context}\n\nPast Projects Context:\n{context}")
     ]
 
     async def event_generator():
