@@ -66,4 +66,25 @@ def get_real_world_image(query: str, count: int = 1):
         
     except Exception as e:
         logger.error(f"Visuals: Failed to fetch real-world image for {query} - {e}")
+        
+    # Fallback to Wikipedia PageImages if Commons fails or is empty
+    try:
+        wiki_url = f"https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch={urllib.parse.quote(query)}&prop=pageimages&pithumbsize=800&format=json"
+        req = urllib.request.Request(wiki_url, headers={'User-Agent': 'AiON/1.0 (contact@aion.ai)'})
+        with urllib.request.urlopen(req) as response:
+            data = json.loads(response.read().decode())
+        
+        pages = data.get('query', {}).get('pages', {})
+        wiki_urls = []
+        for page_id, page in pages.items():
+            if 'thumbnail' in page:
+                wiki_urls.append(page['thumbnail']['source'])
+                if len(wiki_urls) >= count:
+                    break
+                    
+        if count == 1:
+            return wiki_urls[0] if wiki_urls else None
+        return wiki_urls
+    except Exception as e2:
+        logger.error(f"Visuals: Wikipedia fallback failed for {query} - {e2}")
         return None
