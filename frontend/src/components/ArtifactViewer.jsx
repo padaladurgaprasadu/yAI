@@ -28,6 +28,11 @@ const ArtifactViewer = ({ codeFiles, projectId, isPreviewRunning, API_URL, execu
         const pkgData = JSON.parse(codeFiles[pkgFiles[0]]);
         if (pkgData.dependencies) {
           dynamicDependencies = { ...dynamicDependencies, ...pkgData.dependencies };
+          
+          // CRITICAL FIX: Sandpack crashes if we override its internal React bindings
+          delete dynamicDependencies['react'];
+          delete dynamicDependencies['react-dom'];
+          delete dynamicDependencies['react-scripts'];
         }
       } catch (e) {
         console.warn("Failed to parse package.json for dynamic dependencies");
