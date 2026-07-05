@@ -843,17 +843,7 @@ function App() {
         setStep(1) // Return to main screen on error
       }
       
-      // Process Memory Tags after stream completes
-      setChatMessages(prev => {
-          const newMsgs = [...prev];
-          let finalMsg = newMsgs[newMsgs.length - 1].content;
-          const memoryMatch = finalMsg.match(/\[MEMORY_ADD\](.*)/);
-          if (memoryMatch) {
-              finalMsg = finalMsg.replace(/\[MEMORY_ADD\].*/, '').trim();
-              newMsgs[newMsgs.length - 1].content = finalMsg;
-          }
-          return newMsgs;
-      });
+
 
     } catch (err) {
       setError(err.message)
