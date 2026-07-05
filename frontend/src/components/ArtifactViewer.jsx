@@ -259,7 +259,17 @@ root.render(
                   "recharts": "^2.7.2",
                   "framer-motion": "^10.12.16",
                   "clsx": "^1.2.1",
-                  "tailwind-merge": "^1.13.2"
+                  "tailwind-merge": "^1.13.2",
+                  "react-router-dom": "^6.22.3",
+                  "axios": "^1.6.7",
+                  "date-fns": "^3.3.1",
+                  "uuid": "^9.0.1",
+                  "react-icons": "^5.0.1",
+                  "@material-ui/core": "^4.12.4",
+                  "@material-ui/icons": "^4.11.3",
+                  "@mui/material": "^5.15.12",
+                  "@emotion/react": "^11.11.4",
+                  "@emotion/styled": "^11.11.0"
                 }
               }}
             />
