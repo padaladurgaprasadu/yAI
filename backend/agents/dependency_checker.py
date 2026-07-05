@@ -67,15 +67,63 @@ class DependencyCheckerAgent:
 
         state["missing_dependencies"] = list(missing_files)
         
+        # --- PHASE 2: EXTERNAL DEPENDENCY INJECTION ---
+        print("[Dependency Checker] Scanning for external NPM dependencies...")
+        external_regex = re.compile(r'(?:import|require)\s*\(?.*?[\'"]([a-zA-Z@][^:\"\'\s]+)[\'"]\)?')
+        
+        external_deps = set()
+        for file_path, content in code_files.items():
+            if not file_path.endswith(('.js', '.jsx', '.ts', '.tsx')):
+                continue
+                
+            matches = external_regex.findall(content)
+            for match in matches:
+                # Get root package name. E.g., '@apollo/client/core' -> '@apollo/client', 'axios/lib' -> 'axios'
+                parts = match.split('/')
+                if match.startswith('@') and len(parts) >= 2:
+                    pkg_name = f"{parts[0]}/{parts[1]}"
+                else:
+                    pkg_name = parts[0]
+                    
+                # Ignore built-in node modules (basic list)
+                builtins = {'path', 'fs', 'http', 'https', 'os', 'crypto', 'stream', 'util', 'events', 'url'}
+                if pkg_name not in builtins and not pkg_name.startswith('.'):
+                    external_deps.add(pkg_name)
+                    
+        # Inject into package.json
+        import json
+        pkg_json_path = next((p for p in code_files.keys() if p.endswith('package.json')), None)
+        injected_count = 0
+        
+        if pkg_json_path and external_deps:
+            try:
+                pkg_data = json.loads(code_files[pkg_json_path])
+                if "dependencies" not in pkg_data:
+                    pkg_data["dependencies"] = {}
+                    
+                for pkg in external_deps:
+                    if pkg not in pkg_data["dependencies"]:
+                        pkg_data["dependencies"][pkg] = "latest"
+                        injected_count += 1
+                        print(f"   -> [Auto-Heal] Injected missing NPM package '{pkg}' into {pkg_json_path}")
+                        
+                code_files[pkg_json_path] = json.dumps(pkg_data, indent=2)
+                state["code_files"] = code_files
+            except json.JSONDecodeError:
+                print(f"   -> [WARNING] Failed to parse {pkg_json_path}. Cannot inject external dependencies.")
+        
+        # --- END PHASE 2 ---
+        
         if missing_files:
-            print(f"   -> [FAILED] Found {len(missing_files)} missing dependencies!")
+            print(f"   -> [FAILED] Found {len(missing_files)} missing local dependencies!")
             if q:
                 q.put({"type": "timeline_update", "status": "done"})
-                q.put({"type": "timeline", "title": f"Missing Files Detected", "reason": f"Need to generate {len(missing_files)} missing dependencies", "status": "done"})
+                q.put({"type": "timeline", "title": f"Missing Files Detected", "reason": f"Need to generate {len(missing_files)} missing local files", "status": "done"})
         else:
-            print("   -> [SUCCESS] All local dependencies exist.")
+            msg = "All local files exist." if injected_count == 0 else f"Injected {injected_count} missing NPM packages."
+            print(f"   -> [SUCCESS] {msg}")
             if q:
                 q.put({"type": "timeline_update", "status": "done"})
-                q.put({"type": "timeline", "title": "Verification Passed", "reason": "All local dependencies exist", "status": "done"})
+                q.put({"type": "timeline", "title": "Dependencies Verified", "reason": msg, "status": "done"})
                 
         return state

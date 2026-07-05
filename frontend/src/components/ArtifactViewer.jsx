@@ -15,7 +15,25 @@ const ArtifactViewer = ({ codeFiles, projectId, isPreviewRunning, API_URL, execu
   // Format files for Sandpack
   const sandpackFiles = {};
   let hasIndexCss = false;
+  let dynamicDependencies = {
+    "lucide-react": "^0.263.1",
+    "react-router-dom": "^6.22.3" // Fallback defaults
+  };
+  
   if (codeFiles) {
+    // Attempt to extract dynamic dependencies from package.json
+    const pkgFiles = Object.keys(codeFiles).filter(f => f.endsWith('package.json'));
+    if (pkgFiles.length > 0) {
+      try {
+        const pkgData = JSON.parse(codeFiles[pkgFiles[0]]);
+        if (pkgData.dependencies) {
+          dynamicDependencies = { ...dynamicDependencies, ...pkgData.dependencies };
+        }
+      } catch (e) {
+        console.warn("Failed to parse package.json for dynamic dependencies");
+      }
+    }
+
     Object.entries(codeFiles).forEach(([filePath, content]) => {
        if (filePath.startsWith('client/src/')) {
           // Map Vite src folder to Sandpack root
@@ -254,23 +272,7 @@ root.render(
                 autoHiddenFiles: true
               }}
               customSetup={{
-                dependencies: {
-                  "lucide-react": "^0.263.1",
-                  "recharts": "^2.7.2",
-                  "framer-motion": "^10.12.16",
-                  "clsx": "^1.2.1",
-                  "tailwind-merge": "^1.13.2",
-                  "react-router-dom": "^6.22.3",
-                  "axios": "^1.6.7",
-                  "date-fns": "^3.3.1",
-                  "uuid": "^9.0.1",
-                  "react-icons": "^5.0.1",
-                  "@material-ui/core": "^4.12.4",
-                  "@material-ui/icons": "^4.11.3",
-                  "@mui/material": "^5.15.12",
-                  "@emotion/react": "^11.11.4",
-                  "@emotion/styled": "^11.11.0"
-                }
+                dependencies: dynamicDependencies
               }}
             />
           </div>
