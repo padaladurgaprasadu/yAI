@@ -96,3 +96,19 @@ def get_real_world_image(query: str, count: int = 1):
     except Exception as e:
         logger.error(f"Visuals: Commons fallback failed for {query} - {e}")
         return None
+
+def get_pencil_sketch_image(query: str) -> str:
+    """
+    Uses Pollinations Generative AI to create neat, natural, and realistic pencil sketches.
+    """
+    if not query:
+        return None
+    try:
+        enhanced_query = f"Neat, natural, realistic pencil sketch drawing of {query}, highly detailed, graphite, artstation, masterpiece"
+        encoded_query = urllib.parse.quote(enhanced_query)
+        img_url = f"https://image.pollinations.ai/prompt/{encoded_query}?width=800&height=600&nologo=true"
+        logger.info(f"Visuals: Generated AI Pencil Sketch URL for query: {query}")
+        return img_url
+    except Exception as e:
+        logger.error(f"Visuals: Failed to generate AI pencil sketch for {query} - {e}")
+        return None

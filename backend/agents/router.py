@@ -39,7 +39,7 @@ RULES:
   "primary_intent": "General categorization of the request",
   "needs_images": true/false,
   "needs_diagrams": true/false (True ONLY for architecture, algorithms, or workflows),
-  "visual_type": "'real' for real-world places/people, 'generative' for abstract/UI",
+  "visual_type": "'real' for real-world places/people, 'generative' for abstract/UI, 'sketch' for pencil sketches/diagrams",
   "visual_query": "The exact name of the entity to search for images. Null if needs_images is false.",
   "visual_count": "integer between 1 and 5 indicating how many images to fetch (default 1). Choose >1 if user asks for multiple images or a gallery."
 }

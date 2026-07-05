@@ -704,14 +704,18 @@ IMPORTANT RULES:
             # --- VISUAL DECISION ENGINE INTEGRATION ---
             if intent_data.get("needs_images") and intent_data.get("visual_query") and intent_data.get("visual_query").lower() not in ["null", "none"]:
                 yield f"data: {json.dumps({'type': 'status', 'message': '📸 Fetching Visuals...'})}\n\n"
-                from backend.utils.visuals import get_generative_image, get_real_world_image
+                from backend.utils.visuals import get_generative_image, get_real_world_image, get_pencil_sketch_image
                 import asyncio
                 
                 try:
                     v_type = str(intent_data.get("visual_type", "real")).lower()
                     v_count = int(intent_data.get("visual_count", 1))
                     
-                    if v_type == "generative":
+                    if v_type == "sketch":
+                        img_urls = []
+                        url = await asyncio.to_thread(get_pencil_sketch_image, intent_data["visual_query"])
+                        if url: img_urls.append(url)
+                    elif v_type == "generative":
                         img_urls = []
                         # Generative currently only supports 1 image properly via Pollinations without caching conflicts, but we can do a loop with random seeds if needed.
                         # For simplicity, we just fetch one if it's generative.
