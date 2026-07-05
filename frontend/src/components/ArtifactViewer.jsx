@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Sandpack } from "@codesandbox/sandpack-react";
 
 const ArtifactViewer = ({ codeFiles, projectId, isPreviewRunning, API_URL, executionLogs }) => {
   const [activeTab, setActiveTab] = useState('preview');
@@ -11,7 +12,16 @@ const ArtifactViewer = ({ codeFiles, projectId, isPreviewRunning, API_URL, execu
     }
   }, [codeFiles, selectedFile]);
 
-  const previewUrl = `${API_URL}/live/${projectId}/index.html`;
+  // Format files for Sandpack
+  const sandpackFiles = {};
+  if (codeFiles) {
+    Object.entries(codeFiles).forEach(([filePath, content]) => {
+       if (filePath.startsWith('client/')) {
+          const sandpackPath = filePath.replace('client/', '/');
+          sandpackFiles[sandpackPath] = content;
+       }
+    });
+  }
 
   return (
     <div style={{
@@ -186,43 +196,28 @@ const ArtifactViewer = ({ codeFiles, projectId, isPreviewRunning, API_URL, execu
 
         {/* PREVIEW TAB */}
         {activeTab === 'preview' && (
-          <div style={{ width: '100%', height: '100%', backgroundColor: '#fff', position: 'relative' }}>
-            {isPreviewRunning ? (
-              <iframe 
-                src={previewUrl} 
-                style={{ width: '100%', height: '100%', border: 'none', backgroundColor: '#fff' }}
-                title="Live Preview"
-              />
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#666', backgroundColor: '#f9fafb' }}>
-                <div style={{ width: '40px', height: '40px', border: '3px solid #e5e7eb', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '16px' }}></div>
-                <p>Compiling Live Preview...</p>
-              </div>
-            )}
-            
-            {/* Floating Browser Bar Mockup */}
-            <div style={{ 
-              position: 'absolute', 
-              top: '20px', 
-              left: '50%', 
-              transform: 'translateX(-50%)', 
-              backgroundColor: 'rgba(255, 255, 255, 0.9)', 
-              backdropFilter: 'blur(10px)',
-              padding: '8px 16px', 
-              borderRadius: '20px',
-              border: '1px solid #e5e7eb',
-              boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              fontSize: '0.85rem',
-              color: '#4b5563',
-              zIndex: 10,
-              pointerEvents: 'none'
-            }}>
-              <span style={{ color: '#10b981' }}>🔒</span>
-              <span style={{ fontFamily: 'monospace' }}>{previewUrl.split('://')[1]?.split('/')[0] || 'localhost'}/live</span>
-            </div>
+          <div style={{ width: '100%', height: '100%', backgroundColor: '#151515', position: 'relative' }}>
+            <Sandpack 
+              template="react" 
+              theme="dark"
+              files={sandpackFiles}
+              options={{
+                showNavigator: true,
+                showTabs: false,
+                editorHeight: 'calc(100dvh - 120px)',
+                editorWidthPercentage: 0,
+                autoHiddenFiles: true
+              }}
+              customSetup={{
+                dependencies: {
+                  "lucide-react": "^0.263.1",
+                  "recharts": "^2.7.2",
+                  "framer-motion": "^10.12.16",
+                  "clsx": "^1.2.1",
+                  "tailwind-merge": "^1.13.2"
+                }
+              }}
+            />
           </div>
         )}
 

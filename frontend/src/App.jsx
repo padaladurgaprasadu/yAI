@@ -717,7 +717,6 @@ function App() {
           setAwaitingApproval(true)
           setLiveUpdates(prev => [...prev, "⏸️ " + data.message])
         } else if (data.type === "PREVIEW_READY") {
-          setPreviewPort(data.url.split(':').pop())
           setIsPreviewRunning(true)
           ws.close()
         } else if (data.type === "error") {
@@ -776,38 +775,6 @@ function App() {
         setError(err.message);
         setAwaitingApproval(false);
     }
-  }
-
-  const handleStartPreview = async () => {
-      try {
-          setIsLoading(true);
-          const response = await fetch(`${API_URL}/api/start-preview/${projectId}`, { method: 'POST' });
-          const data = await response.json();
-          if (!response.ok) {
-              throw new Error(data.detail || "Failed to compile preview. Please try again.");
-          }
-          setPreviewPort(data.port);
-          setIsPreviewRunning(true);
-          
-          // Wait 3 seconds for the server to bind to the port before rendering iframe
-          setTimeout(() => {
-              setIsLoading(false);
-          }, 3000);
-      } catch(e) {
-          setError(e.message);
-          setIsLoading(false);
-      }
-  }
-
-  const handleStopPreview = async () => {
-      try {
-          setIsLoading(true);
-          await fetch(`${API_URL}/api/stop-preview/${projectId}`, { method: 'POST' });
-          setIsPreviewRunning(false);
-          setPreviewPort(null);
-      } catch(e) {
-          setError(e.message);
-      }
   }
 
   if (!session) {

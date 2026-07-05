@@ -418,16 +418,14 @@ async def websocket_generate(websocket: WebSocket):
             "execution_logs": final_state.get("execution_logs", [])
         })
         
-        # 🟢 Send PREVIEW_READY to the frontend
+        # 🟢 Send PREVIEW_READY to the frontend immediately (Sandpack will handle compilation)
         try:
-            preview_data = await start_preview(project_id)
-            port = preview_data.get("port", 3000)
             await websocket.send_json({
                 "type": "PREVIEW_READY",
-                "url": preview_data.get("url", f"http://localhost:{port}")
+                "url": "sandpack-preview"
             })
         except Exception as preview_err:
-            print(f"Warning: Auto-start preview failed: {preview_err}")
+            print(f"Warning: Failed to send PREVIEW_READY: {preview_err}")
         
     except WebSocketDisconnect:
         print("Client disconnected")
@@ -671,11 +669,7 @@ IMPORTANT RULES:
                             f.write(file_content)
                         yield f"data: {json.dumps({'type': 'refine_file', 'file': safe_path, 'content': file_content})}\n\n"
                         
-                yield f"data: {json.dumps({'type': 'status', 'message': '✨ Rebuilding Preview...'})}\n\n"
-                import asyncio
-                client_path = os.path.join(project_dir, "client")
-                process = await asyncio.create_subprocess_shell("npm install && npx --yes vite build --base=./", cwd=client_path, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-                await process.communicate()
+                yield f"data: {json.dumps({'type': 'status', 'message': '✨ Hot-Reloading Preview...'})}\n\n"
                 yield f"data: {json.dumps({'type': 'refine_done'})}\n\n"
                 return
 
