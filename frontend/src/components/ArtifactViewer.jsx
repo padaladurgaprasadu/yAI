@@ -45,7 +45,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     "lucide-react": "latest",
     "recharts": "latest",
     "react-router-dom": "latest",
-    "framer-motion": "latest"
+    "framer-motion": "latest",
+    "axios": "latest"
   };
   
   if (codeFiles) {
