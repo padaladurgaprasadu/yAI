@@ -119,7 +119,10 @@ class CoderAgent(BaseAgent):
             q = stream_queues.get(project_id)
         except ImportError:
             q = None
-        
+            
+        if q:
+            q.put({"type": "agent_state", "agent": "coder"})
+            
         # Custom LangChain callback to stream tokens to our queue
         from langchain_core.callbacks.base import BaseCallbackHandler
         class QueueStreamCallback(BaseCallbackHandler):
@@ -134,6 +137,9 @@ class CoderAgent(BaseAgent):
                 print(f"[Coder] Auto-Heal Triggered! Attempting to fix runtime error...")
                 if q:
                     q.put({"type": "progress", "message": "Auto-Heal Triggered! Attempting to fix runtime error..."})
+                    q.put({"type": "timeline", "title": "Auto-Heal Triggered", "reason": "Attempting to fix runtime error...", "status": "active"})
+        elif q:
+            q.put({"type": "timeline", "title": f"Generating {len(files_to_generate)} modules", "reason": "Translating architecture to code", "status": "active"})
         
         import concurrent.futures
         
@@ -221,6 +227,9 @@ class CoderAgent(BaseAgent):
         # Clear errors if generation succeeded
         state["error"] = None
         state["review_feedback"] = None
+        
+        if q:
+            q.put({"type": "timeline_update", "status": "done"})
         
         # Log to memory
         try:

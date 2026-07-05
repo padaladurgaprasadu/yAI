@@ -20,6 +20,18 @@ class ArchitectAgent(BaseAgent):
     @measure_time(logger)
     def run(self, state: AiONState) -> AiONState:
         agent_role = state.get("agent_role", "Fullstack Web Developer")
+        project_id = state.get("project_id")
+        
+        try:
+            from backend.api_real import stream_queues
+            q = stream_queues.get(project_id)
+        except ImportError:
+            q = None
+            
+        if q:
+            q.put({"type": "agent_state", "agent": "architect"})
+            q.put({"type": "timeline", "title": "Analyzing requirements...", "reason": f"Role selected: {agent_role}", "status": "active"})
+            
         logger.info(f"[Architect] Designing system architecture for role: {agent_role}...")
         
         # Dynamically define architectural rules based on role
@@ -71,6 +83,11 @@ class ArchitectAgent(BaseAgent):
             print(f"   -> Tech Stack Selected: {blueprint.get('tech_stack', [])}")
             state["blueprint"] = blueprint
             state["semantic_context"] = context
+            
+            if q:
+                q.put({"type": "timeline_update", "status": "done"})
+                tech_stack_str = ", ".join(blueprint.get('tech_stack', [])[:3])
+                q.put({"type": "timeline", "title": f"Architecture Selected", "reason": f"Tech stack includes {tech_stack_str}", "status": "done"})
             
             # Log decision to memory
             try:

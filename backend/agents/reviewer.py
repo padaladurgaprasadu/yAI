@@ -24,8 +24,9 @@ class ReviewerAgent(BaseAgent):
             q = None
 
         if q:
+            q.put({"type": "agent_state", "agent": "reviewer"})
+            q.put({"type": "timeline", "title": f"Reviewing Code (Attempt {state.get('revision_count', 0) + 1})", "reason": "Checking for security and quality", "status": "active"})
             q.put({"type": "progress", "message": "🔍 Senior AI Reviewer is analyzing the codebase for bugs..."})
-            
         print("[Reviewer] Analyzing generated code for bugs...")
         
         # Initialize revision count if it doesn't exist
@@ -74,8 +75,14 @@ class ReviewerAgent(BaseAgent):
         if feedback == "APPROVED" or feedback.startswith("APPROVED"):
             print("   -> [Review Result] Code APPROVED!")
             state["review_feedback"] = "APPROVED"
+            if q:
+                q.put({"type": "timeline_update", "status": "done"})
+                q.put({"type": "timeline", "title": "Review Passed", "reason": "No critical issues detected", "status": "done"})
         else:
             print("   -> [Review Result] Issues found. Sending back to Coder.")
             state["review_feedback"] = feedback
-            
+            if q:
+                q.put({"type": "timeline_update", "status": "done"})
+                q.put({"type": "timeline", "title": "Issues Found", "reason": "Code requires automatic repair", "status": "done"})
+                
         return state

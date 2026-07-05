@@ -5,6 +5,7 @@ import Chat from './components/Chat'
 import { supabase } from './lib/supabaseClient'
 import ArchitectureViewer from './components/ArchitectureViewer'
 import ArtifactViewer from './components/ArtifactViewer'
+import ProgressDashboard from './components/ProgressDashboard'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
@@ -197,6 +198,10 @@ function App() {
   
   // Streaming state
   const [liveUpdates, setLiveUpdates] = useState([])
+  const [agentState, setAgentState] = useState({
+    activeAgent: null,
+    timeline: []
+  })
   const [liveCodeFiles, setLiveCodeFiles] = useState({})
   
   // Execution state
@@ -661,6 +666,7 @@ function App() {
     setIsLoading(true)
     setError(null)
     setLiveUpdates([])
+    setAgentState({ activeAgent: 'architect', timeline: [] })
     setAwaitingApproval(false)
     
     let parsedBlueprint;
@@ -717,8 +723,24 @@ function App() {
           setAwaitingApproval(true)
           setLiveUpdates(prev => [...prev, "⏸️ " + data.message])
         } else if (data.type === "PREVIEW_READY") {
+          setAgentState(prev => ({ ...prev, activeAgent: 'ready' }))
           setIsPreviewRunning(true)
           ws.close()
+        } else if (data.type === "agent_state") {
+          setAgentState(prev => ({ ...prev, activeAgent: data.agent }))
+        } else if (data.type === "timeline") {
+          setAgentState(prev => ({ 
+            ...prev, 
+            timeline: [...prev.timeline, { title: data.title, reason: data.reason, status: data.status }] 
+          }))
+        } else if (data.type === "timeline_update") {
+          setAgentState(prev => {
+            const newTimeline = [...prev.timeline];
+            if (newTimeline.length > 0) {
+               newTimeline[newTimeline.length - 1].status = data.status;
+            }
+            return { ...prev, timeline: newTimeline };
+          });
         } else if (data.type === "error") {
           setError(data.message)
           setIsLoading(false)
@@ -1219,7 +1241,7 @@ function App() {
                 </div>
               )}
               
-              {/* LIVE CODE VIEWER OVERLAY for Workspace */}
+              {/* LIVE PROGRESS DASHBOARD OVERLAY for Workspace */}
               {isLoading && step === 2 && (
                 <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(10,10,10,0.95)', display: 'flex', flexDirection: 'column', zIndex: 50, padding: '30px', animation: 'fadeIn 0.3s ease-out' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -1229,12 +1251,9 @@ function App() {
                         ) : (
                            <div className="spinner" style={{ width: '20px', height: '20px' }}></div>
                         )}
-                        {awaitingApproval ? 'Paused for Approval' : 'Writing Code...'}
+                        {awaitingApproval ? 'Paused for Approval' : 'AiON is engineering your application...'}
                      </h3>
                      <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                       <span style={{ color: 'var(--modal-text-color)', fontSize: '0.9rem' }}>
-                         {liveUpdates.length > 0 ? liveUpdates[liveUpdates.length - 1] : "Streaming Live from AiON Coder Agent"}
-                       </span>
                        {awaitingApproval && (
                           <div style={{ display: 'flex', gap: '10px' }}>
                              <button 
@@ -1252,25 +1271,12 @@ function App() {
                      </div>
                   </div>
                   
-                  <div style={{ flex: 1, backgroundColor: 'var(--input-bg)', borderRadius: '12px', border: '1px solid var(--border-color)', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 40px rgba(0,0,0,0.5)' }}>
-                     {/* Tab Bar */}
-                     <div style={{ backgroundColor: 'var(--sidebar-bg)', padding: '10px 15px', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '10px', overflowX: 'auto' }}>
-                        {Object.keys(liveCodeFiles).map(file => (
-                           <div key={file} style={{ padding: '6px 12px', backgroundColor: 'var(--border-color)', borderRadius: '6px', fontSize: '0.85rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', border: '1px solid #444' }}>
-                              📄 {file}
-                           </div>
-                        ))}
-                     </div>
-                     {/* Code View */}
-                     <div style={{ flex: 1, padding: '20px', overflowY: 'auto', color: '#a6accd', fontFamily: 'monospace', fontSize: '0.9rem' }}>
-                        <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
-                           {Object.keys(liveCodeFiles).length > 0 
-                             ? liveCodeFiles[Object.keys(liveCodeFiles)[Object.keys(liveCodeFiles).length - 1]] 
-                             : "Initializing Coder Agent...\nReading Blueprint...\nSetting up environment..."}
-                           <span className="cursor-blink" style={{ display: 'inline-block', width: '8px', height: '14px', backgroundColor: '#a6accd', marginLeft: '2px', verticalAlign: 'middle' }}></span>
-                        </pre>
-                     </div>
-                  </div>
+                  {/* Dashboard Component */}
+                  <ProgressDashboard 
+                     activeAgent={agentState.activeAgent} 
+                     timeline={agentState.timeline} 
+                     liveUpdates={liveUpdates} 
+                  />
                 </div>
               )}
             </div>
