@@ -1206,15 +1206,24 @@ function App() {
                   background: 'none', 
                   border: 'none', 
                   color: isRecording ? '#ef4444' : '#888',
-                  fontSize: '1.2rem', 
                   cursor: 'pointer', 
-                  padding: '0 16px', 
-                  transition: 'color 0.2s',
-                  transform: isRecording ? 'scale(1.1)' : 'scale(1)'
+                  padding: '0 10px', 
+                  transition: 'all 0.2s',
+                  transform: isRecording ? 'scale(1.05)' : 'scale(1)'
                 }}
                 title={isRecording ? "Listening..." : "Voice Input"}
               >
-                🎤
+                {isRecording ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(239, 68, 68, 0.1)', padding: '6px 12px', borderRadius: '20px', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+                        <span style={{ fontSize: '1rem', animation: 'pulse 1.5s infinite' }}>🔴</span>
+                        <span style={{ fontSize: '0.8rem', fontWeight: '600', color: '#ef4444' }}>Listening</span>
+                    </div>
+                ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(59, 130, 246, 0.1)', padding: '6px 12px', borderRadius: '20px', border: '1px solid rgba(59, 130, 246, 0.3)', transition: 'all 0.3s', boxShadow: '0 0 10px rgba(59, 130, 246, 0.1)' }} onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(59, 130, 246, 0.2)'; e.currentTarget.style.boxShadow = '0 0 15px rgba(59, 130, 246, 0.3)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)'; e.currentTarget.style.boxShadow = '0 0 10px rgba(59, 130, 246, 0.1)'; }}>
+                        <span style={{ fontSize: '1rem' }}>✨</span>
+                        <span style={{ fontSize: '0.8rem', fontWeight: '600', color: '#60a5fa', letterSpacing: '0.5px' }}>Voice AI</span>
+                    </div>
+                )}
               </button>
               <button 
                 type="submit" 
@@ -1413,8 +1422,7 @@ function App() {
         )}
       </div>
       
-      {/* Tutor Chat Widget */}
-      <Chat />
+      {/* Tutor Chat Widget Removed per user request */}
     </div>
   )
 }
