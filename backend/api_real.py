@@ -807,8 +807,8 @@ IMPORTANT RULES:
             
             if is_architecture_req:
                 formatting_reminder = "\n\n[CRITICAL REMINDER]: You MUST output EXACTLY the `<architecture>` JSON block. DO NOT write any markdown text. DO NOT generate ASCII art. ONLY output the `<architecture>` tags containing the JSON payload."
-            elif "Project Development" in str(intent_data.get("primary_intent", "")):
-                formatting_reminder = ""
+            elif "Project Development" in str(intent_data.get("primary_intent", "")) or any(w in sanitized_message.lower() for w in ["build ", "create a ", "develop a "]):
+                formatting_reminder = "\n\n[CRITICAL REMINDER]: The user wants to build a project. You MUST return EXACTLY the `[BUILD] {\"goal\": \"...\", \"agent_role\": \"...\"}` format and nothing else. DO NOT generate markdown lists or conversational text. Output ONLY the [BUILD] tag."
             else:
                 formatting_reminder = "\n\n[CRITICAL REMINDER]: You MUST strictly follow the requested formatting. Use H3 (###) headers, bold text, bullet points, and NEVER write paragraphs longer than 2 sentences. You MUST put headers and bullet points on their own separate lines."
             
