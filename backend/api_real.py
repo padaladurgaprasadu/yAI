@@ -773,11 +773,11 @@ IMPORTANT RULES:
       "tradeoffs": ["Consistency vs Availability..."]
     }}
   }}
-  Types: gateway, microservice, database, external, queue, ai, cache, user. Edges: sync, async, data.
-  You MUST logically group services into `zones` (e.g. Edge Layer, API Layer, Data Layer).
+  Types: gateway, microservice, database, external, queue, ai, cache, user, security, monitoring. Edges: sync, async, data, monitor, fail.
+  You MUST logically group services into `zones` (e.g. Edge Layer, API Layer, Data Layer, Processing, Observability).
   Every node MUST belong to a valid zone ID.
   Every node MUST include `tech`, `status`, and `description`.
-  Every service MUST own its database if applicable. Use Event-Driven patterns.
+  **CRITICAL FOR EFFICIENCY:** Design Highly Efficient, Advanced Architectures. Eliminate single points of failure. Use Event-Driven patterns. Incorporate caching layers and message queues for async tasks. Avoid monolithic chokepoints.
   THINK FIRST. Model the architecture, validate it, optimize it, then output the JSON. Every output must be presentation-ready for enterprise architecture discussions.
 - **Agent Hand-off:** If they are asking to build, develop, create, generate, OR research a complex project, return EXACTLY this format and nothing else:
 [BUILD] {{"goal": "The specific project they want", "agent_role": "Select the best role: Fullstack Web Developer, Machine Learning Engineer, Deep Learning Researcher, Data Scientist, Data Analyst, AI Systems Architect"}}

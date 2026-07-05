@@ -6,7 +6,7 @@ import { Database, Server, Globe, ExternalLink, Mail, Zap, User, Code, Box, Maxi
 
 const getLayoutedElements = (nodes, edges, zones = [], direction = 'LR') => {
   const dagreGraph = new dagre.graphlib.Graph({ compound: true });
-  dagreGraph.setGraph({ rankdir: direction, nodesep: 60, ranksep: 150, edgesep: 40, ranker: 'network-simplex' });
+  dagreGraph.setGraph({ rankdir: direction, nodesep: 50, ranksep: 110, edgesep: 30, ranker: 'network-simplex' });
   dagreGraph.setDefaultEdgeLabel(() => ({}));
 
   const isHorizontal = direction === 'LR';
@@ -204,14 +204,17 @@ export default function ArchitectureViewer({ architectureJson, onNodeSelect }) {
   const rfInstanceRef = useRef(null);
 
   useEffect(() => {
-    if (rfInstanceRef.current) {
-      [50, 200, 500].forEach(delay => {
-        setTimeout(() => {
-          rfInstanceRef.current?.fitView({ padding: 0.2, duration: 800 });
-        }, delay);
-      });
+    if (rfInstanceRef.current && nodes.length > 0) {
+      // Robustly fit view across multiple render frames to ensure DOM layout is complete
+      const fit = () => rfInstanceRef.current?.fitView({ padding: 0.15, duration: 800 });
+      
+      let t1 = setTimeout(() => window.requestAnimationFrame(fit), 50);
+      let t2 = setTimeout(() => window.requestAnimationFrame(fit), 300);
+      let t3 = setTimeout(() => window.requestAnimationFrame(fit), 800);
+      
+      return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
     }
-  }, [isSidebarOpen, isFullscreen]);
+  }, [isSidebarOpen, isFullscreen, nodes]);
 
   const handleExportTerraform = useCallback(() => {
     try {
