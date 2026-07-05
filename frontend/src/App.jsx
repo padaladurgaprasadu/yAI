@@ -785,11 +785,14 @@ function App() {
     }
 
     try {
+      const currentProjectId = projectId || `proj-${Math.random().toString(36).substr(2, 8)}`;
+      if (!projectId) setProjectId(currentProjectId);
+      
       const ws = new WebSocket(`${WS_URL}/api/ws/generate`)
       
       ws.onopen = () => {
         ws.send(JSON.stringify({ 
-            project_id: projectId,
+            project_id: currentProjectId,
             goal: goal,
             blueprint: parsedBlueprint,
             agent_role: agentRole
