@@ -798,6 +798,9 @@ IMPORTANT RULES:
             # Clear status indicator
             yield f"data: {json.dumps({'type': 'status', 'message': ''})}\n\n"
             
+            from backend.agents.base import BaseAgent
+            active_llm = BaseAgent().llm
+            
             first_token_yielded = False
             draft_text = ""
             is_build = False
