@@ -56,6 +56,39 @@ const ArtifactViewer = ({ codeFiles, projectId, isPreviewRunning, API_URL, execu
           const sandpackPath = filePath.replace('client/', '/');
           sandpackFiles[sandpackPath] = content;
        }
+       
+       // AUTO-DETECT DEPENDENCIES FOR SANDPACK
+       if (filePath.endsWith('.js') || filePath.endsWith('.jsx')) {
+          const importRegex = /import\s+.*?\s+from\s+['"]([^'"]+)['"]/g;
+          const requireRegex = /require\(['"]([^'"]+)['"]\)/g;
+          
+          const extractPackages = (regex) => {
+              let match;
+              while ((match = regex.exec(content)) !== null) {
+                  let pkgName = match[1];
+                  // Ignore relative/absolute imports
+                  if (!pkgName.startsWith('.') && !pkgName.startsWith('/')) {
+                      // Extract base package (handle scoped packages like @mui/material)
+                      if (pkgName.startsWith('@')) {
+                          const parts = pkgName.split('/');
+                          if (parts.length >= 2) pkgName = `${parts[0]}/${parts[1]}`;
+                      } else {
+                          pkgName = pkgName.split('/')[0];
+                      }
+                      
+                      // Ignore Sandpack builtins
+                      if (pkgName !== 'react' && pkgName !== 'react-dom' && pkgName !== 'react-scripts') {
+                          if (!dynamicDependencies[pkgName]) {
+                              dynamicDependencies[pkgName] = "latest";
+                          }
+                      }
+                  }
+              }
+          };
+          
+          extractPackages(importRegex);
+          extractPackages(requireRegex);
+       }
     });
   }
   
