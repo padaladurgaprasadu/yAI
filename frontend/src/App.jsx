@@ -399,33 +399,44 @@ function App() {
   }
 
   const startVoiceRecognition = () => {
+    if (isRecording) return;
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      alert("Your browser does not support voice input.");
+      alert("Voice AI requires Google Chrome, Edge, or Safari to function.");
       return;
     }
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    
-    recognition.onstart = () => setIsRecording(true);
-    recognition.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
-      setChatInput(prev => prev + (prev ? ' ' : '') + transcript);
-    };
-    recognition.onerror = (event) => {
-      console.error("Speech recognition error", event.error);
-      setIsRecording(false);
-    };
-    recognition.onend = () => setIsRecording(false);
-    recognition.start();
+    try {
+        const recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        
+        recognition.onstart = () => {
+            setIsRecording(true);
+            window.isVoiceMode = true; // Flag for TTS playback
+        };
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            setChatInput(transcript);
+            handleChatSubmit(null, transcript);
+        };
+        recognition.onerror = (event) => {
+            console.error("Speech recognition error", event.error);
+            setIsRecording(false);
+        };
+        recognition.onend = () => setIsRecording(false);
+        recognition.start();
+    } catch(err) {
+        console.error(err);
+        setIsRecording(false);
+    }
   }
 
-  const handleChatSubmit = async (e) => {
-    e.preventDefault()
-    if (!chatInput.trim() && selectedImages.length === 0) return
+  const handleChatSubmit = async (e, directMessage = null) => {
+    if (e) e.preventDefault()
     
-    const userMessage = chatInput
+    const userMessage = directMessage || chatInput
+    if (!userMessage.trim() && selectedImages.length === 0) return
+    
     const imagePayload = selectedImages.length > 0 ? selectedImages : null
     
     // Add User message immediately
@@ -563,6 +574,20 @@ function App() {
               finalMsg = finalMsg.replace(/\[MEMORY_ADD\].*/, '').trim();
               newMsgs[newMsgs.length - 1].content = finalMsg;
           }
+          
+          // Trigger Voice AI Text-to-Speech if active
+          if (window.isVoiceMode && window.speechSynthesis) {
+              window.isVoiceMode = false;
+              // Strip markdown from AI response for clean speech
+              const cleanText = finalMsg.replace(/```[\s\S]*?```/g, 'Here is the code.').replace(/[#*_~>]/g, '').trim();
+              if (cleanText) {
+                  const utterance = new SpeechSynthesisUtterance(cleanText);
+                  utterance.rate = 1.05;
+                  utterance.pitch = 1;
+                  window.speechSynthesis.speak(utterance);
+              }
+          }
+          
           return newMsgs;
       });
       setIsChatLoading(false);
