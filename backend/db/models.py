@@ -13,6 +13,7 @@ class User(Base):
     id = Column(String, primary_key=True, index=True, default=generate_uuid)
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=True) # Can be null if using OAuth/Supabase
+    chat_history = Column(JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Relationships

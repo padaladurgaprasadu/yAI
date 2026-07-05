@@ -60,6 +60,15 @@ import redis.asyncio as aioredis
 # Initialize Database Tables
 Base.metadata.create_all(bind=engine)
 
+# Auto-migrate: Add chat_history column if missing
+try:
+    from sqlalchemy import text
+    with engine.begin() as conn:
+        conn.execute(text("ALTER TABLE users ADD COLUMN chat_history JSON"))
+except Exception as e:
+    # Ignored if column already exists or DB doesn't support it directly
+    pass
+
 @app.api_route("/", methods=["GET", "HEAD"])
 def health_check():
     return {"status": "ok", "message": "AiON Backend is running with PostgreSQL & Redis"}
@@ -180,6 +189,54 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+class HistoryRequest(BaseModel):
+    history: list
+
+@app.get("/api/user/history")
+async def get_user_history(auth: dict = Depends(verify_token)):
+    from backend.db.database import SessionLocal
+    from backend.db.models import User
+    
+    db = SessionLocal()
+    try:
+        email = auth.get("email")
+        if not email:
+            return {"history": []}
+            
+        user = db.query(User).filter(User.email == email).first()
+        if user and user.chat_history:
+            return {"history": user.chat_history}
+        return {"history": []}
+    finally:
+        db.close()
+
+@app.post("/api/user/history")
+async def save_user_history(req: HistoryRequest, auth: dict = Depends(verify_token)):
+    from backend.db.database import SessionLocal
+    from backend.db.models import User
+    
+    db = SessionLocal()
+    try:
+        email = auth.get("email")
+        if not email:
+            raise HTTPException(status_code=401, detail="Email missing in token")
+            
+        user = db.query(User).filter(User.email == email).first()
+        if not user:
+            # Create user if they don't exist yet in the DB
+            user = User(email=email, chat_history=req.history)
+            db.add(user)
+        else:
+            user.chat_history = req.history
+            
+        db.commit()
+        return {"status": "success"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db.close()
 
 class PlanRequest(BaseModel):
     goal: str

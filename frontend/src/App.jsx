@@ -233,17 +233,47 @@ function App() {
 
   const chatEndRef = useRef(null)
 
-  // Load chat history from localStorage on mount
+  // Cloud Sync Logic
+  const saveTimeoutRef = useRef(null);
+  const syncToCloud = (historyList) => {
+      if (!session?.access_token) return;
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      
+      saveTimeoutRef.current = setTimeout(() => {
+          fetch(`${API_URL}/api/user/history`, {
+              method: 'POST',
+              headers: { 
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${session.access_token}`
+              },
+              body: JSON.stringify({ history: historyList })
+          }).catch(err => console.error("Failed to sync history to cloud", err));
+      }, 1500); // 1.5s debounce
+  };
+
+  // Load chat history from localStorage on mount, then sync from Cloud
   useEffect(() => {
     try {
         const savedHistory = localStorage.getItem('aion_chat_history');
         if (savedHistory) {
             setChatHistoryList(JSON.parse(savedHistory));
         }
-    } catch (e) {
-        console.error("Failed to load chat history", e);
+    } catch (e) {}
+    
+    if (session?.access_token) {
+        fetch(`${API_URL}/api/user/history`, {
+            headers: { 'Authorization': `Bearer ${session.access_token}` }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data && data.history && data.history.length > 0) {
+                setChatHistoryList(data.history);
+                localStorage.setItem('aion_chat_history', JSON.stringify(data.history));
+            }
+        })
+        .catch(err => console.error("Failed to load chat history from cloud", err));
     }
-  }, []);
+  }, [session?.access_token]);
 
   // Effect to automatically open architecture if the AI outputs it
   useEffect(() => {
@@ -295,9 +325,9 @@ function App() {
           
           try {
               localStorage.setItem('aion_chat_history', JSON.stringify(newList));
-          } catch (e) {
-              console.error("Failed to save chat history", e);
-          }
+          } catch (e) {}
+          
+          syncToCloud(newList);
           
           return newList;
       });
@@ -315,6 +345,7 @@ function App() {
         try {
             localStorage.setItem('aion_chat_history', JSON.stringify(newList));
         } catch (err) {}
+        syncToCloud(newList);
     }
   };
 
@@ -326,6 +357,7 @@ function App() {
         try {
             localStorage.setItem('aion_chat_history', JSON.stringify(newList));
         } catch (err) {}
+        syncToCloud(newList);
         
         // If we deleted the active chat, clear the screen
         if (currentChatId === chatId) {
