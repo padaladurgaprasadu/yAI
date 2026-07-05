@@ -617,7 +617,7 @@ async def ai_chat(request_data: ChatRequest, request: Request):
     async def event_generator():
         import json
         import time
-        from backend.agents.router import IntentRouter
+        from backend.agents.router import OmniIntelligenceEngine
         from backend.agents.prompts import get_system_prompt
         
         try:
@@ -863,8 +863,9 @@ IMPORTANT RULES:
                         new_fact = memory_match.group(1).strip()
                         import asyncio
                         def save_mem():
-                            if global_chroma_client:
-                                global_chroma_client.store_memory("default_user", new_fact)
+                            client = globals().get('global_chroma_client')
+                            if client:
+                                client.store_memory("default_user", new_fact)
                             else:
                                 from backend.memory.chroma_client import ChromaClient
                                 ChromaClient().store_memory("default_user", new_fact)
@@ -878,8 +879,9 @@ IMPORTANT RULES:
                 try:
                     import asyncio
                     def save_cache():
-                        if global_chroma_client:
-                            global_chroma_client.set_cache(sanitized_message, buffer)
+                        client = globals().get('global_chroma_client')
+                        if client:
+                            client.set_cache(sanitized_message, buffer)
                         else:
                             from backend.memory.chroma_client import ChromaClient
                             ChromaClient().set_cache(sanitized_message, buffer)
