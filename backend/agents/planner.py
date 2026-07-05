@@ -77,4 +77,14 @@ class PlannerAgent(BaseAgent):
         # Update and return the state
         state["modules"] = modules_list
         state["dag_tasks"] = dag_tasks
+        
+        project_dir = state.get("project_dir")
+        if project_dir:
+            try:
+                from backend.memory.digital_twin import DigitalTwinManager
+                twin = DigitalTwinManager(project_dir)
+                twin.initialize_tasks(dag_tasks)
+            except Exception as e:
+                logger.error(f"[Planner] Failed to initialize Digital Twin: {e}")
+                
         return state

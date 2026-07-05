@@ -854,12 +854,23 @@ IMPORTANT RULES:
                     parsed = json.loads(json_str, strict=False)
                     
                     mode = str(intent_data.get("execution_mode", "Deep")).lower()
-                    if mode in ["lightning", "fast"]:
+                    
+                    if mode == "autonomous":
+                        import uuid
+                        import asyncio
+                        project_id = f"proj-{str(uuid.uuid4())[:8]}"
+                        
+                        from backend.agents.mission_planner import MissionPlanner
+                        planner = MissionPlanner(project_id, parsed, agent_role=intent_data.get("agent_role", "Fullstack Web Developer"))
+                        asyncio.create_task(planner.execute_mission())
+                        
+                        yield f"data: {json.dumps({'type': 'mission_started', 'data': parsed, 'project_id': project_id})}\n\n"
+                    elif mode in ["lightning", "fast"]:
                         yield f"data: {json.dumps({'type': 'fast_build', 'data': parsed})}\n\n"
                     else:
                         yield f"data: {json.dumps({'type': 'build', 'data': parsed})}\n\n"
                 except Exception as e:
-                    yield f"data: {json.dumps({'type': 'chat', 'token': '(Error parsing build request)'})}\n\n"
+                    yield f"data: {json.dumps({'type': 'chat', 'token': f'(Error parsing build request: {e})'})}\n\n"
                 return
             
             # 🟢 PHASE 5: Autonomous Memory Storage (Post-stream)

@@ -84,6 +84,15 @@ class ArchitectAgent(BaseAgent):
             state["blueprint"] = blueprint
             state["semantic_context"] = context
             
+            project_dir = state.get("project_dir")
+            if project_dir:
+                try:
+                    from backend.memory.digital_twin import DigitalTwinManager
+                    twin = DigitalTwinManager(project_dir)
+                    twin.save_blueprint(blueprint)
+                except Exception as e:
+                    logger.error(f"[Architect] Failed to save to Digital Twin: {e}")
+            
             if q:
                 q.put({"type": "timeline_update", "status": "done"})
                 tech_stack_str = ", ".join(blueprint.get('tech_stack', [])[:3])
@@ -97,7 +106,7 @@ class ArchitectAgent(BaseAgent):
                 client.close()
                 print("   -> [Memory] Architectural decision saved to brain.")
             except Exception as e:
-                print(f"   -> [WARNING] Could not save to memory: {e}")
+                print(f"   -> [WARNING] Could not save to neo4j memory: {e}")
                 
         except json.JSONDecodeError:
             print("   -> [WARNING] Failed to parse Architect's JSON. Using raw response.")
