@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { BackendSandbox } from './BackendSandbox';
 import {
   SandpackProvider,
   SandpackLayout,
@@ -88,13 +89,23 @@ const ExecutionLifecycle = ({ activeTab, onCrash }) => {
   );
 };
 
-export const ExecutionManager = ({ files, dynamicDependencies, activeTab }) => {
+export const ExecutionManager = ({ files, dynamicDependencies, activeTab, isBackend, previewUrl, projectId }) => {
   const [restartKey, setRestartKey] = useState(0);
 
   const handleCrash = () => {
      // A hard key update forces React to unmount the SandpackProvider entirely and remount a fresh iframe
      setRestartKey(prev => prev + 1);
   };
+
+  if (isBackend) {
+      return (
+          <BackendSandbox 
+              activeTab={activeTab} 
+              previewUrl={previewUrl} 
+              projectId={projectId} 
+          />
+      );
+  }
 
   return (
     <div style={{ width: '100%', height: '100%', backgroundColor: '#151515', position: 'relative' }}>

@@ -195,6 +195,8 @@ function App() {
   const [blueprintJson, setBlueprintJson] = useState('')
   const [codeFiles, setCodeFiles] = useState(null)
   const [executionLogs, setExecutionLogs] = useState([])
+  const [previewUrl, setPreviewUrl] = useState(null)
+  const [isBackend, setIsBackend] = useState(false)
   
   // Streaming state
   const [liveUpdates, setLiveUpdates] = useState([])
@@ -934,6 +936,13 @@ function App() {
           setLiveUpdates(prev => [...prev, "⏸️ " + data.message])
         } else if (data.type === "PREVIEW_READY") {
           setAgentState(prev => ({ ...prev, activeAgent: 'ready' }))
+          if (data.isBackend) {
+             setPreviewUrl(data.url);
+             setIsBackend(true);
+          } else {
+             setPreviewUrl(null);
+             setIsBackend(false);
+          }
           setIsPreviewRunning(true)
           ws.close()
         } else if (data.type === "agent_state") {
@@ -1447,7 +1456,10 @@ function App() {
                 <div style={{ height: 'calc(100dvh - 60px)', animation: 'fadeIn 0.5s ease-out' }}>
                   <ArtifactViewer 
                     codeFiles={codeFiles} 
-                    projectId={projectId} 
+                    onClose={() => setStep(0)} 
+                    previewUrl={previewUrl}
+                    isBackend={isBackend}
+                    projectId={projectId}
                     isPreviewRunning={isPreviewRunning}
                     previewPort={previewPort}
                     API_URL={API_URL}

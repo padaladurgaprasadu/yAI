@@ -6,7 +6,7 @@ import remarkBreaks from 'remark-breaks';
 import { motion } from 'framer-motion';
 import { ExecutionManager } from './ExecutionManager';
 
-const ArtifactViewer = ({ codeFiles, projectId, isPreviewRunning, API_URL, executionLogs }) => {
+const ArtifactViewer = ({ codeFiles, projectId, isPreviewRunning, API_URL, executionLogs, isBackend, previewUrl }) => {
   const [activeTab, setActiveTab] = useState('preview');
   const [selectedFile, setSelectedFile] = useState(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
@@ -346,6 +346,9 @@ export default defineConfig({
                 files={sandpackFiles}
                 dynamicDependencies={dynamicDependencies}
                 activeTab={activeTab}
+                isBackend={isBackend}
+                previewUrl={previewUrl}
+                projectId={projectId}
             />
         )}
 

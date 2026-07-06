@@ -488,14 +488,26 @@ async def websocket_generate(websocket: WebSocket):
             "execution_logs": final_state.get("execution_logs", [])
         })
         
-        # 🟢 Send PREVIEW_READY to the frontend immediately (Sandpack will handle compilation)
         try:
-            await websocket.send_json({
-                "type": "PREVIEW_READY",
-                "url": "sandpack-preview"
-            })
+            code_files = final_state.get("code_files", {})
+            requires_backend = any(path.startswith("server/") or path == "requirements.txt" or path == "app.py" or path == "docker-compose.yml" for path in code_files.keys())
+            
+            if requires_backend:
+                from backend.sandbox.manager import global_sandbox_manager
+                sandbox_info = await global_sandbox_manager.start_sandbox(project_id, code_files)
+                await websocket.send_json({
+                    "type": "PREVIEW_READY",
+                    "url": sandbox_info["url"],
+                    "isBackend": True
+                })
+            else:
+                await websocket.send_json({
+                    "type": "PREVIEW_READY",
+                    "url": "sandpack-preview",
+                    "isBackend": False
+                })
         except Exception as preview_err:
-            print(f"Warning: Failed to send PREVIEW_READY: {preview_err}")
+            print(f"Warning: Failed to start Sandbox or send PREVIEW_READY: {preview_err}")
         
     except WebSocketDisconnect:
         print("Client disconnected")
@@ -1102,6 +1114,22 @@ async def execute_code(request: Request):
     except Exception as e:
         return {"output": str(e)}
 
+@app.get("/api/health")
+async def health_check():
+    return {"status": "ok", "message": "AiON Multi-Agent Brain 3.0 is running!"}
+
+@app.websocket("/api/ws/sandbox/{project_id}")
+async def websocket_sandbox_logs(websocket: WebSocket, project_id: str):
+    await websocket.accept()
+    from backend.sandbox.manager import global_sandbox_manager
+    try:
+        async for log_msg in global_sandbox_manager.stream_logs(project_id):
+            await websocket.send_text(log_msg)
+    except WebSocketDisconnect:
+        pass
+    except Exception as e:
+        await websocket.send_text(f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n")
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=10000)
