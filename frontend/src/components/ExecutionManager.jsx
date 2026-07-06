@@ -38,9 +38,7 @@ const ExecutionLifecycle = ({ activeTab, onCrash }) => {
             triggerRecovery(text);
          }
       }
-      if (msg.type === 'server-error' || (msg.type === 'error' && msg.title === 'Server error')) {
-         triggerRecovery('Server Error Message');
-      }
+      // Removed server-error hard reboot because it causes grey sad faces on simple Vite errors.
     });
     return unsubscribe;
   }, [listen, triggerRecovery]);
