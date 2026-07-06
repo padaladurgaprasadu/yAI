@@ -495,11 +495,17 @@ async def websocket_generate(websocket: WebSocket):
             if requires_backend:
                 from backend.sandbox.manager import global_sandbox_manager
                 sandbox_info = await global_sandbox_manager.start_sandbox(project_id, code_files)
-                await websocket.send_json({
-                    "type": "PREVIEW_READY",
-                    "url": sandbox_info["url"],
-                    "isBackend": True
-                })
+                if sandbox_info.get("status") == "error":
+                    await websocket.send_json({
+                        "type": "PREVIEW_ERROR",
+                        "message": sandbox_info.get("message", "Unknown backend error")
+                    })
+                else:
+                    await websocket.send_json({
+                        "type": "PREVIEW_READY",
+                        "url": sandbox_info["url"],
+                        "isBackend": True
+                    })
             else:
                 await websocket.send_json({
                     "type": "PREVIEW_READY",

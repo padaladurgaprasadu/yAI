@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AdvancedBrowserPreview } from './AdvancedBrowserPreview';
 
-export const BackendSandbox = ({ activeTab, previewUrl, projectId }) => {
+export const BackendSandbox = ({ activeTab, previewUrl, previewError, projectId }) => {
   const [logs, setLogs] = useState([]);
   const logsEndRef = useRef(null);
 
@@ -46,11 +46,18 @@ export const BackendSandbox = ({ activeTab, previewUrl, projectId }) => {
       
       {/* PREVIEW TAB */}
       <div style={{ display: activeTab === 'preview' ? 'block' : 'none', height: '100%', width: '100%' }}>
-        {previewUrl ? (
+        {previewError ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', backgroundColor: '#000', color: '#ef4444', fontFamily: 'monospace', padding: '20px', textAlign: 'center' }}>
+            <h2 style={{ marginBottom: '10px' }}>⚠️ Backend Execution Failed</h2>
+            <p>{previewError}</p>
+          </div>
+        ) : previewUrl ? (
           <AdvancedBrowserPreview url={previewUrl} />
         ) : (
-          <div style={{ padding: '20px', color: '#10b981', fontFamily: 'monospace', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-            [AiON DevOps] Booting up native backend Sandbox...
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', backgroundColor: '#1e1e1e', color: '#888' }}>
+            <div className="spinner" style={{ marginBottom: '20px', width: '40px', height: '40px' }}></div>
+            <h2>Booting up Native Backend Sandbox...</h2>
+            <p>Installing dependencies and starting server. Check terminal for logs.</p>
           </div>
         )}
       </div>

@@ -89,7 +89,7 @@ const ExecutionLifecycle = ({ activeTab, onCrash }) => {
   );
 };
 
-export const ExecutionManager = ({ files, dynamicDependencies, activeTab, isBackend, previewUrl, projectId }) => {
+export const ExecutionManager = ({ files, dynamicDependencies, activeTab, isBackend, previewUrl, previewError, projectId }) => {
   const [restartKey, setRestartKey] = useState(0);
 
   const handleCrash = () => {
@@ -102,6 +102,7 @@ export const ExecutionManager = ({ files, dynamicDependencies, activeTab, isBack
           <BackendSandbox 
               activeTab={activeTab} 
               previewUrl={previewUrl} 
+              previewError={previewError}
               projectId={projectId} 
           />
       );

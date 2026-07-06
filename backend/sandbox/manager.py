@@ -93,10 +93,38 @@ class SandboxManager:
             "url": f"http://localhost:{port}"
         }
         
+        # 5. HEALTH CHECK POLLING LOOP
+        # Wait until the port actually accepts connections before returning success.
+        # Timeout after 45 seconds to prevent hanging forever.
+        import time
+        start_time = time.time()
+        timeout = 45
+        
+        while time.time() - start_time < timeout:
+            # Check if process died prematurely
+            if process.poll() is not None:
+                return {
+                    "status": "error",
+                    "message": f"Server crashed during startup with exit code {process.returncode}"
+                }
+                
+            try:
+                # Try to connect to the port
+                with socket.create_connection(('localhost', port), timeout=1):
+                    # If we can connect, the web server is bound and ready!
+                    return {
+                        "status": "running",
+                        "port": port,
+                        "url": f"http://localhost:{port}"
+                    }
+            except (ConnectionRefusedError, TimeoutError, OSError):
+                # Port not open yet, wait and try again
+                await asyncio.sleep(2)
+                
+        # If we exit the loop, we timed out
         return {
-            "status": "running",
-            "port": port,
-            "url": f"http://localhost:{port}"
+            "status": "error",
+            "message": "Backend failed to start within 45s. Check terminal logs."
         }
 
     async def stream_logs(self, project_id: str):

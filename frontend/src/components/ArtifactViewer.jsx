@@ -8,7 +8,7 @@ import remarkBreaks from 'remark-breaks';
 import { motion } from 'framer-motion';
 import { ExecutionManager } from './ExecutionManager';
 
-const ArtifactViewer = ({ codeFiles, projectId, isPreviewRunning, API_URL, executionLogs, isBackend, previewUrl }) => {
+const ArtifactViewer = ({ codeFiles, projectId, isPreviewRunning, API_URL, executionLogs, isBackend, previewUrl, previewError }) => {
   const [activeTab, setActiveTab] = useState('preview');
   const [selectedFile, setSelectedFile] = useState(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
@@ -416,6 +416,7 @@ export default defineConfig({
                   activeTab={activeTab}
                   isBackend={isBackend}
                   previewUrl={previewUrl}
+                  previewError={previewError}
                   projectId={projectId}
               />
             )

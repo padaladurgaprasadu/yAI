@@ -196,6 +196,7 @@ function App() {
   const [codeFiles, setCodeFiles] = useState(null)
   const [executionLogs, setExecutionLogs] = useState([])
   const [previewUrl, setPreviewUrl] = useState(null)
+  const [previewError, setPreviewError] = useState(null)
   const [isBackend, setIsBackend] = useState(false)
   
   // Streaming state
@@ -934,8 +935,15 @@ function App() {
         } else if (data.type === "INTERRUPT") {
           setAwaitingApproval(true)
           setLiveUpdates(prev => [...prev, "⏸️ " + data.message])
+        } else if (data.type === "PREVIEW_ERROR") {
+          setAgentState(prev => ({ ...prev, activeAgent: 'error' }))
+          setPreviewError(data.message)
+          setIsBackend(true) // So ExecutionManager routes to BackendSandbox to show the error
+          setIsPreviewRunning(true)
+          ws.close()
         } else if (data.type === "PREVIEW_READY") {
           setAgentState(prev => ({ ...prev, activeAgent: 'ready' }))
+          setPreviewError(null)
           if (data.isBackend) {
              setPreviewUrl(data.url);
              setIsBackend(true);
@@ -1458,6 +1466,7 @@ function App() {
                     codeFiles={codeFiles} 
                     onClose={() => setStep(0)} 
                     previewUrl={previewUrl}
+                    previewError={previewError}
                     isBackend={isBackend}
                     projectId={projectId}
                     isPreviewRunning={isPreviewRunning}
