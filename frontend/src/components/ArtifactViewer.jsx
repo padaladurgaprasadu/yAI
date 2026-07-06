@@ -122,7 +122,14 @@ export default defineConfig({
                   } else {
                       pkgName = pkgName.split('/')[0];
                   }
-                  if (pkgName !== 'react' && pkgName !== 'react-dom') {
+                  
+                  // Ignore built-in React, @types, and common Node built-ins
+                  if (
+                      pkgName !== 'react' && 
+                      pkgName !== 'react-dom' && 
+                      !pkgName.startsWith('@types/') &&
+                      !['fs', 'path', 'crypto', 'os', 'http', 'https', 'stream', 'events', 'util', 'url'].includes(pkgName)
+                  ) {
                       if (!dynamicDependencies[pkgName]) {
                           dynamicDependencies[pkgName] = "latest";
                       }
