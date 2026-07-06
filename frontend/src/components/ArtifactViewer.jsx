@@ -122,37 +122,76 @@ export default defineConfig({
        sandpackFiles[sandpackPath] = finalContent;
        
        // AUTO-DETECT DEPENDENCIES FOR SANDPACK
-       if (filePath.endsWith('.js') || filePath.endsWith('.jsx')) {
-          const importRegex = /import\s+.*?\s+from\s+['"]([^'"]+)['"]/g;
-          let match;
-          while ((match = importRegex.exec(content)) !== null) {
-              let pkgName = match[1];
-              if (!pkgName.startsWith('.') && !pkgName.startsWith('/')) {
-                  if (pkgName.startsWith('@')) {
-                      const parts = pkgName.split('/');
-                      if (parts.length >= 2) pkgName = `${parts[0]}/${parts[1]}`;
-                  } else {
-                      pkgName = pkgName.split('/')[0];
-                  }
-                  
-                  // Ignore built-in React, @types, and common Node built-ins, and ML hallucinations
-                  const blacklist = ['react', 'react-dom', 'pg', 'redis', 'kubernetes', 'docker', 'mongoose', 'express', 'apollo-server', 'apollo-server-express', 'server', 'client', 'ts-node', 'nodemon', 'tensorflow', 'opencv', 'pandas', 'numpy', 'pytorch', 'scikit-learn', 'flask', 'django', 'fastapi', 'keras', 'matplotlib', 'seaborn'];
-                  const isBlacklisted = blacklist.includes(pkgName);
-                  
-                  if (
-                      !isBlacklisted && 
-                      !pkgName.startsWith('@types/') &&
-                      !['fs', 'path', 'crypto', 'os', 'http', 'https', 'stream', 'events', 'util', 'url'].includes(pkgName)
-                  ) {
-                      if (!dynamicDependencies[pkgName]) {
-                          dynamicDependencies[pkgName] = "latest";
-                      }
-                  }
-              }
+       const isJsLike = /\.(js|jsx|ts|tsx)$/.test(filePath);
+       if (isJsLike) {
+          const importRegex = /import\s+[\s\S]*?\s+from\s+['"]([^'"]+)['"]/g;
+          const bareImportRegex = /import\s+['"]([^'"]+)['"]/g;
+          
+          for (const regex of [importRegex, bareImportRegex]) {
+            let match;
+            while ((match = regex.exec(content)) !== null) {
+                let pkgName = match[1];
+                if (!pkgName.startsWith('.') && !pkgName.startsWith('/')) {
+                    if (pkgName.startsWith('@')) {
+                        const parts = pkgName.split('/');
+                        if (parts.length >= 2) pkgName = `${parts[0]}/${parts[1]}`;
+                    } else {
+                        pkgName = pkgName.split('/')[0];
+                    }
+                    
+                    // Ignore built-in React, @types, and common Node built-ins, and ML hallucinations
+                    const blacklist = ['react', 'react-dom', 'pg', 'redis', 'kubernetes', 'docker', 'mongoose', 'express', 'apollo-server', 'apollo-server-express', 'server', 'client', 'ts-node', 'nodemon', 'tensorflow', 'opencv', 'pandas', 'numpy', 'pytorch', 'scikit-learn', 'flask', 'django', 'fastapi', 'keras', 'matplotlib', 'seaborn'];
+                    const isBlacklisted = blacklist.includes(pkgName);
+                    
+                    if (
+                        !isBlacklisted && 
+                        !pkgName.startsWith('@types/') &&
+                        !['fs', 'path', 'crypto', 'os', 'http', 'https', 'stream', 'events', 'util', 'url'].includes(pkgName)
+                    ) {
+                        if (!dynamicDependencies[pkgName]) {
+                            dynamicDependencies[pkgName] = "latest";
+                        }
+                    }
+                }
+            }
           }
        }
     });
   }
+
+  function validateClosure(files) {
+    const missing = [];
+    const filePaths = new Set(Object.keys(files));
+
+    Object.entries(files).forEach(([path, content]) => {
+      if (typeof content !== 'string') return;
+      const importRegex = /from\s+['"](\.[^'"]+)['"]/g;
+      let match;
+      while ((match = importRegex.exec(content)) !== null) {
+        const dir = path.substring(0, path.lastIndexOf('/')) || '';
+        let resolved;
+        try {
+          resolved = new URL(match[1], `file:///${dir.replace(/^\//, '')}/`).pathname;
+          // Ensure it starts with / for Sandpack paths
+          if (!resolved.startsWith('/')) resolved = '/' + resolved;
+        } catch {
+          continue;
+        }
+        const candidates = [
+          resolved, resolved + '.js', resolved + '.jsx',
+          resolved + '.ts', resolved + '.tsx', resolved + '/index.js',
+          resolved + '.css'
+        ];
+        if (!candidates.some(c => filePaths.has(c))) {
+          missing.push({ file: path, import: match[1] });
+        }
+      }
+    });
+
+    return missing;
+  }
+
+  const missingImports = validateClosure(sandpackFiles);
 
   return (
     <div style={{
@@ -359,14 +398,27 @@ export default defineConfig({
 
         {/* EXECUTION MANAGER (Preview + WebContainer Terminal) */}
         {(activeTab === 'preview' || activeTab === 'terminal') && (
-            <ExecutionManager 
-                files={sandpackFiles}
-                dynamicDependencies={dynamicDependencies}
-                activeTab={activeTab}
-                isBackend={isBackend}
-                previewUrl={previewUrl}
-                projectId={projectId}
-            />
+            missingImports.length > 0 ? (
+              <div style={{ padding: 20, color: '#ef4444', fontFamily: 'monospace', height: '100%', backgroundColor: '#000', overflow: 'auto' }}>
+                <strong style={{ fontSize: '1.1em', display: 'block', marginBottom: '10px' }}>[AiON] Generation incomplete — {missingImports.length} file(s) missing:</strong>
+                <ul style={{ listStyleType: 'none', padding: 0 }}>
+                  {missingImports.map((m, i) => (
+                    <li key={i} style={{ marginBottom: '8px', padding: '10px', backgroundColor: '#1a0000', border: '1px solid #330000', borderRadius: '4px' }}>
+                      <span style={{ color: '#aaa' }}>{m.file}</span> imports <strong style={{ color: '#ff6b6b' }}>"{m.import}"</strong> — file not found
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <ExecutionManager 
+                  files={sandpackFiles}
+                  dynamicDependencies={dynamicDependencies}
+                  activeTab={activeTab}
+                  isBackend={isBackend}
+                  previewUrl={previewUrl}
+                  projectId={projectId}
+              />
+            )
         )}
 
       </div>
