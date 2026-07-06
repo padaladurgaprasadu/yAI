@@ -747,10 +747,29 @@ IMPORTANT RULES:
             yield f"data: {json.dumps({'type': 'status', 'message': '✨ Analyzing Intent...'})}\n\n"
             api_logger.info(f"TTFT_heartbeat: {(time.time() - start_time) * 1000:.2f}ms")
 
-            # 🟢 PHASE 2: Fast Intent Routing (Using fast_llm)
+            # 🟢 PHASE 2 & 3 CONCURRENT: Fast Intent Routing & Memory Retrieval
             from backend.agents.router import OmniIntelligenceEngine
+            import asyncio
             router = OmniIntelligenceEngine(llm=agent.fast_llm)
-            intent_data = router.detect_intent(sanitized_message, request_data.history)
+            
+            async def get_memory():
+                try:
+                    if global_chroma_client:
+                        return await asyncio.to_thread(global_chroma_client.retrieve_memory, "default_user", sanitized_message)
+                    else:
+                        from backend.memory.chroma_client import ChromaClient
+                        return await asyncio.to_thread(ChromaClient().retrieve_memory, "default_user", sanitized_message)
+                except Exception as e:
+                    api_logger.warning(f"Failed to retrieve vector memory: {e}")
+                    return "No past memory recorded yet."
+
+            router_task = asyncio.create_task(router.adetect_intent(sanitized_message, request_data.history))
+            memory_task = asyncio.create_task(get_memory())
+            
+            intent_data, USER_MEMORY = await asyncio.gather(router_task, memory_task)
+            
+            if not USER_MEMORY:
+                USER_MEMORY = "No past memory recorded yet."
             
             missing_info = intent_data.get("missing_info_question")
             if missing_info and isinstance(missing_info, str) and missing_info.lower() not in ["none", "null", "", "n/a"]:
@@ -758,69 +777,42 @@ IMPORTANT RULES:
                 yield f"data: {json.dumps({'type': 'chat', 'token': missing_info})}\n\n"
                 return
 
-            # --- VISUAL DECISION ENGINE INTEGRATION ---
+            # --- NON-BLOCKING VISUAL ENGINE ---
+            visual_queue = asyncio.Queue()
+            visual_task = None
             if intent_data.get("needs_images") and intent_data.get("visual_query") and intent_data.get("visual_query").lower() not in ["null", "none"]:
-                yield f"data: {json.dumps({'type': 'status', 'message': '📸 Fetching Visuals...'})}\n\n"
-                from backend.utils.visuals import get_generative_image, get_real_world_image, get_pencil_sketch_image
-                import asyncio
-                
-                try:
-                    v_type = str(intent_data.get("visual_type", "real")).lower()
-                    v_count = int(intent_data.get("visual_count", 1))
-                    
-                    if v_type == "sketch":
+                yield f"data: {json.dumps({'type': 'status', 'message': '📸 Fetching Visuals (Background)...'})}\n\n"
+                async def fetch_visuals():
+                    from backend.utils.visuals import get_generative_image, get_real_world_image, get_pencil_sketch_image
+                    try:
+                        v_type = str(intent_data.get("visual_type", "real")).lower()
+                        v_count = int(intent_data.get("visual_count", 1))
                         img_urls = []
-                        url = await asyncio.to_thread(get_pencil_sketch_image, intent_data["visual_query"])
-                        if url: img_urls.append(url)
-                    elif v_type == "generative":
-                        img_urls = []
-                        # Generative currently only supports 1 image properly via Pollinations without caching conflicts, but we can do a loop with random seeds if needed.
-                        # For simplicity, we just fetch one if it's generative.
-                        url = await asyncio.to_thread(get_generative_image, intent_data["visual_query"])
-                        if url: img_urls.append(url)
-                    else:
-                        res = await asyncio.to_thread(get_real_world_image, intent_data["visual_query"], v_count)
-                        if isinstance(res, list):
-                            img_urls = res
-                        elif res:
-                            img_urls = [res]
+                        if v_type == "sketch":
+                            url = await asyncio.to_thread(get_pencil_sketch_image, intent_data["visual_query"])
+                            if url: img_urls.append(url)
+                        elif v_type == "generative":
+                            url = await asyncio.to_thread(get_generative_image, intent_data["visual_query"])
+                            if url: img_urls.append(url)
                         else:
-                            img_urls = []
+                            res = await asyncio.to_thread(get_real_world_image, intent_data["visual_query"], v_count)
+                            img_urls = res if isinstance(res, list) else ([res] if res else [])
                         
-                    for img_url in img_urls:
-                        visual_payload = {
-                            "type": "visual",
-                            "media_type": "image",
-                            "url": img_url,
-                            "alt": intent_data["visual_query"]
-                        }
-                        yield f"data: {json.dumps(visual_payload)}\n\n"
-                        # Small delay between yields for smooth UI
-                        await asyncio.sleep(0.1)
-                except Exception as e:
-                    api_logger.warning(f"Error fetching visuals: {e}")
-            # -------------------------------------------
+                        for img_url in img_urls:
+                            await visual_queue.put({
+                                "type": "visual",
+                                "media_type": "image",
+                                "url": img_url,
+                                "alt": intent_data["visual_query"]
+                            })
+                    except Exception as e:
+                        api_logger.warning(f"Error fetching visuals: {e}")
+                    finally:
+                        await visual_queue.put(None) # EOF marker
+                
+                visual_task = asyncio.create_task(fetch_visuals())
 
             base_prompt = get_system_prompt(intent_data)
-
-            # 🟢 PHASE 3: Conditional Memory Retrieval
-            USER_MEMORY = "No past memory recorded yet."
-            complexity = str(intent_data.get("complexity", "")).lower()
-            goal = str(intent_data.get("user_goal", "")).lower()
-            
-            # Skip ChromaDB entirely for simple factual questions to maximize TTFT
-            if complexity not in ["simple"] and "concept" not in goal:
-                yield f"data: {json.dumps({'type': 'status', 'message': '✨ Searching Memory...'})}\n\n"
-                try:
-                    if global_chroma_client:
-                        USER_MEMORY = global_chroma_client.retrieve_memory("default_user", sanitized_message)
-                    else:
-                        from backend.memory.chroma_client import ChromaClient
-                        USER_MEMORY = ChromaClient().retrieve_memory("default_user", sanitized_message)
-                    if not USER_MEMORY:
-                        USER_MEMORY = "No past memory recorded yet."
-                except Exception as e:
-                    api_logger.warning(f"Failed to retrieve vector memory: {e}")
 
             system_prompt = f"""{base_prompt}
 
@@ -928,22 +920,52 @@ IMPORTANT RULES:
             from backend.utils.compliance import StreamingComplianceEngine
             compliance_engine = StreamingComplianceEngine(active_llm.astream(messages))
             
-            async for text_chunk in compliance_engine.process():
-                
-                draft_text += text_chunk
-                buffer = draft_text
-                
-                # Check for build keyword before streaming it to UI
-                if "[BUILD]" in draft_text:
-                    is_build = True
-                    continue
+            import asyncio
+            text_gen = compliance_engine.process()
+            
+            async def get_next_token():
+                try:
+                    return await anext(text_gen)
+                except StopAsyncIteration:
+                    return None
+
+            text_task = asyncio.create_task(get_next_token())
+            queue_task = asyncio.create_task(visual_queue.get()) if visual_queue else None
+            
+            while True:
+                tasks = [text_task]
+                if queue_task:
+                    tasks.append(queue_task)
                     
-                if not first_token_yielded:
-                    # Log the REAL TTFT here!
-                    api_logger.info(f"TTFT_real_content: {(time.time() - start_time) * 1000:.2f}ms")
-                    first_token_yielded = True
+                done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+                
+                if queue_task and queue_task in done:
+                    visual_item = queue_task.result()
+                    if visual_item:
+                        yield f"data: {json.dumps(visual_item)}\n\n"
+                        queue_task = asyncio.create_task(visual_queue.get())
+                    else:
+                        queue_task = None # EOF marker reached
+                        
+                if text_task in done:
+                    text_chunk = text_task.result()
+                    if text_chunk is None:
+                        break # End of text stream
+                        
+                    draft_text += text_chunk
+                    buffer = draft_text
                     
-                yield f"data: {json.dumps({'type': 'chat', 'token': text_chunk})}\n\n"
+                    if "[BUILD]" in draft_text:
+                        is_build = True
+                        text_task = asyncio.create_task(get_next_token())
+                        continue
+                        
+                    if not first_token_yielded:
+                        api_logger.info(f"TTFT_real_content: {(time.time() - start_time) * 1000:.2f}ms")
+                        first_token_yielded = True
+                        
+                    yield f"data: {json.dumps({'type': 'chat', 'token': text_chunk})}\n\n"
+                    text_task = asyncio.create_task(get_next_token())
                 
             if is_build:
                 try:

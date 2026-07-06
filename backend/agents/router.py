@@ -143,8 +143,12 @@ Do NOT output any other text, markdown, or explanation.
 """
 
     def detect_intent(self, message: str, history: list = None) -> dict:
+        import asyncio
+        return asyncio.run(self.adetect_intent(message, history))
+
+    async def adetect_intent(self, message: str, history: list = None) -> dict:
         """
-        Runs a fast LLM inference to determine the user's multi-dimensional intent.
+        Runs a fast LLM inference to determine the user's multi-dimensional intent asynchronously.
         """
         try:
             context = ""
@@ -167,7 +171,7 @@ Do NOT output any other text, markdown, or explanation.
                 HumanMessage(content=context)
             ]
             
-            response = self.llm.invoke(messages)
+            response = await self.llm.ainvoke(messages)
             content = response.content.strip()
             
             if content.startswith("```json"):
