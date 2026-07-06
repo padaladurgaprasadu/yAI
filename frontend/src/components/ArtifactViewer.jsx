@@ -91,9 +91,13 @@ export default defineConfig({
       try {
         const pkgData = JSON.parse(codeFiles[pkgFiles[0]]);
         if (pkgData.dependencies) {
-          dynamicDependencies = { ...dynamicDependencies, ...pkgData.dependencies };
-          delete dynamicDependencies['react'];
-          delete dynamicDependencies['react-dom'];
+          Object.keys(pkgData.dependencies).forEach(dep => {
+              // Sandbox-safe filter: Remove @types, node internals, and known backend-only drivers that crash CDN
+              const blacklist = ['react', 'react-dom', 'pg', 'redis', 'kubernetes', 'docker', 'mongoose', 'express', 'apollo-server', 'apollo-server-express', 'server', 'client', 'ts-node', 'nodemon'];
+              if (!dep.startsWith('@types/') && !blacklist.includes(dep) && !dep.startsWith('vite')) {
+                  dynamicDependencies[dep] = pkgData.dependencies[dep];
+              }
+          });
         }
       } catch (e) {
         console.warn("Failed to parse package.json");
