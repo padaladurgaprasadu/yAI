@@ -198,12 +198,17 @@ export default defineConfig({
 
     // Heuristic: if it looks like a React Context (common Coder-agent pattern), stub a real one
     if (fileName.endsWith('Context')) {
+      const isAuth = fileName === 'AuthContext';
+      const defaultState = isAuth 
+        ? `{ user: { id: 'demo-user', name: 'Demo User', email: 'demo@aion.dev' }, isAuthenticated: true }` 
+        : `{}`;
+
       return `import React, { createContext, useContext, useState } from 'react';
 
 const ${fileName} = createContext(null);
 
 export const ${baseName}Provider = ({ children }) => {
-  const [state, setState] = useState({});
+  const [state, setState] = useState(${defaultState});
   return (
     <${fileName}.Provider value={{ ...state, setState }}>
       {children}
