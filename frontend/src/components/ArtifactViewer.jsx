@@ -14,7 +14,7 @@ const ArtifactViewer = ({ codeFiles, projectId, isPreviewRunning, API_URL, execu
   }, [codeFiles, selectedFile]);
 
   const sandpackFiles = {
-    "/index.html": `<!DOCTYPE html>
+    "/client/index.html": `<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -27,7 +27,7 @@ const ArtifactViewer = ({ codeFiles, projectId, isPreviewRunning, API_URL, execu
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>`,
-    "/src/main.jsx": `import React from 'react'
+    "/client/src/main.jsx": `import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import './index.css'
@@ -37,9 +37,44 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <App />
   </React.StrictMode>,
 )`,
-    "/src/index.css": `@tailwind base;
-@tailwind components;
-@tailwind utilities;`
+    "/client/src/index.css": `@tailwind base;\n@tailwind components;\n@tailwind utilities;`,
+    "/client/vite.config.js": `import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [react()],
+  server: { port: 3000 }
+});`,
+    "/package.json": JSON.stringify({
+      name: "aion-fullstack-sandbox",
+      scripts: {
+        "start": "concurrently \"node server/app.js\" \"cd client && vite\""
+      },
+      dependencies: {
+        "express": "latest",
+        "cors": "latest",
+        "pg": "latest",
+        "dotenv": "latest",
+        "mongoose": "latest",
+        "concurrently": "latest"
+      }
+    }, null, 2),
+    "/client/package.json": JSON.stringify({
+      name: "client",
+      dependencies: {
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        "lucide-react": "latest",
+        "react-router-dom": "latest",
+        "recharts": "latest",
+        "framer-motion": "latest",
+        "axios": "latest"
+      },
+      devDependencies: {
+        "vite": "^4.4.5",
+        "@vitejs/plugin-react": "^4.0.3"
+      }
+    }, null, 2)
   };
   
   let dynamicDependencies = {
@@ -66,18 +101,13 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     }
 
     Object.entries(codeFiles).forEach(([filePath, content]) => {
-       if (filePath.startsWith('client/')) {
-          // Map client/ folder directly to Sandpack root
-          let sandpackPath = filePath.replace('client', '');
-          
-          // CRITICAL FIX: Skip if it is a directory (no file extension) to prevent EISDIR crash
-          if (!sandpackPath.includes('.')) return;
-          
-          // Ensure App is always .jsx for Vite
-          if (sandpackPath === '/src/App.js') sandpackPath = '/src/App.jsx';
-          
-          sandpackFiles[sandpackPath] = content;
-       }
+       // AiON-SP: Map ALL files (client, server, root) directly into Sandpack Node template
+       let sandpackPath = filePath.startsWith('/') ? filePath : '/' + filePath;
+       
+       // Ensure App is always .jsx for Vite compatibility
+       if (sandpackPath === '/client/src/App.js') sandpackPath = '/client/src/App.jsx';
+       
+       sandpackFiles[sandpackPath] = content;
        
        // AUTO-DETECT DEPENDENCIES FOR SANDPACK
        if (filePath.endsWith('.js') || filePath.endsWith('.jsx')) {
@@ -310,7 +340,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         {activeTab === 'preview' && (
           <div style={{ width: '100%', height: '100%', backgroundColor: '#151515', position: 'relative' }}>
             <Sandpack 
-              template="vite-react" 
+              template="node"  
               theme="dark"
               files={sandpackFiles}
               options={{
