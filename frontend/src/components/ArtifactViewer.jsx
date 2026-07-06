@@ -49,37 +49,7 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   server: { port: 3000 }
-});`,
-    "/package.json": JSON.stringify({
-      name: "aion-fullstack-sandbox",
-      scripts: {
-        "start": "concurrently \"node server/app.js\" \"cd client && vite\""
-      },
-      dependencies: {
-        "express": "latest",
-        "cors": "latest",
-        "pg": "latest",
-        "dotenv": "latest",
-        "mongoose": "latest",
-        "concurrently": "latest"
-      }
-    }, null, 2),
-    "/client/package.json": JSON.stringify({
-      name: "client",
-      dependencies: {
-        "react": "^18.2.0",
-        "react-dom": "^18.2.0",
-        "lucide-react": "latest",
-        "react-router-dom": "latest",
-        "recharts": "latest",
-        "framer-motion": "latest",
-        "axios": "latest"
-      },
-      devDependencies: {
-        "vite": "^4.4.5",
-        "@vitejs/plugin-react": "^4.0.3"
-      }
-    }, null, 2)
+});`
   };
   
   let dynamicDependencies = {
@@ -150,7 +120,7 @@ export default defineConfig({
                   
                   // Ignore built-in React, @types, and common Node built-ins, and ML hallucinations
                   const blacklist = ['react', 'react-dom', 'pg', 'redis', 'kubernetes', 'docker', 'mongoose', 'express', 'apollo-server', 'apollo-server-express', 'server', 'client', 'ts-node', 'nodemon', 'tensorflow', 'opencv', 'pandas', 'numpy', 'pytorch', 'scikit-learn', 'flask', 'django', 'fastapi', 'keras', 'matplotlib', 'seaborn'];
-                  const isBlacklisted = blacklist.some(b => pkgName.includes(b));
+                  const isBlacklisted = blacklist.includes(pkgName);
                   
                   if (
                       !isBlacklisted && 

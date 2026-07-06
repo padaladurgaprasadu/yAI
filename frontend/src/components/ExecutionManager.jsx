@@ -70,7 +70,7 @@ const ExecutionLifecycle = ({ activeTab, onCrash }) => {
             style={{ height: 'calc(100dvh - 120px)' }} 
             showNavigator={true} 
             showRefreshButton={true}
-            showSandpackErrorOverlay={false}
+            showSandpackErrorOverlay={true}
           />
         )}
       </div>
