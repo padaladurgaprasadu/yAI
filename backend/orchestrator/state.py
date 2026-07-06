@@ -27,3 +27,8 @@ class AiONState(TypedDict):
     execution_mode: Optional[str] # Lightning, Fast, Deep, Autonomous
     complexity: Optional[str]
     compressed_context: Optional[str]
+    
+    # AiON Swarm Protocol State
+    swarm_tasks: Optional[List[Dict[str, Any]]] # Dynamic tasks for sub-agents
+    swarm_results: Optional[List[Dict[str, Any]]] # Results collected from sub-agents
+    federation_peer_id: Optional[str] # ID for cross-machine federation

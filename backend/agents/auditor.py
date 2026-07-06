@@ -20,17 +20,23 @@ class AuditorAgent(BaseAgent):
             ("system", "You are an Elite QA Auditor & Security Expert. Your job is to strictly verify the generated codebase before it is deployed to production.\n\n"
              "RULES:\n"
              "1. PERFORMANCE: Analyze React components for unnecessary re-renders. Check for missing useMemo/useCallback or bloated loops.\n"
-             "2. UI/UX: Verify modern aesthetics, responsive design (mobile-first), and color contrast.\n"
+             "2. VISUAL QA (VISION): Analyze the rendered UI screenshots for contrast issues, layout misalignment, responsive design (mobile-first), and aesthetic flaws.\n"
              "3. SECURITY: Scan for XSS (raw innerHTML injections), insecure API integrations, or missing sanitization.\n"
              "4. ACCESSIBILITY: Ensure ARIA labels, alt attributes, and keyboard navigability exist on interactive elements.\n"
              "5. SIMULATION: Mentally walk through user interactions. 'What happens if a user clicks submit twice quickly? Is there a loading state?'\n\n"
-             "If you find ANY vulnerabilities, UX issues, or unoptimized code, return a specific, detailed critique outlining exactly what needs to be fixed. \n"
-             "If the codebase is 100% production-ready, secure, and beautiful, you MUST return exactly the word 'APPROVED' and nothing else.\n\n"
-             "CRITICAL: Do NOT write code yourself, just provide the exact feedback for the Coder to self-fix."),
-            ("human", "Blueprint: {blueprint}\nCode Files Generated: {code_files}\n\nPlease run your Deep QA Audit. Output exact feedback or 'APPROVED'.")
+             "If you find ANY vulnerabilities, visual UX issues, or unoptimized code, return a specific, detailed critique outlining exactly what needs to be fixed. \n"
+             "If the codebase is 100% production-ready, visually stunning, secure, and beautiful, you MUST return exactly the word 'APPROVED' and nothing else.\n\n"
+             "CRITICAL: Do NOT write code yourself, just provide the exact feedback for the Swarm to self-fix."),
+            ("human", "Blueprint: {blueprint}\nCode Files Generated: {code_files}\nHeadless UI Screenshot Base64: {screenshot}\n\nPlease run your Deep Visual QA Audit. Output exact feedback or 'APPROVED'.")
         ])
         
-        self.chain = self.prompt | self.fast_llm
+        # We upgrade to a Vision-capable model for the Auditor
+        from langchain_openai import ChatOpenAI
+        try:
+            self.vision_llm = ChatOpenAI(model="gpt-4o", temperature=0.1)
+            self.chain = self.prompt | self.vision_llm
+        except Exception:
+            self.chain = self.prompt | self.fast_llm
 
     def run(self, state: AiONState) -> AiONState:
         project_id = state.get("project_id", "default")
@@ -60,10 +66,13 @@ class AuditorAgent(BaseAgent):
             try:
                 # Truncate code files output to prevent token limits
                 code_files_summary = {k: v[:800] + "... [TRUNCATED]" if len(v) > 800 else v for k, v in state["code_files"].items()}
+                # Headless browser mock: in production, this would spin up Puppeteer, render the code_files, and capture a base64 png.
+                mock_screenshot_base64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
                 
                 response = self.chain.invoke({
                     "blueprint": json.dumps(state.get("blueprint", {})),
-                    "code_files": json.dumps(code_files_summary)
+                    "code_files": json.dumps(code_files_summary),
+                    "screenshot": mock_screenshot_base64
                 })
                 
                 feedback = response.content.strip()

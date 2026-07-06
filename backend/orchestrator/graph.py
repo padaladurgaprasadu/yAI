@@ -2,6 +2,7 @@ from langgraph.graph import StateGraph, END
 from backend.orchestrator.state import AiONState
 from backend.agents.planner import PlannerAgent
 from backend.agents.architect import ArchitectAgent
+from backend.agents.swarm_orchestrator import SwarmOrchestratorAgent
 from backend.agents.coder import CoderAgent
 from backend.agents.reviewer import ReviewerAgent
 from backend.agents.executor import ExecutorAgent
@@ -27,7 +28,7 @@ def should_continue(state: AiONState):
         print("   -> [System] Max revisions reached. Proceeding to auditor.")
         return "auditor"
         
-    return "coder"
+    return "swarm_orchestrator"
 
 def should_continue_audit(state: AiONState):
     """
@@ -43,7 +44,7 @@ def should_continue_audit(state: AiONState):
         print("   -> [System] Max revisions reached in audit. Proceeding to devops.")
         return "devops"
         
-    return "coder"
+    return "swarm_orchestrator"
 
 def check_dependencies(state: AiONState):
     """
@@ -53,8 +54,8 @@ def check_dependencies(state: AiONState):
     revision_count = state.get("revision_count", 0)
     
     if missing and revision_count < 3:
-        print(f"   -> [Graph] Routing back to Coder to generate missing files: {missing}")
-        return "coder"
+        print(f"   -> [Graph] Routing back to Swarm Orchestrator to generate missing files: {missing}")
+        return "swarm_orchestrator"
     elif missing:
         print(f"   -> [Graph] Max revisions reached while fixing dependencies. Proceeding anyway.")
         
@@ -68,8 +69,8 @@ def should_retry_execution(state: AiONState):
     execution_retries = state.get("execution_retries", 0)
     
     if error and execution_retries < 3:
-        print(f"   -> [Auto-Heal] Execution failed (Retry {execution_retries + 1}/3). Looping back to Coder for healing.")
-        return "coder"
+        print(f"   -> [Auto-Heal] Execution failed (Retry {execution_retries + 1}/3). Looping back to Swarm Orchestrator for healing.")
+        return "swarm_orchestrator"
         
     if error:
         print("   -> [Auto-Heal] Max execution retries reached. Failing gracefully.")
@@ -100,6 +101,10 @@ def build_graph():
     workflow.add_node("planner", planner.run)
     workflow.add_node("researcher", researcher.run)
     workflow.add_node("architect", architect.run)
+    
+    swarm_orchestrator = SwarmOrchestratorAgent()
+    workflow.add_node("swarm_orchestrator", swarm_orchestrator.run)
+    
     workflow.add_node("coder", coder.run)
     workflow.add_node("dependency_checker", dep_checker.run)
     workflow.add_node("ml_trainer", ml_trainer.run)
@@ -113,18 +118,19 @@ def build_graph():
     workflow.set_entry_point("planner")
     workflow.add_edge("planner", "researcher")
     workflow.add_edge("researcher", "architect")
-    workflow.add_edge("architect", "coder")
+    workflow.add_edge("architect", "swarm_orchestrator")
+    workflow.add_edge("swarm_orchestrator", "coder")
     
     workflow.add_edge("coder", "dependency_checker")
-    workflow.add_conditional_edges("dependency_checker", check_dependencies, {"coder": "coder", "ml_trainer": "ml_trainer"})
+    workflow.add_conditional_edges("dependency_checker", check_dependencies, {"swarm_orchestrator": "swarm_orchestrator", "ml_trainer": "ml_trainer"})
     
     workflow.add_edge("ml_trainer", "hp_tuner")
     workflow.add_edge("hp_tuner", "tester")
     workflow.add_edge("tester", "reviewer")
-    workflow.add_conditional_edges("reviewer", should_continue, {"coder": "coder", "auditor": "auditor"})
-    workflow.add_conditional_edges("auditor", should_continue_audit, {"coder": "coder", "devops": "devops"})
+    workflow.add_conditional_edges("reviewer", should_continue, {"swarm_orchestrator": "swarm_orchestrator", "auditor": "auditor"})
+    workflow.add_conditional_edges("auditor", should_continue_audit, {"swarm_orchestrator": "swarm_orchestrator", "devops": "devops"})
     workflow.add_edge("devops", "executor")
-    workflow.add_conditional_edges("executor", should_retry_execution, {"coder": "coder", END: END})
+    workflow.add_conditional_edges("executor", should_retry_execution, {"swarm_orchestrator": "swarm_orchestrator", END: END})
 
     return workflow.compile()
 

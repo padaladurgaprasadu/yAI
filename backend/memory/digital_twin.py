@@ -19,6 +19,16 @@ class DigitalTwinManager:
         # Ensure the .aion directory exists
         os.makedirs(self.aion_dir, exist_ok=True)
         
+        # AiON Swarm Protocol: Neo4j Knowledge Graph
+        self.neo4j_driver = None
+        try:
+            from neo4j import GraphDatabase
+            # Connect to local Neo4j. If running in a swarm, agents share this graph.
+            self.neo4j_driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "password"))
+            logger.info("[DigitalTwin] Connected to Neo4j Knowledge Graph.")
+        except Exception:
+            logger.warning("[DigitalTwin] Neo4j not available. Using local JSON fallback.")
+        
     def _read_json(self, filepath: str) -> dict:
         if not os.path.exists(filepath):
             return {}
@@ -43,8 +53,32 @@ class DigitalTwinManager:
         self._write_json(self.blueprint_file, blueprint_data)
         logger.info("[DigitalTwin] Blueprint saved.")
         
+        # Sync to Neo4j if available
+        if self.neo4j_driver:
+            try:
+                with self.neo4j_driver.session() as session:
+                    session.run("MERGE (p:Project {id: $id}) SET p.blueprint = $bp", 
+                                id=os.path.basename(self.project_dir), bp=json.dumps(blueprint_data))
+            except Exception as e:
+                logger.warning(f"[DigitalTwin] Neo4j sync failed: {e}")
+        
     def get_blueprint(self) -> dict:
         return self._read_json(self.blueprint_file)
+
+    def sync_agent_state(self, agent_role: str, file_path: str, code: str):
+        """AiON Swarm Protocol: Real-time state syncing to Knowledge Graph"""
+        if self.neo4j_driver:
+            try:
+                with self.neo4j_driver.session() as session:
+                    session.run(
+                        "MERGE (a:Agent {role: $role}) "
+                        "MERGE (f:File {path: $path}) "
+                        "MERGE (a)-[:WROTE]->(f) "
+                        "SET f.code = $code",
+                        role=agent_role, path=file_path, code=code[:2000] # truncating for safety
+                    )
+            except Exception as e:
+                logger.warning(f"[DigitalTwin] Failed to sync agent state to Neo4j: {e}")
 
     # --- TASK (DAG) MANAGEMENT ---
     
