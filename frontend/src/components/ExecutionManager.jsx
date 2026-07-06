@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   SandpackProvider,
   SandpackLayout,
@@ -7,44 +7,63 @@ import {
   SandpackConsole
 } from "@codesandbox/sandpack-react";
 
-const ExecutionLifecycle = ({ activeTab }) => {
-  const { sandpack } = useSandpack();
+const ExecutionLifecycle = ({ activeTab, onCrash }) => {
+  const { sandpack, listen } = useSandpack();
   const [restarting, setRestarting] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
 
+  const triggerRecovery = useCallback((reason) => {
+    if (retryCount >= 3) {
+      console.error(`[AiON DevOps] Max auto-recovery attempts reached. Failed to recover from: ${reason}`);
+      return;
+    }
+    console.warn(`[AiON DevOps] Intercepted infrastructure crash (${reason}), attempting hard reboot... Attempt ${retryCount + 1}/3`);
+    setRestarting(true);
+    setRetryCount(prev => prev + 1);
+    
+    // Trigger hard unmount in parent
+    setTimeout(() => {
+       onCrash();
+    }, 1500);
+  }, [retryCount, onCrash]);
+
+  // Listen to iframe raw messages for fatal server crashes
+  useEffect(() => {
+    const unsubscribe = listen((msg) => {
+      // Catch "Server has crashed with status code 1" overlay
+      if (msg.type === 'action' && msg.action === 'show-error') {
+         const text = (msg.title || '') + ' ' + (msg.message || '');
+         if (text.includes('status code 1') || text.includes('Failed to get shell') || text.includes('crashed')) {
+            triggerRecovery(text);
+         }
+      }
+      if (msg.type === 'server-error' || (msg.type === 'error' && msg.title === 'Server error')) {
+         triggerRecovery('Server Error Message');
+      }
+    });
+    return unsubscribe;
+  }, [listen, triggerRecovery]);
+
+  // Also check standard sandpack.error state
   useEffect(() => {
     if (!sandpack || !sandpack.error) return;
-    
     const errorMsg = typeof sandpack.error === 'string' ? sandpack.error : (sandpack.error.message || '');
-    
-    // Detect infrastructure-level WebContainer crashes
     if (
       errorMsg.includes('Failed to get shell by ID') || 
       errorMsg.includes('status code 1') ||
       errorMsg.includes('timeout') ||
       errorMsg.includes('Server has crashed')
     ) {
-      if (retryCount < 3) {
-        console.warn(`[AiON DevOps] Intercepted infrastructure crash (${errorMsg}), attempting auto-recovery... Attempt ${retryCount + 1}/3`);
-        setRestarting(true);
-        setRetryCount(prev => prev + 1);
-        
-        setTimeout(() => {
-          sandpack.resetAllFiles();
-          setRestarting(false);
-        }, 2000);
-      } else {
-        console.error("[AiON DevOps] Max auto-recovery attempts reached. The preview environment remains unstable.");
-      }
+      triggerRecovery(errorMsg);
     }
-  }, [sandpack.error]);
+  }, [sandpack.error, triggerRecovery]);
 
   return (
     <>
       <div style={{ display: activeTab === 'preview' ? 'block' : 'none', height: '100%', width: '100%' }}>
         {restarting ? (
           <div style={{ padding: '20px', color: '#10b981', fontFamily: 'monospace', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-            [AiON DevOps] Recovering execution environment... Rebooting container...
+            [AiON DevOps] Hard Rebooting WebContainer...
           </div>
         ) : (
           <SandpackPreview 
@@ -69,9 +88,17 @@ const ExecutionLifecycle = ({ activeTab }) => {
 };
 
 export const ExecutionManager = ({ files, dynamicDependencies, activeTab }) => {
+  const [restartKey, setRestartKey] = useState(0);
+
+  const handleCrash = () => {
+     // A hard key update forces React to unmount the SandpackProvider entirely and remount a fresh iframe
+     setRestartKey(prev => prev + 1);
+  };
+
   return (
     <div style={{ width: '100%', height: '100%', backgroundColor: '#151515', position: 'relative' }}>
       <SandpackProvider
+        key={`sp-reboot-${restartKey}`}
         template="vite-react"
         theme="dark"
         files={files}
@@ -82,7 +109,7 @@ export const ExecutionManager = ({ files, dynamicDependencies, activeTab }) => {
         }}
       >
         <SandpackLayout style={{ height: '100%', border: 'none', background: 'transparent', display: 'flex', flexDirection: 'column' }}>
-          <ExecutionLifecycle activeTab={activeTab} />
+          <ExecutionLifecycle activeTab={activeTab} onCrash={handleCrash} />
         </SandpackLayout>
       </SandpackProvider>
     </div>
