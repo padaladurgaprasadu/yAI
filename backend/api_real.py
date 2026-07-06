@@ -1055,24 +1055,25 @@ IMPORTANT RULES:
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 @app.get("/api/download")
-async def download_project():
+async def download_project(project_id: str):
     import shutil
     from fastapi.responses import FileResponse
     from starlette.background import BackgroundTasks
     
-    target_dir = os.path.join(os.getcwd(), "generated_project")
+    # AiON phase 1 saves generated code in generated_projects/{project_id}
+    target_dir = os.path.join(os.getcwd(), "generated_projects", project_id)
     if not os.path.exists(target_dir):
         raise HTTPException(status_code=404, detail="No generated project found")
         
-    zip_path = os.path.join(os.getcwd(), "aion_project")
-    # This creates aion_project.zip
+    zip_path = os.path.join(os.getcwd(), f"aion_project_{project_id}")
+    # This creates aion_project_{project_id}.zip
     shutil.make_archive(zip_path, 'zip', target_dir)
     
     zip_file = zip_path + ".zip"
     return FileResponse(
         zip_file, 
         media_type="application/zip", 
-        filename="aion_generated_project.zip"
+        filename=f"aion_generated_project_{project_id}.zip"
     )
 
 @app.post("/api/execute")
