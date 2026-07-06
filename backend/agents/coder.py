@@ -58,16 +58,18 @@ class CoderAgent(BaseAgent):
                     return (target_file, code)
                 else:
                     print(f"   -> [Attempt {attempt+1}] Failed to parse XML tags for {target_file}.")
-                    return target_file, f"// Error: AiON LLM failed to format {target_file} correctly"
+                    if attempt == max_retries - 1:
+                        return target_file, f"// Error: AiON LLM failed to format {target_file} correctly"
+                    continue
                     
             except Exception as e:
                 error_str = str(e)
-                if "429" in error_str and attempt < max_retries - 1:
+                if attempt < max_retries - 1:
                     wait_time = (attempt + 1) * 3
-                    print(f"      - [WARNING] Rate limit hit for {target_file}. Retrying in {wait_time}s...")
+                    print(f"      - [WARNING] Error generating {target_file}: {e}. Retrying in {wait_time}s...")
                     time.sleep(wait_time)
                 else:
-                    print(f"      - [ERROR] Exception while generating {target_file}: {e}")
+                    print(f"      - [ERROR] Exception while generating {target_file} after {max_retries} attempts: {e}")
                     return target_file, f"// Error: AiON encountered an exception: {e}"
 
     @measure_time(logger)
