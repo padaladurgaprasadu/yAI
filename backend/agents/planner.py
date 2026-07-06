@@ -13,7 +13,7 @@ class PlannerAgent(BaseAgent):
         super().__init__()
 
     @measure_time(logger)
-    def run(self, state: AiONState) -> AiONState:
+    def run(self, state: AiONState, q=None) -> AiONState:
         agent_role = state.get("agent_role", "Fullstack Web Developer")
         logger.info(f"[Planner] Breaking down goal for role: {agent_role}...")
         
