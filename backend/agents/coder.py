@@ -51,15 +51,24 @@ class CoderAgent(BaseAgent):
                     content = "".join(c.get("text", "") if isinstance(c, dict) else str(c) for c in content)
                     
                 import re
-                match = re.search(r'<file\s+path="[^"]+">(.*?)</file>', content, re.DOTALL)
+                match = re.search(r'<file\s+path=[\'"][^\'"]*[\'"][^>]*>(.*?)</file>', content, re.DOTALL | re.IGNORECASE)
                 if match:
                     code = match.group(1).strip()
                     print(f"   -> [Success] Generated {target_file}")
                     return (target_file, code)
                 else:
+                    # Fallback: Strip markdown block if present
+                    code = content.strip()
+                    code = re.sub(r'^```[a-zA-Z]*\n?', '', code)
+                    code = re.sub(r'\n?```$', '', code).strip()
+                    
+                    if code and len(code) > 10:
+                        print(f"   -> [Success] (Fallback Parsing) Generated {target_file}")
+                        return (target_file, code)
+                        
                     print(f"   -> [Attempt {attempt+1}] Failed to parse XML tags for {target_file}.")
                     if attempt == max_retries - 1:
-                        return target_file, f"// Error: AiON LLM failed to format {target_file} correctly"
+                        return target_file, f"// Error: AiON LLM failed to format {target_file} correctly\n// {content}"
                     continue
                     
             except Exception as e:
