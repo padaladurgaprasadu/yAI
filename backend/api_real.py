@@ -888,7 +888,20 @@ IMPORTANT RULES:
             yield f"data: {json.dumps({'type': 'status', 'message': ''})}\n\n"
             
             from backend.agents.base import BaseAgent
-            active_llm = BaseAgent().llm
+            base_agent = BaseAgent()
+            
+            # 🟢 MULTI-SPEED LATENCY TIERING 🟢
+            # - Normal text / small questions: 0.2-0.5s (fast_llm)
+            # - Reasoning / Coding: 1-5s (smart_llm)
+            is_speed_mode = "task_complexity" not in intent_data
+            complexity = str(intent_data.get("task_complexity", "")).lower()
+            
+            if is_speed_mode or complexity in ["trivial", "low"]:
+                active_llm = base_agent.fast_llm
+                api_logger.info("Using Tier 1 (Fast LLM) for sub-second latency.")
+            else:
+                active_llm = base_agent.smart_llm
+                api_logger.info("Using Tier 2 (Smart LLM) for reasoning/coding latency.")
             
             first_token_yielded = False
             draft_text = ""
