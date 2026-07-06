@@ -101,7 +101,7 @@ RULES:
   "needs_images": true/false,
   "needs_diagrams": true/false (True ONLY for architecture, algorithms, or workflows),
   "visual_type": "'real' for real-world places/people, 'generative' for AI generated images/art, 'sketch' for pencil sketches/diagrams",
-  "visual_query": "The exact name or description of the entity to generate/search. If the user asks to draw or sketch something, put their exact descriptive prompt here.",
+  "visual_query": "The exact name or description of the entity to search/generate based ONLY on the Latest User Message.",
   "visual_count": "integer between 1 and 5 indicating how many images to fetch (default 1). Choose >1 if user asks for multiple images or a gallery."
 }
 2. Output raw JSON without markdown formatting.
@@ -138,7 +138,7 @@ Do NOT output any other text, markdown, or explanation.
         try:
             context = ""
             if history and len(history) > 0:
-                context += "Conversation History:\n"
+                context += "Conversation History (FOR CONTEXT ONLY - DO NOT EXTRACT QUERIES FROM HERE):\n"
                 # Keep up to the last 5 messages for context
                 for msg in history[-5:]:
                     role = msg.get("role", "user")
