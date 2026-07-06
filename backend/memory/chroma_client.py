@@ -23,15 +23,59 @@ class ChromaClient:
         
         # Use Google Gemini Embeddings for speed (100x faster than local ONNX model on Render CPU)
         import os
-        gemini_api_key = os.getenv("GEMINI_API_KEY")
+        gemini_api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        openai_api_key = os.getenv("OPENAI_API_KEY")
+        nvidia_api_key = os.getenv("NVIDIA_API_KEY")
+        
         if gemini_api_key:
             from chromadb.utils.embedding_functions import GoogleGenerativeAiEmbeddingFunction
             self.embedding_fn = GoogleGenerativeAiEmbeddingFunction(api_key=gemini_api_key)
-            print("[ChromaDB] Using fast Google Gemini Embeddings.")
+            print("[ChromaDB] Using Google Gemini Embeddings.")
+        elif openai_api_key:
+            from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
+            self.embedding_fn = OpenAIEmbeddingFunction(api_key=openai_api_key)
+            print("[ChromaDB] Using OpenAI Embeddings.")
+        elif nvidia_api_key:
+            # Custom NVIDIA embedding function for Chroma
+            from chromadb.api.types import Documents, EmbeddingFunction, Embeddings
+            import requests
+            
+            class NvidiaEmbeddingFunction(EmbeddingFunction):
+                def __init__(self, api_key: str):
+                    self.api_key = api_key
+                    self.url = "https://integrate.api.nvidia.com/v1/embeddings"
+                    
+                def __call__(self, input: Documents) -> Embeddings:
+                    headers = {
+                        "Authorization": f"Bearer {self.api_key}",
+                        "Content-Type": "application/json"
+                    }
+                    payload = {
+                        "input": input,
+                        "model": "nvidia/nv-embedqa-e5-v5",
+                        "encoding_format": "float",
+                        "input_type": "query"
+                    }
+                    try:
+                        res = requests.post(self.url, json=payload, headers=headers)
+                        res.raise_for_status()
+                        data = res.json()
+                        return [d["embedding"] for d in data["data"]]
+                    except Exception as e:
+                        print(f"[ChromaDB] NVIDIA Embedding failed: {e}")
+                        # Return zero vectors as fallback so it doesn't crash
+                        return [[0.0] * 1024 for _ in input]
+
+            self.embedding_fn = NvidiaEmbeddingFunction(api_key=nvidia_api_key)
+            print("[ChromaDB] Using NVIDIA Embeddings.")
         else:
-            # Fallback to local sentence-transformer model (slow on weak CPUs)
-            self.embedding_fn = embedding_functions.DefaultEmbeddingFunction()
-            print("[ChromaDB] Using local DefaultEmbeddingFunction (slow).")
+            # FATAL: Local embedding causes OOM on Render. Use dummy to prevent crash.
+            from chromadb.api.types import Documents, EmbeddingFunction, Embeddings
+            class DummyEmbeddingFunction(EmbeddingFunction):
+                def __call__(self, input: Documents) -> Embeddings:
+                    return [[0.0] * 384 for _ in input]
+            self.embedding_fn = DummyEmbeddingFunction()
+            print("[ChromaDB] WARNING: No API keys found. Using Dummy Embeddings to prevent OOM crash.")
         
         # Get or create our 'blueprints' collection
         self.collection = self.client.get_or_create_collection(
