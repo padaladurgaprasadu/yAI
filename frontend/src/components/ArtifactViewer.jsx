@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Sandpack } from "@codesandbox/sandpack-react";
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
+import { motion } from 'framer-motion';
+import { ExecutionManager } from './ExecutionManager';
 
 const ArtifactViewer = ({ codeFiles, projectId, isPreviewRunning, API_URL, executionLogs }) => {
   const [activeTab, setActiveTab] = useState('preview');
@@ -14,7 +19,7 @@ const ArtifactViewer = ({ codeFiles, projectId, isPreviewRunning, API_URL, execu
   }, [codeFiles, selectedFile]);
 
   const sandpackFiles = {
-    "/client/index.html": `<!DOCTYPE html>
+    "/index.html": `<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -27,7 +32,7 @@ const ArtifactViewer = ({ codeFiles, projectId, isPreviewRunning, API_URL, execu
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>`,
-    "/client/src/main.jsx": `import React from 'react'
+    "/src/main.jsx": `import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import './index.css'
@@ -37,8 +42,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <App />
   </React.StrictMode>,
 )`,
-    "/client/src/index.css": `@tailwind base;\n@tailwind components;\n@tailwind utilities;`,
-    "/client/vite.config.js": `import { defineConfig } from 'vite';
+    "/src/index.css": `@tailwind base;\n@tailwind components;\n@tailwind utilities;`,
+    "/vite.config.js": `import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
@@ -377,45 +382,13 @@ export default defineConfig({
           </div>
         )}
 
-        {/* PREVIEW TAB */}
-        {activeTab === 'preview' && (
-          <div style={{ width: '100%', height: '100%', backgroundColor: '#151515', position: 'relative' }}>
-            <Sandpack 
-              template="vite-react"  
-              theme="dark"
-              files={sandpackFiles}
-              options={{
-                showNavigator: true,
-                showTabs: false,
-                editorHeight: 'calc(100dvh - 120px)',
-                editorWidthPercentage: 0,
-                autoHiddenFiles: true
-              }}
-              customSetup={{
-                dependencies: dynamicDependencies
-              }}
+        {/* EXECUTION MANAGER (Preview + WebContainer Terminal) */}
+        {(activeTab === 'preview' || activeTab === 'terminal') && (
+            <ExecutionManager 
+                files={sandpackFiles}
+                dynamicDependencies={dynamicDependencies}
+                activeTab={activeTab}
             />
-          </div>
-        )}
-
-        {/* TERMINAL TAB */}
-        {activeTab === 'terminal' && (
-          <div style={{ flex: 1, backgroundColor: '#000', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ padding: '12px 20px', borderBottom: '1px solid #222', color: '#888', fontSize: '0.85rem', display: 'flex', justifyContent: 'space-between' }}>
-               <span>Executor Agent Logs</span>
-               <span style={{ color: '#10b981' }}>● Live</span>
-            </div>
-            <div style={{ flex: 1, overflow: 'auto', padding: '20px', display: 'flex', flexDirection: 'column-reverse' }}>
-               <pre style={{ margin: 0, color: '#a6accd', fontFamily: 'monospace', fontSize: '0.9rem', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
-                 {/* Determine the props name based on what we passed in App.jsx */}
-                 {/* App.jsx passes executionLogs={executionLogs} */}
-                 {/* But we forgot to destructure it in ArtifactViewer parameters! Let's do that next */}
-                 {executionLogs && executionLogs.length > 0 
-                    ? executionLogs.join('\n') 
-                    : "> Waiting for execution logs...\n"}
-               </pre>
-            </div>
-          </div>
         )}
 
       </div>
