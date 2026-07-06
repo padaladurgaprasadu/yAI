@@ -13,9 +13,11 @@ def get_generative_image(query: str) -> str:
     if not query:
         return None
     try:
+        import random
+        seed = random.randint(1, 1000000)
         enhanced_query = f"{query} high quality, modern, photorealistic, best, latest"
         encoded_query = urllib.parse.quote(enhanced_query)
-        img_url = f"https://image.pollinations.ai/prompt/{encoded_query}?width=800&height=600&nologo=true"
+        img_url = f"https://image.pollinations.ai/prompt/{encoded_query}?width=800&height=600&nologo=true&seed={seed}"
         logger.info(f"Visuals: Generated AI Image URL for query: {query}")
         return img_url
     except Exception as e:
@@ -104,9 +106,11 @@ def get_pencil_sketch_image(query: str) -> str:
     if not query:
         return None
     try:
+        import random
+        seed = random.randint(1, 1000000)
         enhanced_query = f"Neat, natural, realistic pencil sketch drawing of {query}, highly detailed, graphite, artstation, masterpiece"
         encoded_query = urllib.parse.quote(enhanced_query)
-        img_url = f"https://image.pollinations.ai/prompt/{encoded_query}?width=800&height=600&nologo=true"
+        img_url = f"https://image.pollinations.ai/prompt/{encoded_query}?width=800&height=600&nologo=true&seed={seed}"
         logger.info(f"Visuals: Generated AI Pencil Sketch URL for query: {query}")
         return img_url
     except Exception as e:
