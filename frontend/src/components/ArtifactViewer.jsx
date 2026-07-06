@@ -111,7 +111,26 @@ export default defineConfig({
        // Ensure App is always .jsx for Vite compatibility
        if (sandpackPath === '/client/src/App.js') sandpackPath = '/client/src/App.jsx';
        
-       sandpackFiles[sandpackPath] = content;
+       let finalContent = content;
+       if (filePath.endsWith('package.json')) {
+           try {
+               const pkg = JSON.parse(content);
+               const isBlacklisted = (dep) => {
+                   const blacklist = ['react', 'react-dom', 'pg', 'redis', 'kubernetes', 'docker', 'mongoose', 'express', 'apollo-server', 'apollo-server-express', 'server', 'client', 'ts-node', 'nodemon', 'tensorflow', 'opencv', 'pandas', 'numpy', 'pytorch', 'scikit-learn', 'flask', 'django', 'fastapi', 'keras', 'matplotlib', 'seaborn'];
+                   const isDirectMatch = blacklist.some(b => dep.includes(b));
+                   return isDirectMatch || dep.startsWith('@types/');
+               };
+               if (pkg.dependencies) {
+                   Object.keys(pkg.dependencies).forEach(dep => { if(isBlacklisted(dep)) delete pkg.dependencies[dep]; });
+               }
+               if (pkg.devDependencies) {
+                   Object.keys(pkg.devDependencies).forEach(dep => { if(isBlacklisted(dep)) delete pkg.devDependencies[dep]; });
+               }
+               finalContent = JSON.stringify(pkg, null, 2);
+           } catch(e) {}
+       }
+       
+       sandpackFiles[sandpackPath] = finalContent;
        
        // AUTO-DETECT DEPENDENCIES FOR SANDPACK
        if (filePath.endsWith('.js') || filePath.endsWith('.jsx')) {
@@ -129,8 +148,10 @@ export default defineConfig({
                   
                   // Ignore built-in React, @types, and common Node built-ins, and ML hallucinations
                   const blacklist = ['react', 'react-dom', 'pg', 'redis', 'kubernetes', 'docker', 'mongoose', 'express', 'apollo-server', 'apollo-server-express', 'server', 'client', 'ts-node', 'nodemon', 'tensorflow', 'opencv', 'pandas', 'numpy', 'pytorch', 'scikit-learn', 'flask', 'django', 'fastapi', 'keras', 'matplotlib', 'seaborn'];
+                  const isBlacklisted = blacklist.some(b => pkgName.includes(b));
+                  
                   if (
-                      !blacklist.includes(pkgName) && 
+                      !isBlacklisted && 
                       !pkgName.startsWith('@types/') &&
                       !['fs', 'path', 'crypto', 'os', 'http', 'https', 'stream', 'events', 'util', 'url'].includes(pkgName)
                   ) {
