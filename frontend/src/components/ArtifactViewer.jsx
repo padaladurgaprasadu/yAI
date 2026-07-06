@@ -191,7 +191,76 @@ export default defineConfig({
     return missing;
   }
 
+  function generateStub(importPath) {
+    // Guess a reasonable name from the path, e.g. "../contexts/AuthContext" -> "Auth"
+    const fileName = importPath.split('/').pop(); // "AuthContext"
+    const baseName = fileName.replace(/Context$/, ''); // "Auth"
+
+    // Heuristic: if it looks like a React Context (common Coder-agent pattern), stub a real one
+    if (fileName.endsWith('Context')) {
+      return `import React, { createContext, useContext, useState } from 'react';
+
+const ${fileName} = createContext(null);
+
+export const ${baseName}Provider = ({ children }) => {
+  const [state, setState] = useState({});
+  return (
+    <${fileName}.Provider value={{ ...state, setState }}>
+      {children}
+    </${fileName}.Provider>
+  );
+};
+
+export const use${baseName} = () => useContext(${fileName});
+export default ${fileName};
+`;
+    }
+
+    // Generic fallback: a no-op component stub
+    return `import React from 'react';
+export default function ${baseName}() {
+  return null;
+}
+export const ${baseName} = () => null;
+`;
+  }
+
+  function autoStubMissingFiles(files, missingImports) {
+    const stubbedFiles = { ...files };
+    const stubbedList = [];
+
+    missingImports.forEach(({ file, import: importPath }) => {
+      const dir = file.substring(0, file.lastIndexOf('/'));
+      let resolved;
+      try {
+        resolved = new URL(importPath, \`file://\${dir}/\`).pathname;
+      } catch {
+        return;
+      }
+      // Default to .jsx for the stub
+      const stubPath = resolved.endsWith('.jsx') || resolved.endsWith('.js')
+        ? resolved
+        : resolved + '.jsx';
+
+      if (!stubbedFiles[stubPath]) {
+        stubbedFiles[stubPath] = generateStub(importPath);
+        stubbedList.push(stubPath);
+      }
+    });
+
+    return { stubbedFiles, stubbedList };
+  }
+
   const missingImports = validateClosure(sandpackFiles);
+
+  let finalFiles = sandpackFiles;
+  let stubbedList = [];
+
+  if (missingImports.length > 0) {
+    const result = autoStubMissingFiles(sandpackFiles, missingImports);
+    finalFiles = result.stubbedFiles;
+    stubbedList = result.stubbedList;
+  }
 
   return (
     <div style={{
@@ -398,28 +467,24 @@ export default defineConfig({
 
         {/* EXECUTION MANAGER (Preview + WebContainer Terminal) */}
         {(activeTab === 'preview' || activeTab === 'terminal') && (
-            missingImports.length > 0 ? (
-              <div style={{ padding: 20, color: '#ef4444', fontFamily: 'monospace', height: '100%', backgroundColor: '#000', overflow: 'auto' }}>
-                <strong style={{ fontSize: '1.1em', display: 'block', marginBottom: '10px' }}>[AiON] Generation incomplete — {missingImports.length} file(s) missing:</strong>
-                <ul style={{ listStyleType: 'none', padding: 0 }}>
-                  {missingImports.map((m, i) => (
-                    <li key={i} style={{ marginBottom: '8px', padding: '10px', backgroundColor: '#1a0000', border: '1px solid #330000', borderRadius: '4px' }}>
-                      <span style={{ color: '#aaa' }}>{m.file}</span> imports <strong style={{ color: '#ff6b6b' }}>"{m.import}"</strong> — file not found
-                    </li>
-                  ))}
-                </ul>
+            <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              {stubbedList.length > 0 && (
+                <div style={{ padding: '8px 16px', background: '#3a2a00', color: '#fbbf24', fontFamily: 'monospace', fontSize: 13, borderBottom: '1px solid #5a4200' }}>
+                  ⚠ AiON auto-generated {stubbedList.length} placeholder file(s) the Coder agent missed: {stubbedList.map(s => s.split('/').pop()).join(', ')} — app will run but this functionality is incomplete.
+                </div>
+              )}
+              <div style={{ flex: 1 }}>
+                <ExecutionManager 
+                    files={finalFiles}
+                    dynamicDependencies={dynamicDependencies}
+                    activeTab={activeTab}
+                    isBackend={isBackend}
+                    previewUrl={previewUrl}
+                    previewError={previewError}
+                    projectId={projectId}
+                />
               </div>
-            ) : (
-              <ExecutionManager 
-                  files={sandpackFiles}
-                  dynamicDependencies={dynamicDependencies}
-                  activeTab={activeTab}
-                  isBackend={isBackend}
-                  previewUrl={previewUrl}
-                  previewError={previewError}
-                  projectId={projectId}
-              />
-            )
+            </div>
         )}
 
       </div>
