@@ -112,37 +112,25 @@ export default defineConfig({
 
     Object.entries(codeFiles).forEach(([filePath, content]) => {
        let sandpackPath = filePath.startsWith('/') ? filePath : '/' + filePath;
-       
        // If it's a fullstack project, isolate only the frontend for Sandpack preview
        if (isMonorepo) {
            if (sandpackPath.startsWith('/client/')) {
                sandpackPath = sandpackPath.replace('/client', '');
-           } else if (sandpackPath.startsWith('/server/') || sandpackPath === '/package.json') {
-               return; // Skip backend files and root package.json
+           } else if (sandpackPath.startsWith('/server/')) {
+               return; // Skip backend files
            }
+       }
+       
+       // NEVER inject the AI's package.json into Sandpack. 
+       // This forces Sandpack to use its flawless default vite-react package.json.
+       if (sandpackPath === '/package.json' || sandpackPath === '/client/package.json') {
+           return;
        }
        
        // Ensure App is always .jsx for Vite compatibility
        if (sandpackPath === '/src/App.js') sandpackPath = '/src/App.jsx';
        
        let finalContent = content;
-       if (filePath.endsWith('package.json')) {
-           try {
-               const pkg = JSON.parse(content);
-               const isBlacklisted = (dep) => {
-                   const blacklist = ['react', 'react-dom', 'pg', 'redis', 'kubernetes', 'docker', 'mongoose', 'express', 'apollo-server', 'apollo-server-express', 'server', 'client', 'ts-node', 'nodemon', 'tensorflow', 'opencv', 'pandas', 'numpy', 'pytorch', 'scikit-learn', 'flask', 'django', 'fastapi', 'keras', 'matplotlib', 'seaborn'];
-                   const isDirectMatch = blacklist.some(b => dep.includes(b));
-                   return isDirectMatch || dep.startsWith('@types/');
-               };
-               if (pkg.dependencies) {
-                   Object.keys(pkg.dependencies).forEach(dep => { if(isBlacklisted(dep)) delete pkg.dependencies[dep]; });
-               }
-               if (pkg.devDependencies) {
-                   Object.keys(pkg.devDependencies).forEach(dep => { if(isBlacklisted(dep)) delete pkg.devDependencies[dep]; });
-               }
-               finalContent = JSON.stringify(pkg, null, 2);
-           } catch(e) {}
-       }
        
        sandpackFiles[sandpackPath] = finalContent;
        
