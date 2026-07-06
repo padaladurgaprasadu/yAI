@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { AdvancedBrowserPreview } from './AdvancedBrowserPreview';
 
 export const BackendSandbox = ({ activeTab, previewUrl, projectId }) => {
   const [logs, setLogs] = useState([]);
@@ -46,12 +47,7 @@ export const BackendSandbox = ({ activeTab, previewUrl, projectId }) => {
       {/* PREVIEW TAB */}
       <div style={{ display: activeTab === 'preview' ? 'block' : 'none', height: '100%', width: '100%' }}>
         {previewUrl ? (
-          <iframe 
-            src={previewUrl} 
-            style={{ width: '100%', height: 'calc(100dvh - 120px)', border: 'none', backgroundColor: '#fff' }}
-            title="Backend Preview"
-            sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
-          />
+          <AdvancedBrowserPreview url={previewUrl} />
         ) : (
           <div style={{ padding: '20px', color: '#10b981', fontFamily: 'monospace', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
             [AiON DevOps] Booting up native backend Sandbox...
