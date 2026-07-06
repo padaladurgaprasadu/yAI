@@ -178,7 +178,7 @@ class CoderAgent(BaseAgent):
                 
                 design_system = state.get("blueprint", {}).get("designSystem")
                 if design_system:
-                    framework_rules += f"\n\nCRITICAL DESIGN SYSTEM RULE: You MUST strictly adhere to the following design system:\n{json.dumps(design_system, indent=2)}\nEnsure all Tailwind classes, colors, CSS, layout, and animations perfectly reflect this exact premium style."
+                    framework_rules += "\n\nCRITICAL DESIGN SYSTEM RULE: You MUST strictly adhere to the following design system:\n{design_system}\nEnsure all Tailwind classes, colors, CSS, layout, and animations perfectly reflect this exact premium style."
             else:
                 framework_rules = "3. CRITICAL PORT RULE: The app must run on port 3000 for the iframe preview.\n4. CRITICAL FRAMEWORK RULE: Write modular, clean code using the appropriate Python libraries for ML/Data Science (e.g. Pandas, Scikit-learn, PyTorch, Streamlit, FastAPI). Ensure all dependencies are documented in requirements.txt.\n5. Do NOT write React code unless explicitly requested in the blueprint. Use Streamlit for simple UIs.\n6. POSTGRESQL RULE: If using PostgreSQL, you MUST strictly use the connection string 'postgresql://postgres:postgres@localhost:5432/postgres'. Do NOT use environment variables for DB connections."
 
@@ -199,7 +199,8 @@ class CoderAgent(BaseAgent):
                         context=semantic_context,
                         target_file=target_file,
                         review_feedback=feedback,
-                        runtime_error=runtime_error
+                        runtime_error=runtime_error,
+                        design_system=json.dumps(state.get("blueprint", {}).get("designSystem", {}), indent=2) if state.get("blueprint", {}).get("designSystem") else ""
                     )
                     
                     response_text = ""
@@ -250,8 +251,13 @@ class CoderAgent(BaseAgent):
                         time.sleep(wait_time)
                     else:
                         logger.error(f"      - [ERROR] Exception while generating {target_file}: {e}")
-                        # If it's a 429 on the last attempt, don't crash the whole UI with empty files, just return the error string.
-            return (target_file, f"// Error: AiON failed to generate {target_file}")
+                        last_error = str(e)
+                        
+                        # Wait briefly before retrying a generic error to prevent infinite spin
+                        if attempt < max_retries - 1:
+                            time.sleep(2)
+            
+            return (target_file, f"// Error: AiON failed to generate {target_file}. Exception: {last_error if 'last_error' in locals() else 'Unknown'}")
 
         # Execute sequential generation to prevent API rate limits (429) on free tiers!
         # WARNING: Parallel execution causes 429 Too Many Requests and OOM. DO NOT USE max_workers > 1.
