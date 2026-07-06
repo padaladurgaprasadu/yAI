@@ -329,6 +329,11 @@ class ExecutorAgent(BaseAgent):
             except Exception as e:
                 print(f"      - [Executor] GitHub integration failed: {e}")
                 execution_logs.append(f"> [GitHub] Failed to initialize git: {e}")
+                
+        if not state.get("runtime_error"):
+            if q:
+                q.put({"type": "timeline_update", "status": "done"})
+                q.put({"type": "timeline", "title": "🌐 Preview ready: http://localhost:3000", "reason": "Environment prepared for Sandpack", "status": "done"})
             
         state["execution_logs"] = execution_logs
         return state

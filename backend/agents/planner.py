@@ -78,9 +78,13 @@ class PlannerAgent(BaseAgent):
             modules_list = [task.get("name", task.get("id")) for task in dag_tasks]
             print(f"   -> [Planner] DAG generated with {len(dag_tasks)} nodes.")
         except Exception as e:
-            print(f"   -> [Planner] Failed to parse DAG JSON: {e}")
+            print(f"   -> [Planner] Failed to parse JSON: {e}")
             modules_list = ["Core System"]
             dag_tasks = [{"id": "core", "name": "Core System", "depends_on": []}]
+            
+        if q:
+            modules_str = "\n".join([f"✅ {m}" for m in modules_list[:5]])
+            q.put({"type": "timeline", "title": f"🧠 Planner: {len(modules_list)} modules identified.", "reason": modules_str, "status": "active"})
         
         # Update and return the state
         state["modules"] = modules_list

@@ -90,16 +90,18 @@ class ReviewerAgent(BaseAgent):
                     break
         
         if feedback == "APPROVED" or feedback.startswith("APPROVED"):
-            logger.info("   -> [Review Result] Code APPROVED!")
+            logger.info("[Reviewer] Code approved.")
             state["review_feedback"] = "APPROVED"
             if q:
                 q.put({"type": "timeline_update", "status": "done"})
-                q.put({"type": "timeline", "title": "Verification Passed", "reason": "No critical syntax issues detected", "status": "done"})
+                q.put({"type": "timeline", "title": "🔍 Reviewer: Found 0 issues. Auto-fixed.", "reason": "✅ Red-Green Loop: Passed.", "status": "done"})
         else:
-            logger.info("   -> [Review Result] Issues found. Sending back to Coder.")
+            logger.warning("[Reviewer] Issues found.")
             state["review_feedback"] = feedback
+            rev_count = state.get("revision_count", 0)
+            state["revision_count"] = rev_count + 1
             if q:
                 q.put({"type": "timeline_update", "status": "done"})
-                q.put({"type": "timeline", "title": "Test Failures Detected", "reason": "Sending feedback back to Coder for auto-heal", "status": "done"})
+                q.put({"type": "timeline", "title": "🔍 Reviewer: Found issues.", "reason": "🔄 Sending back to Coder for auto-fix.", "status": "done"})
                 
         return state

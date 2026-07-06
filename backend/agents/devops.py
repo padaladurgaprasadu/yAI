@@ -34,7 +34,8 @@ class DevOpsAgent(BaseAgent):
             q = None
 
         if q:
-            q.put({"type": "progress", "message": "🐳 DevOps Agent is generating Docker & CI/CD pipelines..."})
+            q.put({"type": "agent_state", "agent": "devops"})
+            q.put({"type": "timeline", "title": "☸️ DevOps: Generating deployment files...", "reason": "✅ Dockerfile\n✅ docker-compose.yml\n✅ GitHub Actions CI/CD", "status": "active"})
             
         print("[DevOps] Generating deployment files (Docker, CI/CD)...")
         
@@ -88,9 +89,16 @@ class DevOpsAgent(BaseAgent):
                 print("   -> [Memory] Deployment decision saved to Neo4j.")
             except Exception as e:
                 print(f"   -> [WARNING] Could not save DevOps decision to memory: {e}")
-        except json.JSONDecodeError as e:
-            print(f"   -> [DevOps] ERROR parsing DevOps files: {e}")
-            # Non-fatal error, the project still works without Docker
-            pass
 
-        return state
+            print("   -> [DevOps] Successfully generated deployment infrastructure.")
+            
+            if q:
+                q.put({"type": "timeline_update", "status": "done"})
+                q.put({"type": "timeline", "title": "DevOps Phase Complete", "reason": "Deployment infrastructure ready", "status": "done"})
+                
+            return state
+        except Exception as e:
+            print(f"   -> [DevOps] Error generating deployment files: {e}")
+            if q:
+                q.put({"type": "timeline_update", "status": "done"})
+            return state

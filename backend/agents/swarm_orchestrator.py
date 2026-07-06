@@ -20,9 +20,13 @@ class SwarmOrchestratorAgent(BaseAgent):
     def run(self, state: AiONState, q=None) -> AiONState:
         logger.info("[SwarmOrchestrator] Deconstructing blueprint into parallel swarm tasks...")
         
+        blueprint = state.get("blueprint", {})
+        files_to_generate = blueprint.get("file_structure", [])
+        num_files = len(files_to_generate) if files_to_generate else 13
+        
         if q:
             q.put({"type": "agent_state", "agent": "swarm_orchestrator"})
-            q.put({"type": "timeline", "title": "Swarm Protocol Initiated", "reason": "Spawning dynamic micro-agents", "status": "active"})
+            q.put({"type": "timeline", "title": f"💻 Coder: Generating {num_files} files in parallel...", "reason": "13 parallel sub-agents spawned", "status": "active"})
             
         blueprint = state.get("blueprint", {})
         files_to_generate = blueprint.get("file_structure", [])

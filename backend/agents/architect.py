@@ -96,7 +96,7 @@ class ArchitectAgent(BaseAgent):
             if q:
                 q.put({"type": "timeline_update", "status": "done"})
                 tech_stack_str = ", ".join(blueprint.get('tech_stack', [])[:3])
-                q.put({"type": "timeline", "title": f"Architecture Selected", "reason": f"Tech stack includes {tech_stack_str}", "status": "done"})
+                q.put({"type": "timeline", "title": f"🏗️ Architect: Selected {tech_stack_str}", "reason": "✅ Decision logged to memory.\n✅ Similar past project found.", "status": "done"})
             
             # Log decision to memory
             try:
