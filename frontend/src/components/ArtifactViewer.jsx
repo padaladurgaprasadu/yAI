@@ -4,6 +4,7 @@ import { Sandpack } from "@codesandbox/sandpack-react";
 const ArtifactViewer = ({ codeFiles, projectId, isPreviewRunning, API_URL, executionLogs }) => {
   const [activeTab, setActiveTab] = useState('preview');
   const [selectedFile, setSelectedFile] = useState(null);
+  const [isFullScreen, setIsFullScreen] = useState(false);
 
   // Set the initial selected file
   useEffect(() => {
@@ -106,13 +107,24 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <div style={{
       display: 'flex',
       flexDirection: 'column',
-      height: '100%',
+      ...(isFullScreen ? {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        zIndex: 9999,
+        borderRadius: 0,
+        animation: 'none'
+      } : {
+        height: '100%',
+        borderRadius: '16px',
+        animation: 'slideInRight 0.5s cubic-bezier(0.2, 0.8, 0.2, 1)'
+      }),
       backgroundColor: '#0a0a0a',
-      borderRadius: '16px',
       border: '1px solid #2a2a2a',
       overflow: 'hidden',
-      boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
-      animation: 'slideInRight 0.5s cubic-bezier(0.2, 0.8, 0.2, 1)'
+      boxShadow: '0 20px 40px rgba(0,0,0,0.4)'
     }}>
       {/* Sleek Tab Bar */}
       <div style={{
@@ -192,7 +204,28 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           </button>
         </div>
         
-        <div style={{ position: 'absolute', right: '20px', top: '16px' }}>
+        <div style={{ position: 'absolute', right: '20px', top: '16px', display: 'flex', gap: '10px' }}>
+            <button 
+                onClick={() => setIsFullScreen(!isFullScreen)}
+                style={{ 
+                    padding: '8px 16px', 
+                    borderRadius: '8px', 
+                    fontSize: '0.85rem', 
+                    fontWeight: 'bold', 
+                    border: '1px solid #444', 
+                    cursor: 'pointer', 
+                    background: '#222', 
+                    color: '#fff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#333'}
+                onMouseLeave={(e) => e.currentTarget.style.background = '#222'}
+            >
+                {isFullScreen ? '↙ Exit Independent Mode' : '↗ Independent Preview'}
+            </button>
             <button 
                 onClick={() => window.location.href = `${API_URL}/api/download?project_id=${projectId}`} 
                 style={{ 
