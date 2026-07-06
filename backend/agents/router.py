@@ -108,7 +108,7 @@ RULES:
   "risk_level": "Selected from Step 3",
   "execution_mode": "Selected from Step 4",
   "missing_info_question": "Null if no info is missing. Otherwise, exactly what you need to proceed.",
-  "primary_intent": "General categorization of the request",
+  "primary_intent": "MUST BE EXACTLY ONE OF: 'Project Development', 'Architecture Design', 'General Chat', 'Visual Request'",
   "needs_images": true/false,
   "needs_diagrams": true/false (True ONLY for architecture, algorithms, or workflows),
   "visual_type": "'real', 'generative', or 'sketch'",
