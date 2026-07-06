@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Sandpack } from "@codesandbox/sandpack-react";
 import ReactMarkdown from 'react-markdown';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
 import { motion } from 'framer-motion';
@@ -10,6 +12,21 @@ const ArtifactViewer = ({ codeFiles, projectId, isPreviewRunning, API_URL, execu
   const [activeTab, setActiveTab] = useState('preview');
   const [selectedFile, setSelectedFile] = useState(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
+
+  const handleDownload = () => {
+    const zip = new JSZip();
+    
+    // Add all codeFiles to the zip
+    Object.entries(codeFiles || {}).forEach(([path, content]) => {
+      // Remove leading slash if present
+      const cleanPath = path.startsWith('/') ? path.substring(1) : path;
+      zip.file(cleanPath, content);
+    });
+    
+    zip.generateAsync({ type: 'blob' }).then(blob => {
+      saveAs(blob, `aion_project_${projectId || 'download'}.zip`);
+    });
+  };
 
   // Set the initial selected file
   useEffect(() => {
@@ -261,7 +278,7 @@ export default defineConfig({
                 {isFullScreen ? '↙ Exit Independent Mode' : '↗ Independent Preview'}
             </button>
             <button 
-                onClick={() => window.location.href = `${API_URL}/api/download?project_id=${projectId}`} 
+                onClick={handleDownload} 
                 style={{ 
                     padding: '8px 16px', 
                     borderRadius: '8px', 
