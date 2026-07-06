@@ -92,8 +92,8 @@ export default defineConfig({
         const pkgData = JSON.parse(codeFiles[pkgFiles[0]]);
         if (pkgData.dependencies) {
           Object.keys(pkgData.dependencies).forEach(dep => {
-              // Sandbox-safe filter: Remove @types, node internals, and known backend-only drivers that crash CDN
-              const blacklist = ['react', 'react-dom', 'pg', 'redis', 'kubernetes', 'docker', 'mongoose', 'express', 'apollo-server', 'apollo-server-express', 'server', 'client', 'ts-node', 'nodemon'];
+              // Sandbox-safe filter: Remove @types, node internals, backend drivers, and common Python/ML hallucinations
+              const blacklist = ['react', 'react-dom', 'pg', 'redis', 'kubernetes', 'docker', 'mongoose', 'express', 'apollo-server', 'apollo-server-express', 'server', 'client', 'ts-node', 'nodemon', 'tensorflow', 'opencv', 'pandas', 'numpy', 'pytorch', 'scikit-learn', 'flask', 'django', 'fastapi', 'keras', 'matplotlib', 'seaborn'];
               if (!dep.startsWith('@types/') && !blacklist.includes(dep) && !dep.startsWith('vite')) {
                   dynamicDependencies[dep] = pkgData.dependencies[dep];
               }
@@ -127,10 +127,10 @@ export default defineConfig({
                       pkgName = pkgName.split('/')[0];
                   }
                   
-                  // Ignore built-in React, @types, and common Node built-ins
+                  // Ignore built-in React, @types, and common Node built-ins, and ML hallucinations
+                  const blacklist = ['react', 'react-dom', 'pg', 'redis', 'kubernetes', 'docker', 'mongoose', 'express', 'apollo-server', 'apollo-server-express', 'server', 'client', 'ts-node', 'nodemon', 'tensorflow', 'opencv', 'pandas', 'numpy', 'pytorch', 'scikit-learn', 'flask', 'django', 'fastapi', 'keras', 'matplotlib', 'seaborn'];
                   if (
-                      pkgName !== 'react' && 
-                      pkgName !== 'react-dom' && 
+                      !blacklist.includes(pkgName) && 
                       !pkgName.startsWith('@types/') &&
                       !['fs', 'path', 'crypto', 'os', 'http', 'https', 'stream', 'events', 'util', 'url'].includes(pkgName)
                   ) {
