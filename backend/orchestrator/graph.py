@@ -11,6 +11,7 @@ from backend.agents.hyperparameter_tuner import AutoHyperparameterTuningAgent
 from backend.agents.researcher import ResearchAgent
 from backend.agents.tester import TesterAgent
 from backend.agents.dependency_checker import DependencyCheckerAgent
+from backend.agents.auditor import AuditorAgent
 
 def should_continue(state: AiONState):
     """
@@ -20,10 +21,26 @@ def should_continue(state: AiONState):
     revision_count = state.get("revision_count", 0)
     
     if feedback == "APPROVED":
+        return "auditor"
+    
+    if revision_count >= 2:
+        print("   -> [System] Max revisions reached. Proceeding to auditor.")
+        return "auditor"
+        
+    return "coder"
+
+def should_continue_audit(state: AiONState):
+    """
+    Routing function for the advanced Auditor QA phase.
+    """
+    feedback = state.get("audit_feedback", "")
+    revision_count = state.get("revision_count", 0)
+    
+    if feedback == "APPROVED":
         return "devops"
     
     if revision_count >= 2:
-        print("   -> [System] Max revisions reached. Proceeding to devops.")
+        print("   -> [System] Max revisions reached in audit. Proceeding to devops.")
         return "devops"
         
     return "coder"
@@ -76,6 +93,7 @@ def build_graph():
     ml_trainer = AIMLModelTrainingAgent()
     hp_tuner = AutoHyperparameterTuningAgent()
     tester = TesterAgent()
+    auditor = AuditorAgent()
 
     researcher = ResearchAgent()
 
@@ -88,6 +106,7 @@ def build_graph():
     workflow.add_node("hp_tuner", hp_tuner.run)
     workflow.add_node("tester", tester.run)
     workflow.add_node("reviewer", reviewer.run)
+    workflow.add_node("auditor", auditor.run)
     workflow.add_node("devops", devops.run)
     workflow.add_node("executor", executor.run)
 
@@ -102,7 +121,8 @@ def build_graph():
     workflow.add_edge("ml_trainer", "hp_tuner")
     workflow.add_edge("hp_tuner", "tester")
     workflow.add_edge("tester", "reviewer")
-    workflow.add_conditional_edges("reviewer", should_continue, {"coder": "coder", "devops": "devops"})
+    workflow.add_conditional_edges("reviewer", should_continue, {"coder": "coder", "auditor": "auditor"})
+    workflow.add_conditional_edges("auditor", should_continue_audit, {"coder": "coder", "devops": "devops"})
     workflow.add_edge("devops", "executor")
     workflow.add_conditional_edges("executor", should_retry_execution, {"coder": "coder", END: END})
 
@@ -148,6 +168,7 @@ def build_generate_graph():
     ml_trainer = AIMLModelTrainingAgent()
     hp_tuner = AutoHyperparameterTuningAgent()
     tester = TesterAgent()
+    auditor = AuditorAgent()
     
     workflow.add_node("context_orchestrator", ctx_orchestrator.run)
     workflow.add_node("coder", coder.run)
@@ -155,6 +176,7 @@ def build_generate_graph():
     workflow.add_node("hp_tuner", hp_tuner.run)
     workflow.add_node("tester", tester.run)
     workflow.add_node("reviewer", reviewer.run)
+    workflow.add_node("auditor", auditor.run)
     workflow.add_node("devops", devops.run)
     workflow.add_node("executor", executor.run)
     
@@ -166,7 +188,8 @@ def build_generate_graph():
     workflow.add_edge("hp_tuner", "tester")
     workflow.add_edge("tester", "reviewer")
     
-    workflow.add_conditional_edges("reviewer", should_continue, {"coder": "coder", "devops": "devops"})
+    workflow.add_conditional_edges("reviewer", should_continue, {"coder": "coder", "auditor": "auditor"})
+    workflow.add_conditional_edges("auditor", should_continue_audit, {"coder": "coder", "devops": "devops"})
     workflow.add_edge("devops", "executor")
     workflow.add_conditional_edges("executor", should_retry_execution, {"coder": "coder", END: END})
     

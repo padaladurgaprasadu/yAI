@@ -17,6 +17,7 @@ class AiONState(TypedDict):
     error: Optional[str]
     runtime_error: Optional[str]
     review_feedback: Optional[str]
+    audit_feedback: Optional[str]
     revision_count: int
     execution_retries: int
     execution_logs: Optional[list[str]]

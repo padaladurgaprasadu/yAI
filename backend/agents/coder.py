@@ -78,6 +78,7 @@ class CoderAgent(BaseAgent):
         blueprint_str = json.dumps(state.get("blueprint", {}))
         
         feedback = state.get("review_feedback")
+        audit_feedback = state.get("audit_feedback")
         runtime_error = state.get("runtime_error")
         missing_deps = state.get("missing_dependencies", [])
         
@@ -87,7 +88,7 @@ class CoderAgent(BaseAgent):
             files_to_generate = missing_deps
             # Clear missing dependencies state so we don't infinitely loop if generation fails
             state["missing_dependencies"] = []
-        elif runtime_error or feedback or state.get("execution_mode") in ["lightning", "fast"]:
+        elif runtime_error or feedback or audit_feedback or state.get("execution_mode") in ["lightning", "fast"]:
             print(f"[Coder] Next-Gen Auto-Healing / Fast Mode: Diagnosing failing files...")
             diagnostic_prompt = ChatPromptTemplate.from_messages([
                 ("system", "You are an elite debugging AI. Given a list of files in the project, and a runtime error, goal, or review feedback, identify exactly which files need to be modified to fix the issue or implement the feature. Output EXACTLY a JSON list of strings (the exact file paths from the provided list) and nothing else."),
@@ -103,7 +104,7 @@ class CoderAgent(BaseAgent):
                 res = diag_chain.invoke({
                     "files": json.dumps(available_files),
                     "error": runtime_error,
-                    "feedback": feedback if feedback else state.get("goal")
+                    "feedback": audit_feedback if audit_feedback else (feedback if feedback else state.get("goal"))
                 })
                 content = res.content.replace("```json", "").replace("```", "").strip()
                 files_to_fix = json.loads(content)
