@@ -14,14 +14,17 @@ class WisdomExtractorAgent(BaseAgent):
     """
     def __init__(self):
         super().__init__()
-        self.chroma_client = None
         try:
-            import chromadb
-            self.chroma_client = chromadb.Client()
-            self.collection = self.chroma_client.get_or_create_collection(name="aion_wisdom_store")
+            from backend.memory.chroma_client import ChromaClient
+            self.chroma = ChromaClient()
+            self.chroma_client = self.chroma.client
+            self.collection = self.chroma_client.get_or_create_collection(
+                name="aion_wisdom_store", 
+                embedding_function=self.chroma.embedding_fn
+            )
             logger.info("[WisdomExtractor] Connected to ChromaDB Wisdom Store.")
-        except ImportError:
-            logger.warning("[WisdomExtractor] ChromaDB not installed. Self-learning disabled.")
+        except Exception as e:
+            logger.warning(f"[WisdomExtractor] ChromaDB initialization failed: {e}. Self-learning disabled.")
 
     @measure_time(logger)
     def run(self, state: AiONState, q=None) -> AiONState:
