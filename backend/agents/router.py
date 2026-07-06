@@ -49,5 +49,10 @@ class ModelRouter:
         except Exception as e:
             logger.warning(f"[LiquidRouting] Failed to initialize {provider} {model_name}: {e}")
             
-        # Fallback to whatever is available (Default OpenAI)
-        return ChatOpenAI(model="gpt-4o-mini" if complexity == "fast" else "gpt-4o", temperature=0.1)
+        # Fallback to whatever is available
+        if os.getenv("OPENAI_API_KEY"):
+            return ChatOpenAI(model="gpt-4o-mini" if complexity == "fast" else "gpt-4o", temperature=0.1)
+        elif os.getenv("GOOGLE_API_KEY"):
+            return ChatGoogleGenerativeAI(model="gemini-1.5-flash" if complexity == "fast" else "gemini-1.5-pro", temperature=0.1)
+        
+        raise Exception("Missing credentials: No API keys configured for Liquid Routing.")

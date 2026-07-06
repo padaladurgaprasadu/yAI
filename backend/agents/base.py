@@ -30,8 +30,18 @@ class BaseAgent:
             self.fast_llm = ModelRouter.get_optimal_llm(self_role, complexity="fast")
         except Exception as e:
             logger.warning(f"Failed to initialize ModelRouter: {e}")
-            self.smart_llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0.1)
-            self.fast_llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.1)
+            
+            # Safe instantiation that doesn't crash pydantic if keys are missing
+            if os.getenv("OPENAI_API_KEY"):
+                self.smart_llm = ChatOpenAI(model="gpt-4o", temperature=0.1)
+                self.fast_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.1)
+            elif os.getenv("GOOGLE_API_KEY"):
+                self.smart_llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0.1)
+                self.fast_llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.1)
+            else:
+                # Provide a dummy fallback so it doesn't crash on boot, but will fail gracefully when invoked
+                self.smart_llm = ChatOpenAI(api_key="dummy", model="gpt-4o", temperature=0.1)
+                self.fast_llm = ChatOpenAI(api_key="dummy", model="gpt-4o-mini", temperature=0.1)
             
         # Backward compatibility for scripts still calling self.llm
         self.llm = self.smart_llm

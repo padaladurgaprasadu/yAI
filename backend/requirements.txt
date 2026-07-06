@@ -18,5 +18,8 @@ PyJWT
 pysqlite3-binary
 cryptography
 psycopg2-binary
+langchain_anthropic
+langchain_groq
+langchain_google_genai
 sqlalchemy
 redis
