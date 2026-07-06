@@ -70,6 +70,7 @@ const ExecutionLifecycle = ({ activeTab, onCrash }) => {
             style={{ height: 'calc(100dvh - 120px)' }} 
             showNavigator={true} 
             showRefreshButton={true}
+            showSandpackErrorOverlay={false}
           />
         )}
       </div>
@@ -105,7 +106,7 @@ export const ExecutionManager = ({ files, dynamicDependencies, activeTab }) => {
         customSetup={{ dependencies: dynamicDependencies }}
         options={{
             recompileMode: "delayed",
-            recompileDelay: 500
+            recompileDelay: 2500
         }}
       >
         <SandpackLayout style={{ height: '100%', border: 'none', background: 'transparent', display: 'flex', flexDirection: 'column' }}>
