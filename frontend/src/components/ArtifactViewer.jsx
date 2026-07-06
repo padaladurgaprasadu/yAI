@@ -103,13 +103,22 @@ export default defineConfig({
         console.warn("Failed to parse package.json");
       }
     }
+    const isMonorepo = Object.keys(codeFiles).some(path => path.includes('client/') || path.includes('server/'));
 
     Object.entries(codeFiles).forEach(([filePath, content]) => {
-       // AiON-SP: Map ALL files (client, server, root) directly into Sandpack Node template
        let sandpackPath = filePath.startsWith('/') ? filePath : '/' + filePath;
        
+       // If it's a fullstack project, isolate only the frontend for Sandpack preview
+       if (isMonorepo) {
+           if (sandpackPath.startsWith('/client/')) {
+               sandpackPath = sandpackPath.replace('/client', '');
+           } else if (sandpackPath.startsWith('/server/') || sandpackPath === '/package.json') {
+               return; // Skip backend files and root package.json
+           }
+       }
+       
        // Ensure App is always .jsx for Vite compatibility
-       if (sandpackPath === '/client/src/App.js') sandpackPath = '/client/src/App.jsx';
+       if (sandpackPath === '/src/App.js') sandpackPath = '/src/App.jsx';
        
        let finalContent = content;
        if (filePath.endsWith('package.json')) {
@@ -372,7 +381,7 @@ export default defineConfig({
         {activeTab === 'preview' && (
           <div style={{ width: '100%', height: '100%', backgroundColor: '#151515', position: 'relative' }}>
             <Sandpack 
-              template="node"  
+              template="vite-react"  
               theme="dark"
               files={sandpackFiles}
               options={{
