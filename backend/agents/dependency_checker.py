@@ -157,9 +157,14 @@ class DependencyCheckerAgent:
         
         if missing_files:
             print(f"   -> [FAILED] Found {len(missing_files)} completely missing files.")
+            
+            # CRITICAL FIX: Increment revision count to prevent infinite auto-heal loops!
+            rev_count = state.get("revision_count", 0)
+            state["revision_count"] = rev_count + 1
+            
             if q:
                 q.put({"type": "timeline_update", "status": "done"})
-                q.put({"type": "timeline", "title": f"Files Missing", "reason": f"Routing to Swarm for {len(missing_files)} files", "status": "done"})
+                q.put({"type": "timeline", "title": f"Files Missing", "reason": f"Routing to Swarm for {len(missing_files)} files (Retry {state['revision_count']}/3)", "status": "done"})
         else:
             msg = f"Compiled virtually. Healed {healed_imports_count} paths, injected {injected_count} packages."
             print(f"   -> [SUCCESS] {msg}")
