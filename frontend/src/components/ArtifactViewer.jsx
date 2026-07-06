@@ -233,7 +233,7 @@ export const ${baseName} = () => null;
       const dir = file.substring(0, file.lastIndexOf('/'));
       let resolved;
       try {
-        resolved = new URL(importPath, \`file://\${dir}/\`).pathname;
+        resolved = new URL(importPath, `file://${dir}/`).pathname;
       } catch {
         return;
       }
