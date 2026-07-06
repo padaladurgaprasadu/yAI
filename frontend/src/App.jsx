@@ -855,14 +855,18 @@ function App() {
     let parsedBlueprint;
     let rawJson = blueprintJson.trim();
     try {
-        // Strip out any trailing markdown ticks if present
+        // Strip out any trailing markdown ticks and text before/after JSON
         rawJson = rawJson.replace(/```json/g, '').replace(/```/g, '').trim();
+        
+        // Strip trailing commas before closing braces/brackets (common LLM hallucination)
+        rawJson = rawJson.replace(/,(?=\s*[}\]])/g, '');
+        
         parsedBlueprint = JSON.parse(rawJson);
     } catch (e) {
         try {
             // Attempt auto-repair for truncated JSON arrays/objects
             if (rawJson.endsWith(',')) rawJson = rawJson.slice(0, -1);
-            if (rawJson.endsWith('"')) rawJson += ']}'; // cut off mid-string
+            if (rawJson.endsWith('"')) rawJson += '"]}'; // cut off mid-string in file_structure
             else if (!rawJson.endsWith('}')) {
                 if (rawJson.includes('"file_structure": [') && !rawJson.includes(']')) {
                     rawJson += ']}';
@@ -870,6 +874,9 @@ function App() {
                     rawJson += '}';
                 }
             }
+            // Strip trailing commas one last time just in case the repair added something weird
+            rawJson = rawJson.replace(/,(?=\s*[}\]])/g, '');
+            
             parsedBlueprint = JSON.parse(rawJson);
         } catch (repairError) {
             setError("Invalid JSON format in Blueprint! Scroll down and fix the missing brackets or trailing commas.");
