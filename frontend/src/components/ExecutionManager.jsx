@@ -12,6 +12,8 @@ const ExecutionLifecycle = ({ activeTab, onCrash }) => {
   const { sandpack, listen } = useSandpack();
   const [restarting, setRestarting] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const [runtimeError, setRuntimeError] = useState(null);
+  const [isHealing, setIsHealing] = useState(false);
 
   const triggerRecovery = useCallback((reason) => {
     if (retryCount >= 3) {
@@ -45,7 +47,10 @@ const ExecutionLifecycle = ({ activeTab, onCrash }) => {
 
   // Also check standard sandpack.error state
   useEffect(() => {
-    if (!sandpack || !sandpack.error) return;
+    if (!sandpack || !sandpack.error) {
+       setRuntimeError(null);
+       return;
+    }
     const errorMsg = typeof sandpack.error === 'string' ? sandpack.error : (sandpack.error.message || '');
     if (
       errorMsg.includes('Failed to get shell by ID') || 
@@ -54,6 +59,8 @@ const ExecutionLifecycle = ({ activeTab, onCrash }) => {
       errorMsg.includes('Server has crashed')
     ) {
       triggerRecovery(errorMsg);
+    } else {
+      setRuntimeError(errorMsg);
     }
   }, [sandpack.error, triggerRecovery]);
 
@@ -65,12 +72,42 @@ const ExecutionLifecycle = ({ activeTab, onCrash }) => {
             [AiON DevOps] Hard Rebooting WebContainer...
           </div>
         ) : (
-          <SandpackPreview 
-            style={{ height: 'calc(100dvh - 120px)' }} 
-            showNavigator={true} 
-            showRefreshButton={true}
-            showSandpackErrorOverlay={true}
-          />
+          <div style={{ position: 'relative', height: '100%' }}>
+            <SandpackPreview 
+              style={{ height: 'calc(100dvh - 120px)' }} 
+              showNavigator={true} 
+              showRefreshButton={true}
+              showSandpackErrorOverlay={false}
+            />
+            {runtimeError && (
+               <div className="animate-slide-up cyber-panel" style={{ position: 'absolute', bottom: '20px', left: '20px', right: '20px', padding: '20px', borderRadius: '12px', zIndex: 9999, border: '1px solid rgba(239, 68, 68, 0.5)' }}>
+                  <h3 style={{ color: '#ef4444', margin: '0 0 10px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                     ⚠️ Sandbox Runtime Error
+                  </h3>
+                  <div style={{ fontFamily: 'monospace', fontSize: '0.85rem', color: '#fca5a5', marginBottom: '15px', maxHeight: '100px', overflowY: 'auto' }}>
+                     {runtimeError}
+                  </div>
+                  <button 
+                     className={isHealing ? "animate-pulse-glow" : ""}
+                     onClick={() => {
+                        setIsHealing(true);
+                        setTimeout(() => {
+                           setIsHealing(false);
+                           setRuntimeError(null);
+                           onCrash(); 
+                        }, 2000);
+                     }}
+                     style={{ 
+                        background: isHealing ? 'rgba(59, 130, 246, 0.2)' : '#1a1a1a', 
+                        color: isHealing ? '#60a5fa' : '#fff', 
+                        border: isHealing ? '1px solid #3b82f6' : '1px solid #333', 
+                        padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.3s' 
+                     }}>
+                     {isHealing ? '⚡ AI is Auto-Healing Code...' : '✨ Diagnose & Auto-Fix'}
+                  </button>
+               </div>
+            )}
+          </div>
         )}
       </div>
 

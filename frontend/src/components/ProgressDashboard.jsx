@@ -25,7 +25,7 @@ const ProgressDashboard = ({ activeAgent, timeline, liveUpdates }) => {
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '20px' }}>
       
       {/* Top Level Progress */}
-      <div style={{ backgroundColor: 'var(--input-bg)', borderRadius: '12px', padding: '20px', border: '1px solid var(--border-color)', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}>
+      <div className="cyber-panel" style={{ borderRadius: '12px', padding: '20px' }}>
          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
             <h3 style={{ margin: 0, fontWeight: '600', color: 'var(--text-primary)', fontSize: '1.1rem' }}>
               {getAgentLabel()}
@@ -50,7 +50,7 @@ const ProgressDashboard = ({ activeAgent, timeline, liveUpdates }) => {
       </div>
 
       {/* Engineering Reasoning Timeline */}
-      <div style={{ flex: 1, backgroundColor: 'var(--input-bg)', borderRadius: '12px', padding: '20px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className="cyber-panel" style={{ flex: 1, borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
          <h4 style={{ margin: '0 0 15px 0', color: '#aaa', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Engineering Reasoning Timeline</h4>
          
          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '15px', paddingRight: '10px' }}>
@@ -60,12 +60,13 @@ const ProgressDashboard = ({ activeAgent, timeline, liveUpdates }) => {
             {timeline.map((item, idx) => (
                <div key={idx} style={{ display: 'flex', gap: '15px', animation: 'fadeIn 0.3s ease-out' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                     <div style={{ 
+                     <div className={item.status === 'active' ? 'animate-pulse-glow' : item.status === 'done' ? 'animate-pulse-glow-success' : ''} style={{ 
                         width: '30px', height: '30px', borderRadius: '50%', 
-                        backgroundColor: item.status === 'done' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(59, 130, 246, 0.1)',
+                        backgroundColor: item.status === 'done' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(59, 130, 246, 0.2)',
                         border: item.status === 'done' ? '1px solid #10b981' : '1px solid #3b82f6',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '0.9rem'
+                        fontSize: '0.9rem',
+                        transition: 'all 0.3s ease'
                      }}>
                         {item.status === 'done' ? '✅' : '⚙️'}
                      </div>
@@ -89,8 +90,8 @@ const ProgressDashboard = ({ activeAgent, timeline, liveUpdates }) => {
       
       {/* Live System Logs (Small) */}
       {liveUpdates.length > 0 && (
-         <div style={{ backgroundColor: '#0d0d0d', padding: '10px 15px', borderRadius: '8px', border: '1px solid #222', fontSize: '0.8rem', color: '#666', fontFamily: 'monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            <span style={{ color: '#3b82f6' }}>$</span> {liveUpdates[liveUpdates.length - 1]}
+         <div className="animate-slide-up" style={{ backgroundColor: 'rgba(0,0,0,0.6)', padding: '12px 18px', borderRadius: '8px', border: '1px solid rgba(59,130,246,0.2)', fontSize: '0.85rem', color: '#888', fontFamily: 'monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', backdropFilter: 'blur(8px)', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+            <span style={{ color: '#3b82f6', fontWeight: 'bold' }}>$</span> <span className="typing-cursor" style={{ color: '#ccc' }}>{liveUpdates[liveUpdates.length - 1]}</span>
          </div>
       )}
       

@@ -150,3 +150,61 @@ html, body {
   flex: 1;
   flex-direction: column;
 }
+
+/* =========================================
+   AiON OVERDRIVE: Addictive Aesthetics
+   ========================================= */
+
+@keyframes pulse-glow {
+  0% { box-shadow: 0 0 5px var(--accent), 0 0 10px var(--accent); opacity: 0.8; }
+  50% { box-shadow: 0 0 15px var(--accent), 0 0 25px var(--accent); opacity: 1; transform: scale(1.05); }
+  100% { box-shadow: 0 0 5px var(--accent), 0 0 10px var(--accent); opacity: 0.8; }
+}
+
+@keyframes pulse-glow-success {
+  0% { box-shadow: 0 0 5px var(--success), 0 0 10px var(--success); }
+  50% { box-shadow: 0 0 15px var(--success), 0 0 25px var(--success); transform: scale(1.02); }
+  100% { box-shadow: 0 0 5px var(--success), 0 0 10px var(--success); }
+}
+
+@keyframes slideInUp {
+  from { opacity: 0; transform: translateY(15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes blink-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s infinite ease-in-out;
+}
+
+.animate-pulse-glow-success {
+  animation: pulse-glow-success 2s infinite ease-in-out;
+}
+
+.animate-slide-up {
+  animation: slideInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.typing-cursor::after {
+  content: '|';
+  animation: blink-cursor 1s step-end infinite;
+  color: var(--accent);
+  margin-left: 2px;
+}
+
+.cyber-panel {
+  background: rgba(15, 15, 20, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
