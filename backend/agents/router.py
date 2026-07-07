@@ -112,7 +112,7 @@ RULES:
   "needs_images": true/false,
   "needs_diagrams": true/false (True ONLY for architecture, algorithms, or workflows),
   "visual_type": "'real', 'generative', or 'sketch'",
-  "visual_query": "The exact name or description of the entity to search/generate based ONLY on the Latest User Message.",
+  "visual_query": "The highly specific, disambiguated name of the entity to search (e.g. use 'Badrinath Temple Uttarakhand' instead of 'Badrinath', or 'Kanaka Durga Temple Vijayawada' instead of 'Vijayawada temple') to prevent fetching wrong images.",
   "visual_count": "integer between 1 and 5"
 }
 2. Output raw JSON without markdown formatting.
@@ -120,7 +120,7 @@ RULES:
 Visual Generation Rules (MANDATORY):
 - If the user asks to "draw", "sketch", "generate an image", or "show a picture", you MUST set "needs_images": true.
 - Use "visual_type": "sketch" for pencil sketches. Use "generative" for general AI art.
-- The "visual_query" MUST be a detailed prompt based on the user's request.
+- The "visual_query" MUST be highly disambiguated (e.g. use "Badrinath Temple" instead of "Badrinath" which is a movie, or "Kanaka Durga Temple Vijayawada" instead of "Vijayawada"). Never fetch images of random people for locations.
 
 Clarification Rules (MANDATORY):
 - Answer the user's question immediately whenever possible.

@@ -43,7 +43,15 @@ def get_real_world_image(query: str, count: int = 1):
             data = json.loads(response.read().decode())
         
         pages = data.get('query', {}).get('pages', {})
-        for page_id, page in pages.items():
+        # Sort pages by relevance index returned by generator=search
+        sorted_pages = sorted(pages.values(), key=lambda x: x.get('index', 999))
+        
+        for page in sorted_pages:
+            # Skip disambiguation pages or film pages if we want a place
+            title_lower = page.get('title', '').lower()
+            if '(film)' in title_lower or 'actor' in title_lower:
+                continue
+                
             if 'thumbnail' in page:
                 image_urls.append(page['thumbnail']['source'])
                 if len(image_urls) >= count:
