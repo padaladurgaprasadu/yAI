@@ -1107,7 +1107,7 @@ function App() {
             </div>
             
             <div style={{ fontSize: '0.75rem', color: '#94a3b8', textAlign: 'center', marginTop: '10px' }}>
-              AiON v1.0.1
+              AiON 2.0
             </div>
           </div>
         </aside>
