@@ -299,13 +299,18 @@ OUTPUT SCHEMA:
             
             return (target_file, f"// Error: AiON failed to generate {target_file}. Exception: {last_error if 'last_error' in locals() else 'Unknown'}")
 
-        # Execute sequential generation to prevent API rate limits (429) on free tiers!
-        # WARNING: Parallel execution causes 429 Too Many Requests and OOM. DO NOT USE max_workers > 1.
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        # Execute parallel generation for speed
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
             future_to_file = {executor.submit(generate_file, f): f for f in files_to_generate}
-            for future in concurrent.futures.as_completed(future_to_file):
-                file_name, code = future.result()
-                code_files[file_name] = code
+            try:
+                # Add a hard timeout to prevent the pipeline from hanging forever
+                for future in concurrent.futures.as_completed(future_to_file, timeout=180):
+                    file_name, code = future.result()
+                    code_files[file_name] = code
+            except concurrent.futures.TimeoutError:
+                logger.error("[Coder] Parallel generation timed out after 180 seconds!")
+                if q:
+                    q.put({"type": "progress", "message": "⚠️ Code generation timed out."})
         
         state["code_files"] = code_files
         

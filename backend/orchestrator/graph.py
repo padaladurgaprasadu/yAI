@@ -37,13 +37,13 @@ def should_continue(state: AiONState):
     revision_count = state.get("revision_count", 0)
     
     if feedback == "APPROVED":
-        return "auditor"
+        return "visual_critique"
     
     if revision_count >= 2:
-        print("   -> [System] Max revisions reached. Proceeding to auditor.")
-        return "auditor"
+        print("   -> [System] Max revisions reached. Proceeding to visual critique.")
+        return "visual_critique"
         
-    return "swarm_orchestrator"
+    return "coder"
 
 def should_continue_audit(state: AiONState):
     """
@@ -59,7 +59,7 @@ def should_continue_audit(state: AiONState):
         print("   -> [System] Max revisions reached in audit. Proceeding to devops.")
         return "devops"
         
-    return "swarm_orchestrator"
+    return "coder"
 
 def check_dependencies(state: AiONState):
     """
@@ -69,8 +69,8 @@ def check_dependencies(state: AiONState):
     revision_count = state.get("revision_count", 0)
     
     if missing and revision_count < 3:
-        print(f"   -> [Graph] Routing back to Swarm Orchestrator to generate missing files: {missing}")
-        return "swarm_orchestrator"
+        print(f"   -> [Graph] Routing back to generate missing files: {missing}")
+        return "coder"
     elif missing:
         print(f"   -> [Graph] Max revisions reached while fixing dependencies. Proceeding anyway.")
         
@@ -84,8 +84,8 @@ def should_retry_execution(state: AiONState):
     execution_retries = state.get("execution_retries", 0)
     
     if error and execution_retries < 3:
-        print(f"   -> [Auto-Heal] Execution failed (Retry {execution_retries + 1}/3). Looping back to Swarm Orchestrator for healing.")
-        return "swarm_orchestrator"
+        print(f"   -> [Auto-Heal] Execution failed (Retry {execution_retries + 1}/3). Looping back for healing.")
+        return "coder"
         
     if error:
         print("   -> [Auto-Heal] Max execution retries reached. Failing gracefully.")
@@ -157,16 +157,16 @@ def build_graph():
     workflow.add_edge("image_search", "dependency_checker")
     workflow.add_edge("preview_agent", "dependency_checker")
     
-    workflow.add_conditional_edges("dependency_checker", check_dependencies, {"swarm_orchestrator": "swarm_orchestrator", "ml_trainer": "ml_trainer"})
+    workflow.add_conditional_edges("dependency_checker", check_dependencies, {"coder": "swarm_orchestrator", "ml_trainer": "ml_trainer"})
     
     workflow.add_edge("ml_trainer", "hp_tuner")
     workflow.add_edge("hp_tuner", "tester")
     workflow.add_edge("tester", "reviewer")
-    workflow.add_conditional_edges("reviewer", should_continue, {"swarm_orchestrator": "swarm_orchestrator", "visual_critique": "visual_critique"})
-    workflow.add_conditional_edges("visual_critique", should_continue_visual, {"swarm_orchestrator": "swarm_orchestrator", "auditor": "auditor"})
-    workflow.add_conditional_edges("auditor", should_continue_audit, {"swarm_orchestrator": "swarm_orchestrator", "devops": "devops"})
+    workflow.add_conditional_edges("reviewer", should_continue, {"coder": "swarm_orchestrator", "visual_critique": "visual_critique"})
+    workflow.add_conditional_edges("visual_critique", should_continue_visual, {"coder": "swarm_orchestrator", "auditor": "auditor"})
+    workflow.add_conditional_edges("auditor", should_continue_audit, {"coder": "swarm_orchestrator", "devops": "devops"})
     workflow.add_edge("devops", "executor")
-    workflow.add_conditional_edges("executor", should_retry_execution, {"swarm_orchestrator": "swarm_orchestrator", END: END})
+    workflow.add_conditional_edges("executor", should_retry_execution, {"coder": "swarm_orchestrator", END: END})
 
     return workflow.compile()
 

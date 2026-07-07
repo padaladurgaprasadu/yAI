@@ -1220,9 +1220,10 @@ function App() {
               
               {isChatLoading && (
                 <div style={{ display: 'flex', gap: '16px', alignSelf: 'flex-start' }}>
-                   <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--accent)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>A</div>
-                   <div style={{ padding: '6px 0' }}>
+                   <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--accent)', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#fff', fontWeight: 'bold' }}>A</div>
+                   <div style={{ padding: '6px 0', display: 'flex', alignItems: 'center', gap: '12px' }}>
                      <div className="spinner" style={{ width: '18px', height: '18px' }}></div>
+                     {chatStatus && <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontStyle: 'italic', letterSpacing: '0.5px' }}>{chatStatus}</span>}
                    </div>
                 </div>
               )}
