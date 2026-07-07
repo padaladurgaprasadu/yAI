@@ -25,8 +25,14 @@ def main():
     # Check for API key
     from dotenv import load_dotenv
     load_dotenv()
-    if os.getenv("OPENROUTER_API_KEY") in [None, "your_openrouter_api_key_here"]:
-        print("\n[ERROR] You must set a valid OPENROUTER_API_KEY in the .env file first!")
+    
+    has_key = any(os.getenv(k) for k in [
+        "OPENAI_API_KEY", "OPENROUTER_API_KEY", "NVIDIA_API_KEY", 
+        "GEMINI_API_KEY", "GOOGLE_API_KEY", "ANTHROPIC_API_KEY", "GROQ_API_KEY"
+    ])
+    
+    if not has_key:
+        print("\n[ERROR] You must set a valid API_KEY (e.g., NVIDIA_API_KEY or OPENROUTER_API_KEY) in the .env file or Render dashboard first!")
         sys.exit(1)
 
     # Build the graph
