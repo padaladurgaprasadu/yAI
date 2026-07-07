@@ -546,6 +546,10 @@ function App() {
         payload.projectId = projectId;
       }
 
+      let wakeTimer = setTimeout(() => {
+          setChatStatus("Server waking up from hibernation (takes ~50s)...");
+      }, 3000);
+
       const response = await fetch(`${API_URL}/api/chat`, {
         method: 'POST',
         headers: { 
@@ -554,6 +558,8 @@ function App() {
         },
         body: JSON.stringify(payload)
       })
+      
+      clearTimeout(wakeTimer);
       
       if (!response.ok) {
         setIsChatLoading(false)
