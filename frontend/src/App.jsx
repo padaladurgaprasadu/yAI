@@ -603,10 +603,15 @@ function App() {
                     } else if (data.type === 'status') {
                         setChatStatus(data.message);
                     } else if (data.type === 'visual') {
-                        // Use the beautiful dedicated visual card renderer
+                        // Use the beautiful dedicated visual card renderer (supports multiple images)
                         setChatMessages(prev => {
                             const newMsgs = [...prev];
-                            newMsgs[newMsgs.length - 1].visual = data;
+                            const lastMsg = newMsgs[newMsgs.length - 1];
+                            const existingVisuals = lastMsg.visuals || [];
+                            newMsgs[newMsgs.length - 1] = {
+                                ...lastMsg,
+                                visuals: [...existingVisuals, data]
+                            };
                             return newMsgs;
                         });
                     } else if (data.type === 'fast_build') {
@@ -639,15 +644,6 @@ function App() {
                         // Trigger an iframe refresh by toggling isPreviewRunning
                         setIsPreviewRunning(false);
                         setTimeout(() => setIsPreviewRunning(true), 500);
-                    } else if (data.type === 'visual') {
-                        setChatMessages(prev => {
-                            const newMsgs = [...prev];
-                            newMsgs[newMsgs.length - 1] = {
-                                ...newMsgs[newMsgs.length - 1],
-                                visual: data
-                            };
-                            return newMsgs;
-                        });
                     }
                 } catch (e) {
                     console.error("Error parsing stream line:", part);
@@ -1168,9 +1164,20 @@ function App() {
                         <img src={msg.image} alt="Uploaded" style={{ maxWidth: '300px', maxHeight: '300px', borderRadius: '8px', border: '1px solid #444', objectFit: 'contain' }} />
                       </div>
                     )}
-                    {msg.visual && msg.visual.media_type === 'image' && (
-                      <div style={{ marginBottom: '16px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border-color)', boxShadow: '0 4px 20px rgba(0,0,0,0.3)', width: 'fit-content' }}>
-                        <img src={msg.visual.url} alt={msg.visual.alt} style={{ maxWidth: '400px', maxHeight: '300px', width: '100%', objectFit: 'cover', display: 'block' }} />
+                    {msg.visuals && msg.visuals.length > 0 && (
+                      <div style={{ 
+                          display: 'grid', 
+                          gridTemplateColumns: msg.visuals.length > 1 ? 'repeat(auto-fit, minmax(200px, 1fr))' : '1fr', 
+                          gap: '12px', 
+                          marginBottom: '16px', 
+                          width: '100%',
+                          maxWidth: '600px'
+                      }}>
+                        {msg.visuals.filter(v => v.media_type === 'image').map((v, i) => (
+                          <div key={i} style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border-color)', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}>
+                            <img src={v.url} alt={v.alt || 'Visual'} style={{ width: '100%', height: '100%', maxHeight: msg.visuals.length > 1 ? '200px' : '300px', objectFit: 'cover', display: 'block' }} />
+                          </div>
+                        ))}
                       </div>
                     )}
                     {console.log("RENDERING MSG CONTENT:", msg.content)}

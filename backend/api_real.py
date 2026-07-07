@@ -835,6 +835,38 @@ IMPORTANT RULES:
             is_simple_chat = len(words) < 10 and not any(t in sanitized_message.lower() for t in visual_triggers)
             
             if is_simple_chat:
+                visual_queue = asyncio.Queue()
+                
+                async def background_router():
+                    try:
+                        from backend.agents.router import OmniIntelligenceEngine
+                        from backend.agents.base import BaseAgent
+                        from backend.utils.visuals import get_real_world_image
+                        
+                        router = OmniIntelligenceEngine(llm=BaseAgent().fast_llm)
+                        intent_data = await router.adetect_intent(sanitized_message, request_data.history)
+                        
+                        if intent_data.get("needs_images"):
+                            visual_query = intent_data.get("visual_query") or sanitized_message
+                            v_count = int(intent_data.get("visual_count", 4))
+                            
+                            res = await asyncio.to_thread(get_real_world_image, visual_query, v_count)
+                            img_urls = res if isinstance(res, list) else ([res] if res else [])
+                            
+                            for img_url in img_urls:
+                                await visual_queue.put({
+                                    "type": "visual",
+                                    "media_type": "image",
+                                    "url": img_url,
+                                    "alt": visual_query
+                                })
+                    except Exception as e:
+                        api_logger.warning(f"Background router error: {e}")
+                    finally:
+                        await visual_queue.put(None)
+
+                router_task = asyncio.create_task(background_router())
+                
                 yield f"data: {json.dumps({'type': 'status', 'message': '✨ Generating...'})}\n\n"
                 messages = [SystemMessage(content="You are AiON, a concise and friendly AI architect. Answer briefly.")]
                 for hm in request_data.history[-4:]:
@@ -849,10 +881,41 @@ IMPORTANT RULES:
                         async for text_chunk in agent.fast_llm.astream(messages):
                             token = text_chunk.content if hasattr(text_chunk, 'content') else str(text_chunk)
                             yield f"data: {json.dumps({'type': 'chat', 'token': token})}\n\n"
+                            
+                    text_gen = fetch_fast()
                     
-                    # Yield from the async generator directly
-                    async for chunk in fetch_fast():
-                        yield chunk
+                    async def get_next_token():
+                        try: return await anext(text_gen)
+                        except StopAsyncIteration: return "EOF"
+                        
+                    text_task = asyncio.create_task(get_next_token())
+                    queue_task = asyncio.create_task(visual_queue.get())
+                    
+                    while True:
+                        tasks = []
+                        if text_task: tasks.append(text_task)
+                        if queue_task: tasks.append(queue_task)
+                        
+                        if not tasks: break
+                        
+                        done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+                        
+                        if text_task in done:
+                            token = text_task.result()
+                            if token == "EOF":
+                                text_task = None
+                            else:
+                                yield token
+                                text_task = asyncio.create_task(get_next_token())
+                                
+                        if queue_task in done:
+                            visual_item = queue_task.result()
+                            if visual_item:
+                                yield f"data: {json.dumps(visual_item)}\n\n"
+                                queue_task = asyncio.create_task(visual_queue.get())
+                            else:
+                                queue_task = None
+                                
                 except Exception as e:
                     api_logger.error(f"Fast Lane Error: {e}")
                     yield f"data: {json.dumps({'type': 'chat', 'token': f'⚠️ Fast Lane Error: {str(e)}'})}\n\n"
