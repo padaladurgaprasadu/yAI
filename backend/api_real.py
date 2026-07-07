@@ -856,9 +856,10 @@ IMPORTANT RULES:
                         router = OmniIntelligenceEngine(llm=BaseAgent().fast_llm)
                         intent_data = await router.adetect_intent(sanitized_message, request_data.history)
                         
-                        if intent_data.get("needs_images"):
-                            visual_query = intent_data.get("visual_query") or sanitized_message
-                            v_count = int(intent_data.get("visual_count", 4))
+                        entity_det = intent_data.get("entity_detection", {})
+                        if entity_det.get("requires_visuals"):
+                            visual_query = entity_det.get("search_query") or sanitized_message
+                            v_count = 4
                             
                             res = await asyncio.to_thread(get_real_world_image, visual_query, v_count)
                             img_urls = res if isinstance(res, list) else ([res] if res else [])
@@ -878,7 +879,12 @@ IMPORTANT RULES:
                 router_task = asyncio.create_task(background_router())
                 
                 yield f"data: {json.dumps({'type': 'status', 'message': '✨ Generating...'})}\n\n"
-                messages = [SystemMessage(content="You are AiON, a concise and friendly AI architect. Answer briefly.")]
+                sys_prompt = get_system_prompt({
+                    "primary_intent": "General Knowledge",
+                    "user_goal": "Provide a comprehensive, highly-structured response utilizing Markdown.",
+                    "complexity": "Deep Dive"
+                })
+                messages = [SystemMessage(content=sys_prompt)]
                 for hm in request_data.history[-4:]:
                     if hm.get("role") == "user":
                         messages.append(HumanMessage(content=hm.get("content", "")))
@@ -971,22 +977,24 @@ IMPORTANT RULES:
             # --- NON-BLOCKING VISUAL ENGINE ---
             visual_queue = asyncio.Queue()
             visual_task = None
-            if intent_data.get("needs_images") and intent_data.get("visual_query") and intent_data.get("visual_query").lower() not in ["null", "none"]:
+            entity_det = intent_data.get("entity_detection", {})
+            visual_query_val = entity_det.get("search_query", "")
+            if entity_det.get("requires_visuals") and visual_query_val and visual_query_val.lower() not in ["null", "none"]:
                 yield f"data: {json.dumps({'type': 'status', 'message': '📸 Fetching Visuals (Background)...'})}\n\n"
                 async def fetch_visuals():
                     from backend.utils.visuals import get_generative_image, get_real_world_image, get_pencil_sketch_image
                     try:
-                        v_type = str(intent_data.get("visual_type", "real")).lower()
-                        v_count = int(intent_data.get("visual_count", 1))
+                        v_type = "real"
+                        v_count = 4
                         img_urls = []
                         if v_type == "sketch":
-                            url = await asyncio.to_thread(get_pencil_sketch_image, intent_data["visual_query"])
+                            url = await asyncio.to_thread(get_pencil_sketch_image, visual_query_val)
                             if url: img_urls.append(url)
                         elif v_type == "generative":
-                            url = await asyncio.to_thread(get_generative_image, intent_data["visual_query"])
+                            url = await asyncio.to_thread(get_generative_image, visual_query_val)
                             if url: img_urls.append(url)
                         else:
-                            res = await asyncio.to_thread(get_real_world_image, intent_data["visual_query"], v_count)
+                            res = await asyncio.to_thread(get_real_world_image, visual_query_val, v_count)
                             img_urls = res if isinstance(res, list) else ([res] if res else [])
                         
                         for img_url in img_urls:
