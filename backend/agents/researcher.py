@@ -7,6 +7,7 @@ from typing import List, Dict, Any
 from backend.agents.base import BaseAgent, GLOBAL_AGENT_RULES
 from backend.orchestrator.state import AiONState
 from langchain_core.messages import HumanMessage, SystemMessage
+from backend.utils.cache import llm_cache
 
 try:
     import PyPDF2
@@ -100,7 +101,7 @@ class ResearchAgent(BaseAgent):
         except Exception:
             pass
         return ""
-
+    @llm_cache("researcher")
     def run(self, state: AiONState) -> AiONState:
         goal = state.get("goal", "")
         project_id = state.get("project_id")

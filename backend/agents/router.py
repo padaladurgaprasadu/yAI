@@ -87,15 +87,14 @@ OUTPUT SCHEMA:
 {
   "mode": "tutor" | "builder",
   "scope_estimate": "trivial" | "small_app" | "multi_service",
-  "ambiguity_flags": ["list any missing critical info, e.g. 'no mention of auth requirement'"],
+  "ambiguity_flags": ["list any missing critical info"],
   "confidence": "high" | "medium" | "low",
   
-  // Backwards compatibility for OmniIntelligenceEngine
-  "execution_mode": "Lightning|Fast|Deep|Autonomous|Research",
-  "primary_intent": "Project Development|Architecture Design|General Chat|Visual Request",
-  "needs_images": false,
-  "visual_type": "real|generative|sketch",
-  "visual_query": ""
+  "entity_detection": {
+    "requires_visuals": true/false,
+    "entity_type": "place|person|landmark|animal|product|logo|movie|document|none",
+    "search_query": "specific string to search for images (e.g. 'Taj Mahal exterior')"
+  }
 }
 
 RULES:

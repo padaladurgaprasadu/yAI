@@ -17,6 +17,8 @@ from backend.agents.dependency_checker import DependencyCheckerAgent
 from backend.agents.auditor import AuditorAgent
 from backend.agents.wisdom_extractor import WisdomExtractorAgent
 from backend.agents.novelty import NoveltyAgent
+from backend.agents.image_search import ImageSearchAgent
+from backend.agents.preview import PreviewAgent
 
 def should_run_novelty(state: AiONState):
     """
@@ -113,6 +115,8 @@ def build_graph():
 
     researcher = ResearchAgent()
     novelty_agent = NoveltyAgent()
+    image_search = ImageSearchAgent()
+    preview_agent = PreviewAgent()
 
     workflow.add_node("planner", planner.run)
     workflow.add_node("researcher", researcher.run)
@@ -124,6 +128,8 @@ def build_graph():
     workflow.add_node("swarm_orchestrator", swarm_orchestrator.run)
     
     workflow.add_node("coder", coder.run)
+    workflow.add_node("image_search", image_search.run)
+    workflow.add_node("preview_agent", preview_agent.run)
     workflow.add_node("dependency_checker", dep_checker.run)
     workflow.add_node("ml_trainer", ml_trainer.run)
     workflow.add_node("hp_tuner", hp_tuner.run)
@@ -140,9 +146,17 @@ def build_graph():
     workflow.add_edge("novelty_agent", "architect")
     workflow.add_edge("architect", "design")
     workflow.add_edge("design", "swarm_orchestrator")
-    workflow.add_edge("swarm_orchestrator", "coder")
     
+    # Fan-out: Parallel execution of Code, Search, and Preview
+    workflow.add_edge("swarm_orchestrator", "coder")
+    workflow.add_edge("swarm_orchestrator", "image_search")
+    workflow.add_edge("swarm_orchestrator", "preview_agent")
+    
+    # Fan-in: Wait for all to finish before dependency_checker
     workflow.add_edge("coder", "dependency_checker")
+    workflow.add_edge("image_search", "dependency_checker")
+    workflow.add_edge("preview_agent", "dependency_checker")
+    
     workflow.add_conditional_edges("dependency_checker", check_dependencies, {"swarm_orchestrator": "swarm_orchestrator", "ml_trainer": "ml_trainer"})
     
     workflow.add_edge("ml_trainer", "hp_tuner")

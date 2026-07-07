@@ -5,6 +5,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from backend.agents.base import BaseAgent
 from backend.orchestrator.state import AiONState
 from backend.utils.logger import get_logger, measure_time
+from backend.utils.cache import llm_cache
 import ast
 
 logger = get_logger(__name__)
