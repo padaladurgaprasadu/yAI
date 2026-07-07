@@ -19,8 +19,9 @@ class ReviewerAgent(BaseAgent):
             ("system", "You are an elite Autonomous Code Reviewer. Your job is to verify the codebase syntactically and logically.\n\n"
              "RULES:\n"
              "1. Read the provided file structures and logic.\n"
-             "2. If you find critical syntax errors, missing imports, or broken logic, return a detailed critique.\n"
-             "3. If the code is solid, production-ready, and logically sound, you MUST return exactly the word 'APPROVED' and nothing else.\n\n"
+             "2. DEEP SEMANTIC REVIEW: You MUST actively search for memory leaks, race conditions, unhandled edge cases, missing error boundaries, and security vulnerabilities (e.g., missing input validation, hardcoded secrets).\n"
+             "3. If you find ANY critical syntax errors, missing imports, broken logic, or security flaws, return a detailed critique.\n"
+             "4. If the code is solid, highly efficient, and logically sound, you MUST return exactly the word 'APPROVED' and nothing else.\n\n"
              "CRITICAL: Do NOT write code yourself, just provide feedback."),
             ("human", "Project Workspace: {workspace}\nBlueprint: {blueprint}\nCode Files Generated: {code_files}\n\nPlease run your semantic verification. If everything passes, output 'APPROVED'. Otherwise, output the exact error feedback for the Coder to fix.")
         ])

@@ -14,7 +14,7 @@ class ExecutorAgent(BaseAgent):
     def __init__(self):
         super().__init__()
         self.prompt = ChatPromptTemplate.from_messages([
-            ("system", "You are a DevOps Engineer. Given a blueprint and the generated code files, determine the exact terminal commands required to initialize the project and install the dependencies.\n\nIMPORTANT: Output each command EXACTLY in this format:\n\n<command>npm install</command>\n\nCRITICAL RULE: If a root 'package.json' is present, output `<command>npm install --legacy-peer-deps</command>`. If a 'client/package.json' is present, you MUST ALSO output `<command>cd client && npm install --legacy-peer-deps</command>`. \n\nCRITICAL BUILD VERIFICATION: To ensure the code compiles without missing component errors, if a 'client/package.json' is present, you MUST output a final command `<command>cd client && npm run build</command>`. If it fails, our auto-heal system will catch the missing files and fix them.\n\nDo NOT start any servers (no 'npm start')."),
+            ("system", "You are a DevOps Engineer. Given a blueprint and the generated code files, determine the exact terminal commands required to initialize the project and install the dependencies.\n\nIMPORTANT: Output each command EXACTLY in this format:\n\n<command>npm install</command>\n\nCRITICAL RULE: If a root 'package.json' is present, output `<command>npm install --no-audit --no-fund --legacy-peer-deps</command>`. If a 'client/package.json' is present, you MUST ALSO output `<command>cd client && npm install --no-audit --no-fund --legacy-peer-deps</command>`. \n\nCRITICAL BUILD VERIFICATION: To ensure the code compiles without missing component errors, if a 'client/package.json' is present, you MUST output a final command `<command>cd client && npm run build</command>`. If it fails, our auto-heal system will catch the missing files and fix them.\n\nDo NOT start any servers (no 'npm start')."),
             ("human", "Blueprint: {blueprint}\n\nFiles:\n{code_files}")
         ])
         self.chain = self.prompt | self.llm
@@ -25,7 +25,7 @@ class ExecutorAgent(BaseAgent):
         
         # Collect all imported packages across .js and .jsx files
         imported_packages = set()
-        import_pattern = r'import\s+.*?\s+from\s+[\'"]([^\.\/][^\'"]+)[\'"]'
+        import_pattern = r'(?:import\s+(?:(?:[\w{}\*\, \n]+)\s+from\s+)?|import\()[\'"]([^\.\/][^\'"]+)[\'"]'
         require_pattern = r'require\([\'"]([^\.\/][^\'"]+)[\'"]\)'
         
         for path, content in code_files.items():
