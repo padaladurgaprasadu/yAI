@@ -273,55 +273,61 @@ async def plan_project(request_data: PlanRequest, request: Request, auth: dict =
     except Exception as e:
         print(f"Warning: Could not log to Neo4j: {e}")
 
-    # 1. Run Research Agent (Innovation Engine) FIRST to gather novel approaches
-    from backend.agents.researcher import ResearchAgent
-    researcher = ResearchAgent()
-    initial_state = AiONState(goal=goal, project_id=project_id, agent_role=request_data.agent_role, modules=[])
-    if request_data.image:
-        initial_state["image"] = request_data.image
-        
-    researched_state = researcher.run(initial_state)
-    semantic_context = researched_state.get("semantic_context", "")
-
-    # 2. Run Planner synchronously using the Research insights
-    from backend.agents.planner import PlannerAgent
-    planner = PlannerAgent()
-    planned_state = planner.run(researched_state)
-    modules = planned_state.get("modules", [])
-
-    # 2. Setup Architect Stream
+    # Setup Architect
+    from backend.agents.architect import ArchitectAgent
     architect = ArchitectAgent()
-    
-    # Dynamically define architectural rules based on role (mirroring architect.py)
-    agent_role = request_data.agent_role
-    if "Research" in agent_role:
-        tech_rule = "CRITICAL ARCHITECTURE RULE: You MUST design a research document structure instead of software. Your 'tech_stack' should list the methodologies or research fields involved. Your 'file_structure' MUST only include markdown files (e.g., 'research_paper.md', 'literature_review.md', 'methodology.md'). Do NOT include code files like package.json or server.js."
-    elif "Fullstack" in agent_role or "Web" in agent_role or "UI" in agent_role:
-        framework_rules = "4. CRITICAL REACT REQUIREMENT: Do NOT include 'client/public/index.html', 'client/src/index.js', 'client/src/main.jsx', or 'client/package.json' in your file_structure! The backend will automatically scaffold the React app using Vite. You ONLY need to list the components you create (e.g., 'client/src/App.jsx', 'client/src/components/Dashboard.jsx') and the root 'package.json'.\n5. CRITICAL COMPONENT REQUIREMENT: Every single React component (e.g. Dashboard, Login, Navbar) you plan to use MUST be explicitly listed as a separate file with a '.jsx' extension in 'file_structure'. If you don't list it, it will never be generated and the app will crash with 'Module not found'.\n6. CRITICAL RUN REQUIREMENT: You MUST include a root 'package.json' with a 'dev' script that uses 'concurrently' to run the backend and the Vite frontend at the same time."
-        tech_rule = f"CRITICAL ARCHITECTURE RULE: You MUST ALWAYS build a FULLSTACK application with a Node.js (Express) backend and a React frontend. \nCRITICAL DB RULE: You MUST use PostgreSQL for the database using the 'pg' library. IMPORTANT: Hardcode the database connection string or pool config to use user 'postgres', password 'postgres', host 'localhost', port 5432, database 'postgres' as a fallback if env vars are missing.\nCRITICAL PORT RULE: Your backend MUST run on PORT 5000. Your React frontend MUST run on PORT 3000. \n{framework_rules}"
-    else:
-        tech_rule = "CRITICAL ARCHITECTURE RULE: You MUST build a Python-based application using frameworks suitable for ML/Data Science (e.g., Streamlit, FastAPI, Flask). Do NOT use React or Express. The app must run on port 3000 for the iframe preview (e.g., streamlit run app.py --server.port=3000). You MUST include a 'requirements.txt' file and a 'start.sh' or 'start.bat' script to launch it."
-        
-    system_prompt = f"You are an Elite Enterprise Systems Architect acting as a {agent_role}. Given a goal, a list of modules, and an Innovation Brief, design a highly advanced, cutting-edge, and production-ready technology stack and blueprint. Do NOT build simple 1990s CRUD apps; incorporate modern UX, AI where relevant, scalable structures, and robust data models. Use the provided Past Projects and Research Context as inspiration.\n\n{tech_rule}\n\nReturn ONLY valid JSON with three keys: 'tech_stack' (a list of exact technologies), 'blueprint_notes' (a detailed string explaining the advanced architectural decisions), and 'file_structure' (a comprehensive list of ALL necessary file paths). CRITICAL: Every item in 'file_structure' MUST be a file with an extension (e.g., 'server/app.js', 'client/src/App.jsx'). NEVER include raw directory names (like 'server' or 'client/src'). Do not include markdown formatting or backticks, just the raw JSON."
-
-    try:
-        vector_db = ChromaClient()
-        past_projects = vector_db.find_similar_projects(goal)
-        context = "\n---\n".join(past_projects) if past_projects else "No past projects found."
-    except Exception:
-        context = "No past projects found."
-
-    messages = [
-        SystemMessage(content=system_prompt),
-        HumanMessage(content=f"Goal: {goal}\nModules: {','.join(modules)}\n\nResearch Context (Innovation Brief):\n{semantic_context}\n\nPast Projects Context:\n{context}")
-    ]
 
     async def event_generator():
+        import asyncio
         # First yield the project metadata so frontend knows the project ID
         yield f"data: {json.dumps({'type': 'metadata', 'project_id': project_id})}\n\n"
         
-        buffer = ""
         try:
+            yield f"data: {json.dumps({'type': 'token', 'token': '### 🔍 Phase 1: Researching & Gathering Context...\\n'})}\n\n"
+            from backend.agents.researcher import ResearchAgent
+            researcher = ResearchAgent()
+            initial_state = AiONState(goal=goal, project_id=project_id, agent_role=request_data.agent_role, modules=[])
+            if request_data.image:
+                initial_state["image"] = request_data.image
+                
+            researched_state = await asyncio.to_thread(researcher.run, initial_state)
+            semantic_context = researched_state.get("semantic_context", "")
+
+            yield f"data: {json.dumps({'type': 'token', 'token': '✅ Context gathered.\\n\\n### 🧠 Phase 2: Defining Core Modules...\\n'})}\n\n"
+            from backend.agents.planner import PlannerAgent
+            planner = PlannerAgent()
+            planned_state = await asyncio.to_thread(planner.run, researched_state)
+            modules = planned_state.get("modules", [])
+
+            yield f"data: {json.dumps({'type': 'token', 'token': '✅ Modules defined.\\n\\n### 🏗️ Phase 3: Drafting System Blueprint...\\n\\n'})}\n\n"
+
+            # Dynamically define architectural rules based on role (mirroring architect.py)
+            agent_role = request_data.agent_role
+            if "Research" in agent_role:
+                tech_rule = "CRITICAL ARCHITECTURE RULE: You MUST design a research document structure instead of software. Your 'tech_stack' should list the methodologies or research fields involved. Your 'file_structure' MUST only include markdown files (e.g., 'research_paper.md', 'literature_review.md', 'methodology.md'). Do NOT include code files like package.json or server.js."
+            elif "Fullstack" in agent_role or "Web" in agent_role or "UI" in agent_role:
+                framework_rules = "4. CRITICAL REACT REQUIREMENT: Do NOT include 'client/public/index.html', 'client/src/index.js', 'client/src/main.jsx', or 'client/package.json' in your file_structure! The backend will automatically scaffold the React app using Vite. You ONLY need to list the components you create (e.g., 'client/src/App.jsx', 'client/src/components/Dashboard.jsx') and the root 'package.json'.\n5. CRITICAL COMPONENT REQUIREMENT: Every single React component (e.g. Dashboard, Login, Navbar) you plan to use MUST be explicitly listed as a separate file with a '.jsx' extension in 'file_structure'. If you don't list it, it will never be generated and the app will crash with 'Module not found'.\n6. CRITICAL RUN REQUIREMENT: You MUST include a root 'package.json' with a 'dev' script that uses 'concurrently' to run the backend and the Vite frontend at the same time."
+                tech_rule = f"CRITICAL ARCHITECTURE RULE: You MUST ALWAYS build a FULLSTACK application with a Node.js (Express) backend and a React frontend. \nCRITICAL DB RULE: You MUST use PostgreSQL for the database using the 'pg' library. IMPORTANT: Hardcode the database connection string or pool config to use user 'postgres', password 'postgres', host 'localhost', port 5432, database 'postgres' as a fallback if env vars are missing.\nCRITICAL PORT RULE: Your backend MUST run on PORT 5000. Your React frontend MUST run on PORT 3000. \n{framework_rules}"
+            else:
+                tech_rule = "CRITICAL ARCHITECTURE RULE: You MUST build a Python-based application using frameworks suitable for ML/Data Science (e.g., Streamlit, FastAPI, Flask). Do NOT use React or Express. The app must run on port 3000 for the iframe preview (e.g., streamlit run app.py --server.port=3000). You MUST include a 'requirements.txt' file and a 'start.sh' or 'start.bat' script to launch it."
+                
+            system_prompt = f"You are an Elite Enterprise Systems Architect acting as a {agent_role}. Given a goal, a list of modules, and an Innovation Brief, design a highly advanced, cutting-edge, and production-ready technology stack and blueprint. Do NOT build simple 1990s CRUD apps; incorporate modern UX, AI where relevant, scalable structures, and robust data models. Use the provided Past Projects and Research Context as inspiration.\n\n{tech_rule}\n\nReturn ONLY valid JSON with three keys: 'tech_stack' (a list of exact technologies), 'blueprint_notes' (a detailed string explaining the advanced architectural decisions), and 'file_structure' (a comprehensive list of ALL necessary file paths). CRITICAL: Every item in 'file_structure' MUST be a file with an extension (e.g., 'server/app.js', 'client/src/App.jsx'). NEVER include raw directory names (like 'server' or 'client/src'). Do not include markdown formatting or backticks, just the raw JSON."
+
+            try:
+                def get_past_projects():
+                    vector_db = ChromaClient()
+                    return vector_db.find_similar_projects(goal)
+                past_projects = await asyncio.to_thread(get_past_projects)
+                context = "\n---\n".join(past_projects) if past_projects else "No past projects found."
+            except Exception:
+                context = "No past projects found."
+
+            messages = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=f"Goal: {goal}\nModules: {','.join(modules)}\n\nResearch Context (Innovation Brief):\n{semantic_context}\n\nPast Projects Context:\n{context}")
+            ]
+            
+            buffer = ""
             for chunk in architect.llm.stream(messages):
                 text_chunk = chunk.content
                 if isinstance(text_chunk, list):

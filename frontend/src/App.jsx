@@ -800,7 +800,13 @@ function App() {
     
     let parsedBlueprint = { tech_stack: [], file_structure: [], blueprint_notes: "" };
     try {
-        if (blueprintJson) parsedBlueprint = JSON.parse(blueprintJson);
+        if (blueprintJson) {
+            let cleanJson = blueprintJson.replace(/```json/g, '').replace(/```/g, '').trim();
+            const startIdx = cleanJson.indexOf('{');
+            const endIdx = cleanJson.lastIndexOf('}');
+            if (startIdx !== -1 && endIdx !== -1) cleanJson = cleanJson.substring(startIdx, endIdx + 1);
+            parsedBlueprint = JSON.parse(cleanJson);
+        }
     } catch (e) {
         console.warn("No valid blueprint found, proceeding zero-shot.");
     }
@@ -883,6 +889,9 @@ function App() {
     try {
         // Strip out any trailing markdown ticks and text before/after JSON
         rawJson = rawJson.replace(/```json/g, '').replace(/```/g, '').trim();
+        const startIdx = rawJson.indexOf('{');
+        const endIdx = rawJson.lastIndexOf('}');
+        if (startIdx !== -1 && endIdx !== -1) rawJson = rawJson.substring(startIdx, endIdx + 1);
         
         // Strip trailing commas before closing braces/brackets (common LLM hallucination)
         rawJson = rawJson.replace(/,(?=\s*[}\]])/g, '');
