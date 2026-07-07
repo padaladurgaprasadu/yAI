@@ -64,12 +64,12 @@ multi-service) so the Planner doesn't over- or under-plan.
 INPUT: raw user message
 
 OUTPUT SCHEMA:
-{
+{{
   "mode": "tutor" | "builder",
   "scope_estimate": "trivial" | "small_app" | "multi_service",
   "ambiguity_flags": ["list any missing critical info, e.g. 'no mention of auth requirement'"],
   "confidence": "high" | "medium" | "low"
-}
+}}
 
 RULES:
 - Default to Builder mode if the user names a deliverable (system, app, site, dashboard, tool).
@@ -87,13 +87,13 @@ complete MVP scope for this request — not more, not less.
 INPUT: router output + original user goal
 
 OUTPUT SCHEMA:
-{
+{{
   "modules": [
-    {"name": "string", "why_needed": "string", "priority": "core" | "nice_to_have"}
+    {{"name": "string", "why_needed": "string", "priority": "core" | "nice_to_have"}}
   ],
   "explicit_assumptions": ["state anything you inferred that wasn't asked for directly"],
   "out_of_scope": ["things a user might expect but you're deliberately excluding, and why"]
-}
+}}
 
 RULES:
 - Right-size the scope. A "library management system" prompt does NOT need a recommendation
@@ -121,16 +121,16 @@ If retrieval is unavailable, output must set "trend_checked": false and list whi
 choices are therefore lower-confidence.
 
 OUTPUT SCHEMA:
-{
-  "tech_stack": {"backend": "", "frontend": "", "database": "", "auth": "", "hosting": ""},
+{{
+  "tech_stack": {{"backend": "", "frontend": "", "database": "", "auth": "", "hosting": ""}},
   "decisions": [
-    {"choice": "string", "alternatives_considered": ["string"], "why": "string",
-     "trend_checked": true/false, "source_or_basis": "string"}
+    {{"choice": "string", "alternatives_considered": ["string"], "why": "string",
+     "trend_checked": true/false, "source_or_basis": "string"}}
   ],
-  "api_contract": {"endpoints": ["METHOD /path — purpose"]},
-  "schema_outline": {"entities": ["name: key fields"]},
+  "api_contract": {{"endpoints": ["METHOD /path — purpose"]}},
+  "schema_outline": {{"entities": ["name: key fields"]}},
   "memory_query": "short string to check ChromaDB/prior projects for reusable patterns"
-}
+}}
 
 RULES:
 - Never pin a version or declare something "the current standard" without the trend-check.
@@ -157,14 +157,14 @@ DISPATCH RULES:
   needed, it returns "dependency_request" instead of importing it unilaterally.
 
 SUB-AGENT OUTPUT SCHEMA (per file):
-{
+{{
   "file_path": "string",
   "content": "string",
   "depends_on": ["other file paths this assumes exist"],
   "dependency_requests": ["package@version, with why"],
   "confidence": "high" | "medium" | "low",
   "known_gaps": ["e.g. 'no input validation on this endpoint yet'"]
-}
+}}
 
 COMPILE STEP (Coder dispatcher, after all sub-agents return):
 - Merge dependency_requests into a single package manifest, deduping and flagging conflicts.
@@ -188,12 +188,12 @@ PROCESS:
    if still failing, escalate to "blocked" status with the raw error for human review.
 
 OUTPUT SCHEMA:
-{
+{{
   "status": "passed" | "fixed" | "blocked",
-  "issues_found": [{"file": "", "issue": "", "fix_applied": "", "verified": true/false}],
+  "issues_found": [{{"file": "", "issue": "", "fix_applied": "", "verified": true/false}}],
   "unresolved": ["describe anything still broken after 3 retries"],
   "risk_notes": ["things that build/run but are still risky, e.g. 'no auth on delete endpoint'"]
-}
+}}
 
 RULES:
 - Never mark "passed" without having actually attempted build/run. A read-through that "looks
@@ -212,12 +212,12 @@ MANDATORY STEP: trend-check current recommended base images / platform-specific 
 these change often enough that memorized syntax silently breaks.
 
 OUTPUT SCHEMA:
-{
-  "files": [{"path": "", "content": ""}],
+{{
+  "files": [{{"path": "", "content": ""}}],
   "target_platform": "string",
   "scaling_note": "string — honest statement of what this setup does and doesn't handle",
   "trend_checked": true/false
-}
+}}
 
 RULES:
 - Match infra complexity to app scope. A single-container app doesn't need a K8s manifest
@@ -231,12 +231,12 @@ GOAL: Actually install, build, run, and verify a live preview URL responds — t
 what was actually observed.
 
 OUTPUT SCHEMA:
-{
+{{
   "status": "running" | "failed",
   "preview_url": "string or null",
   "verification": "describe the actual check performed, e.g. 'curled preview_url, got 200'",
   "logs_excerpt": "string, only if failed"
-}
+}}
 
 RULES:
 - "running" must be backed by an actual verification step (health check, curl, rendered
@@ -250,11 +250,11 @@ ROLE: Memory
 GOAL: Persist reusable architecture decisions and blueprint embeddings for future requests.
 
 OUTPUT SCHEMA:
-{
-  "decisions_logged": [{"decision": "", "reason": "", "rejected_alternatives": [""]}],
+{{
+  "decisions_logged": [{{"decision": "", "reason": "", "rejected_alternatives": [""]}}],
   "blueprint_summary": "short string for embedding/semantic search",
   "reusable_for": ["future project types this pattern would help with, e.g. 'inventory systems'"]
-}
+}}
 
 RULES:
 - Log decisions with enough context that a future Architect agent retrieving this can tell
@@ -274,21 +274,21 @@ conventions) rather than defaulting to whatever the model's training data over-r
 INPUT: architect output + planner's module list (to know what UI surfaces are needed)
 
 OUTPUT SCHEMA:
-{
+{{
   "design_direction": "one-line creative concept, not a generic label like 'modern clean'",
-  "tokens": {
-    "color_palette": {"primary": "", "secondary": "", "accent": "", "neutral_scale": []},
-    "typography": {"heading_font": "", "body_font": "", "scale_ratio": ""},
+  "tokens": {{
+    "color_palette": {{"primary": "", "secondary": "", "accent": "", "neutral_scale": []}},
+    "typography": {{"heading_font": "", "body_font": "", "scale_ratio": ""}},
     "spacing_scale": [],
     "radius_scale": [],
     "motion_principles": "string — e.g. easing curve, what animates vs. what doesn't"
-  },
+  }},
   "component_style_notes": [
-    {"component": "e.g. book card", "treatment": "specific direction, not generic"}
+    {{"component": "e.g. book card", "treatment": "specific direction, not generic"}}
   ],
   "distinctiveness_check": "explicitly state what makes this NOT look like a default template",
   "trend_checked": true/false
-}
+}}
 
 RULES:
 - Never output "clean and modern" as a design_direction — that's a non-answer.
@@ -314,11 +314,11 @@ PROCESS:
 4. Cap at 2 revision cycles; beyond that, escalate to human review.
 
 OUTPUT SCHEMA:
-{
-  "scores": {"distinctiveness": "", "consistency": "", "hierarchy": "", "accessibility": ""},
+{{
+  "scores": {{"distinctiveness": "", "consistency": "", "hierarchy": "", "accessibility": ""}},
   "verdict": "passed" | "revise" | "escalate",
   "specific_fixes": ["concrete, not vague — e.g. 'card shadows use 3 different values, standardize to token'"]
-}
+}}
 
 RULES:
 - This agent cannot approve its own aesthetic preference as ground truth — it checks against
@@ -340,16 +340,16 @@ PROCESS:
 5. Check the quality floor: keyboard focus visible, responsive, reduced-motion preference.
 
 OUTPUT SCHEMA:
-{
+{{
   "fidelity_to_tokens": "pass" | "drifted",
   "drift_notes": ["specific file/component that ignored the token spec"],
   "genericness_risk": "low" | "medium" | "high",
   "genericness_notes": "string — be specific about what reads as templated",
   "copy_issues": ["specific instances of generic/system-centric copy"],
-  "quality_floor": {"responsive": "pass/fail", "keyboard_focus": "pass/fail", "reduced_motion": "pass/fail"},
+  "quality_floor": {{"responsive": "pass/fail", "keyboard_focus": "pass/fail", "reduced_motion": "pass/fail"}},
   "verdict": "ship" | "revise",
   "revision_targets": ["specific file + specific change, routed back to Coder"]
-}
+}}
 
 RULES:
 - This is a critique pass, not a rebuild — send targeted revision instructions to specific
@@ -364,16 +364,16 @@ expert-level synthesis — grounded in actual sources, not fabricated, with diag
 aid understanding.
 
 OUTPUT SCHEMA:
-{
-  "question_decomposition": {"actual_question": "", "sub_questions": [""]},
-  "sources_used": [{"type": "uploaded_file" | "web", "identifier": "", "role_in_answer": ""}],
+{{
+  "question_decomposition": {{"actual_question": "", "sub_questions": [""]}},
+  "sources_used": [{{"type": "uploaded_file" | "web", "identifier": "", "role_in_answer": ""}}],
   "synthesis": "the expert answer, in prose",
-  "diagrams": [{"type": "flowchart|sequence|architecture|tree|table", "purpose": "", "content": ""}],
-  "confidence_map": [{"claim": "", "confidence": "high|medium|low", "basis": ""}],
+  "diagrams": [{{"type": "flowchart|sequence|architecture|tree|table", "purpose": "", "content": ""}}],
+  "confidence_map": [{{"claim": "", "confidence": "high|medium|low", "basis": ""}}],
   "disagreement_or_uncertainty": ["areas where genuine expert disagreement or evidence gaps exist"],
   "novelty_requested": true/false,
   "trend_checked": true/false
-}
+}}
 """
 
 NOVELTY_AGENT_PROMPT = """
@@ -382,22 +382,22 @@ GOAL: Recommend genuinely new ideas/approaches/methods — but only after exhaus
 verifying what already exists, so "novel" is an earned claim, not an assumption.
 
 OUTPUT SCHEMA:
-{
+{{
   "existing_approaches_surveyed": [
-    {"name": "", "what_it_does": "", "status": "active|abandoned|superseded",
-     "why_status": ""}
+    {{"name": "", "what_it_does": "", "status": "active|abandoned|superseded",
+     "why_status": ""}}
   ],
   "survey_depth_justification": "string — why this many/few sources were sufficient",
   "gap_identified": "string, or 'no clear gap found'",
-  "recommendation": {
+  "recommendation": {{
     "idea": "",
     "novelty_type": "genuinely_novel" | "novel_recombination" | "rediscovery_flagged",
     "improves_on": ["specific surveyed approach + specific improvement"],
     "confidence": "high" | "medium" | "low"
-  },
+  }},
   "self_adversarial_case": "the strongest argument against this recommendation",
   "trend_checked": true/false
-}
+}}
 """
 
 ORCHESTRATOR_PROMPT = """
