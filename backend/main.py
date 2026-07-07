@@ -4,7 +4,7 @@ import os
 # Make sure Python can find our backend module when running from the CLI
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from backend.orchestrator.graph import build_graph
+from backend.orchestrator.graph import build_orchestrator_graph
 from backend.orchestrator.state import AiONState
 import uuid
 from backend.memory.neo4j_client import Neo4jClient
@@ -31,7 +31,7 @@ def main():
 
     # Build the graph
     try:
-        app = build_graph()
+        app = build_orchestrator_graph()
     except Exception as e:
         print(f"\n[ERROR] Error building the graph: {e}")
         sys.exit(1)

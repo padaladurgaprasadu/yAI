@@ -448,8 +448,8 @@ async def websocket_generate(websocket: WebSocket):
             compressed_context=None
         )
         
-        from backend.orchestrator.graph import build_generate_graph
-        graph = build_generate_graph()
+        from backend.orchestrator.graph import build_orchestrator_graph
+        graph = build_orchestrator_graph()
         
         def run_graph():
             try:
@@ -621,8 +621,8 @@ async def resume_generation(req: ResumeRequest, auth: dict = Depends(verify_toke
         raise HTTPException(status_code=404, detail="No active generation found for this project_id.")
         
     q = stream_queues[req.project_id]
-    from backend.orchestrator.graph import build_generate_graph
-    graph = build_generate_graph()
+    from backend.orchestrator.graph import build_orchestrator_graph
+    graph = build_orchestrator_graph()
     thread_config = {"configurable": {"thread_id": req.project_id}}
     
     if req.action != "approve":
