@@ -59,6 +59,23 @@ class BaseAgent:
                     request_timeout=90,
                     max_retries=2
                 )
+            elif os.getenv("OPENROUTER_API_KEY"):
+                self.smart_llm = ChatOpenAI(
+                    base_url="https://openrouter.ai/api/v1",
+                    api_key=os.getenv("OPENROUTER_API_KEY"),
+                    model="anthropic/claude-3.5-sonnet",
+                    temperature=0.1,
+                    request_timeout=90,
+                    max_retries=2
+                )
+                self.fast_llm = ChatOpenAI(
+                    base_url="https://openrouter.ai/api/v1",
+                    api_key=os.getenv("OPENROUTER_API_KEY"),
+                    model="anthropic/claude-3.5-haiku",
+                    temperature=0.1,
+                    request_timeout=90,
+                    max_retries=2
+                )
             else:
                 # Provide a dummy fallback so it doesn't crash on boot, but will fail gracefully when invoked
                 self.smart_llm = ChatOpenAI(api_key="dummy", model="gpt-4o", temperature=0.1)

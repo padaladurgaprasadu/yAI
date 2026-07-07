@@ -63,6 +63,13 @@ class ModelRouter:
                 model="meta/llama-3.1-8b-instruct" if complexity == "fast" else "meta/llama-3.1-70b-instruct",
                 temperature=0.1
             )
+        elif os.getenv("OPENROUTER_API_KEY"):
+            return ChatOpenAI(
+                base_url="https://openrouter.ai/api/v1",
+                api_key=os.getenv("OPENROUTER_API_KEY"),
+                model="anthropic/claude-3.5-haiku" if complexity == "fast" else "anthropic/claude-3.5-sonnet",
+                temperature=0.1
+            )
         
         raise Exception("Missing credentials: No API keys configured for Liquid Routing.")
 
