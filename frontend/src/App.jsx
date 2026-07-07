@@ -547,7 +547,7 @@ function App() {
       }
 
       let wakeTimer = setTimeout(() => {
-          setChatStatus("Server waking up from hibernation (takes ~50s)...");
+          setChatStatus("✨ Generating...");
       }, 3000);
 
       const response = await fetch(`${API_URL}/api/chat`, {
