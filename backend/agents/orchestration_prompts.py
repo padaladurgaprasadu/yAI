@@ -68,6 +68,10 @@ OUTPUT SCHEMA:
   "mode": "tutor" | "builder",
   "scope_estimate": "trivial" | "small_app" | "multi_service",
   "ambiguity_flags": ["list any missing critical info, e.g. 'no mention of auth requirement'"],
+  "entity_detection": {{
+    "requires_visuals": true,
+    "search_query": "string, the specific place/thing to fetch an image of, if visual required"
+  }},
   "confidence": "high" | "medium" | "low"
 }}
 
