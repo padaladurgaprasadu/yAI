@@ -14,7 +14,10 @@ class MultimodalVisualDB:
     """
     def __init__(self):
         try:
-            self.client = chromadb.PersistentClient(path=os.path.join(os.getcwd(), "chroma_db", "visuals"))
+            try:
+                self.client = chromadb.PersistentClient(path=os.path.join(os.getcwd(), "chroma_db", "visuals"))
+            except Exception:
+                self.client = chromadb.EphemeralClient()
             self.collection = self.client.get_or_create_collection(name="image_embeddings")
             
             # Lazy load CLIP model to save memory until first use

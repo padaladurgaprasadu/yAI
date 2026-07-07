@@ -6,7 +6,7 @@ import redis
 REDIS_URL = os.getenv("REDIS_URL", None)
 
 # Create a global Redis connection pool if URL is provided
-redis_pool = redis.ConnectionPool.from_url(REDIS_URL, decode_responses=True) if REDIS_URL else None
+redis_pool = redis.ConnectionPool.from_url(REDIS_URL, decode_responses=True, socket_timeout=2) if REDIS_URL else None
 
 def get_redis_client():
     """

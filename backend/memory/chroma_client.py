@@ -17,10 +17,13 @@ class ChromaClient:
     def __init__(self, db_path="./chroma_db"):
         if self._initialized:
             return
+            # Initialize a local ChromaDB instance
+        try:
+            self.client = chromadb.PersistentClient(path=db_path)
+        except Exception as e:
+            print(f"[ChromaDB] Persistent DB failed (likely read-only FS). Falling back to Ephemeral: {e}")
+            self.client = chromadb.EphemeralClient()
             
-        # Initialize a local ChromaDB instance
-        self.client = chromadb.PersistentClient(path=db_path)
-        
         # Use Google Gemini Embeddings for speed (100x faster than local ONNX model on Render CPU)
         import os
         gemini_api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
