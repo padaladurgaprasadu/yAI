@@ -764,6 +764,7 @@ async def ai_chat(request_data: ChatRequest, request: Request):
     async def event_generator():
         import json
         import time
+        import asyncio
         from backend.agents.router import OmniIntelligenceEngine
         from backend.agents.prompts import get_system_prompt
         
@@ -923,7 +924,6 @@ IMPORTANT RULES:
 
             # 🟢 PHASE 2 & 3 CONCURRENT: Fast Intent Routing & Memory Retrieval
             from backend.agents.router import OmniIntelligenceEngine
-            import asyncio
             router = OmniIntelligenceEngine(llm=agent.fast_llm)
             
             async def get_memory():

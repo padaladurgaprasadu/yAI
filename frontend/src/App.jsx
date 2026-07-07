@@ -684,9 +684,11 @@ function App() {
           return newMsgs;
       });
       setIsChatLoading(false);
+      setChatStatus("");
 
     } catch (err) {
-      setIsChatLoading(false)
+      setIsChatLoading(false);
+      setChatStatus("");
       setChatMessages(prev => {
           const newMsgs = [...prev];
           newMsgs[newMsgs.length - 1].content = "Error connecting to AI. Please try again.";
