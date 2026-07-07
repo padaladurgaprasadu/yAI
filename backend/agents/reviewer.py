@@ -16,25 +16,9 @@ class ReviewerAgent(BaseAgent):
         super().__init__()
         
         from backend.agents.base import GLOBAL_AGENT_RULES
+        from backend.agents.orchestration_prompts import REVIEWER_PROMPT
         self.prompt = ChatPromptTemplate.from_messages([
-            ("system", GLOBAL_AGENT_RULES + """
-ROLE: Reviewer (Static Semantic Review)
-GOAL: Verify the codebase syntactically and logically without running it.
-
-RULES:
-- Read the provided file structures and logic.
-- DEEP SEMANTIC REVIEW: Search for memory leaks, race conditions, unhandled edge cases, missing error boundaries, and security vulnerabilities.
-- Only return "fail" for functional/logic errors. Do not fail for aesthetic/styling issues (the Visual Critique agent handles that).
-
-OUTPUT SCHEMA:
-{
-  "status": "pass" | "fail",
-  "issues": [
-    {"file": "string", "line": "number or range", "severity": "critical" | "warning", "description": "string", "suggested_fix": "string"}
-  ],
-  "praise": ["things done well"]
-}
-"""),
+            ("system", GLOBAL_AGENT_RULES + "\\n\\n" + REVIEWER_PROMPT),
             ("human", "Project Workspace: {workspace}\nBlueprint: {blueprint}\nCode Files Generated: {code_files}")
         ])
         
@@ -96,11 +80,11 @@ OUTPUT SCHEMA:
                 else:
                     data = json.loads(response_content)
                 
-                status = data.get("status", "fail")
-                if status == "pass":
+                status = data.get("status", "blocked")
+                if status == "passed":
                     feedback = "APPROVED"
                 else:
-                    feedback = json.dumps(data.get("issues", []))
+                    feedback = json.dumps(data.get("issues_found", []))
                 break
                 
             except Exception as e:

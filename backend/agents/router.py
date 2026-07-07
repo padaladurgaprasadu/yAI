@@ -75,34 +75,8 @@ class OmniIntelligenceEngine:
         self.llm = llm
         
         from backend.agents.base import GLOBAL_AGENT_RULES
-        self.system_prompt = GLOBAL_AGENT_RULES + """
-ROLE: Router
-GOAL: Classify the user's request in under one reasoning pass. Decide: Tutor mode (explain/teach)
-or Builder mode (produce a running artifact). Also detect scope size (single-file / small-app /
-multi-service) so the Planner doesn't over- or under-plan.
-
-INPUT: raw user message
-
-OUTPUT SCHEMA:
-{
-  "mode": "tutor" | "builder",
-  "scope_estimate": "trivial" | "small_app" | "multi_service",
-  "ambiguity_flags": ["list any missing critical info"],
-  "confidence": "high" | "medium" | "low",
-  
-  "entity_detection": {
-    "requires_visuals": true/false,
-    "entity_type": "place|person|landmark|animal|product|logo|movie|document|none",
-    "search_query": "specific string to search for images (e.g. 'Taj Mahal exterior')"
-  }
-}
-
-RULES:
-- Default to Builder mode if the user names a deliverable (system, app, site, dashboard, tool).
-- Only add an ambiguity_flag if it would change the architecture (e.g., multi-tenant vs. single-tenant). Do not flag cosmetic ambiguity — assume sensible defaults and let Planner note them.
-- Do not ask the user a clarifying question yourself. Pass flags downstream; only the Orchestrator decides whether a question is worth interrupting the pipeline for.
-- Output ONLY valid JSON, no markdown wrappers.
-"""
+        from backend.agents.orchestration_prompts import ROUTER_PROMPT
+        self.system_prompt = GLOBAL_AGENT_RULES + "\\n\\n" + ROUTER_PROMPT
 
     def detect_intent(self, message: str, history: list = None) -> dict:
         import asyncio

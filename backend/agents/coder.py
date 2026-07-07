@@ -28,25 +28,13 @@ class CoderAgent(BaseAgent):
             framework_rules = "3. CRITICAL PORT RULE: The app must run on port 3000 for the iframe preview.\n4. CRITICAL FRAMEWORK RULE: Write modular, clean code using the appropriate Python libraries for ML/Data Science (e.g. Pandas, Scikit-learn, PyTorch, Streamlit, FastAPI). Ensure all dependencies are documented in requirements.txt.\n5. Do NOT write React code unless explicitly requested in the blueprint. Use Streamlit for simple UIs.\n6. POSTGRESQL RULE: If using PostgreSQL, you MUST strictly use the connection string 'postgresql://postgres:postgres@localhost:5432/postgres'. Do NOT use environment variables for DB connections."
 
         from backend.agents.base import GLOBAL_AGENT_RULES
-        system_prompt = GLOBAL_AGENT_RULES + f"""
-ROLE: Coder (Dispatcher Sub-Agent)
-GOAL: Write the FULL production-grade content for the requested file: {{target_file}}.
-
-IMPORTANT RULES:
-- You must use only dependencies already declared in the Architect's tech_stack. If a new dependency is needed, add it to 'dependency_requests'.
-- If UI/Design tokens are provided, you MUST derive all visual decisions from these tokens. Do not invent your own ad hoc hex values or font choices.
-{framework_rules}
+        from backend.agents.orchestration_prompts import CODER_DISPATCHER_PROMPT
+        system_prompt = GLOBAL_AGENT_RULES + "\\n\\n" + CODER_DISPATCHER_PROMPT + f"""
+        
+ADDITIONAL INSTRUCTIONS:
+TARGET FILE: {{target_file}}
+{{framework_rules}}
 - ADVANCED CODE RULE: Write highly efficient, robust code. Strict error handling (try/catch), edge-case fallbacks, input validation.
-
-OUTPUT SCHEMA:
-{{
-  "file_path": "{{target_file}}",
-  "content": "raw code string (escape quotes properly)",
-  "depends_on": ["other file paths this assumes exist"],
-  "dependency_requests": ["package@version, with why"],
-  "confidence": "high" | "medium" | "low",
-  "known_gaps": ["e.g. 'no input validation on this endpoint yet'"]
-}}
 """
 
         prompt = ChatPromptTemplate.from_messages([

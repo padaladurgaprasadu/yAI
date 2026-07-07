@@ -18,24 +18,8 @@ class PlannerAgent(BaseAgent):
         logger.info(f"[Planner] Breaking down goal for role: {agent_role}...")
         
         from backend.agents.base import GLOBAL_AGENT_RULES
-        sys_prompt = GLOBAL_AGENT_RULES + f"""
-ROLE: Planner
-GOAL: Break the goal into 3-8 functional modules a senior engineer would recognize as a complete MVP scope for this request — not more, not less. Right-size the scope. Over-scoping is a junior-agent failure mode.
-
-OUTPUT SCHEMA:
-{{
-  "tasks": [
-    {{"id": "string (no spaces)", "name": "string", "why_needed": "string", "priority": "core" | "nice_to_have", "depends_on": ["string (ids)"]}}
-  ],
-  "explicit_assumptions": ["state anything you inferred that wasn't asked for directly"],
-  "out_of_scope": ["things a user might expect but you're deliberately excluding, and why"]
-}}
-
-RULES:
-- Every module must map to something the Coder agent can actually build in this pass — no vague modules like "scalability".
-- Ensure tasks can form a valid DAG via depends_on.
-- Output ONLY valid JSON, no markdown.
-"""
+        from backend.agents.orchestration_prompts import PLANNER_PROMPT
+        sys_prompt = GLOBAL_AGENT_RULES + "\n\n" + PLANNER_PROMPT
         goal = state["goal"]
         image_url = state.get("image", None)
         

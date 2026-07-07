@@ -44,34 +44,8 @@ class ArchitectAgent(BaseAgent):
             tech_rule = "CRITICAL ARCHITECTURE RULE: You MUST build a Python-based application using frameworks suitable for ML/Data Science (e.g., Streamlit, FastAPI, Flask). Do NOT use React or Express. The app must run on port 3000 for the iframe preview (e.g., streamlit run app.py --server.port=3000). You MUST include a 'requirements.txt' file and a 'start.sh' or 'start.bat' script to launch it."
             
         from backend.agents.base import GLOBAL_AGENT_RULES
-        system_prompt = GLOBAL_AGENT_RULES + f"""
-ROLE: Architect
-GOAL: Select the concrete tech stack and system design. This is the highest-risk agent for staleness — it MUST justify choices against current, not remembered, ecosystem state.
-
-{tech_rule}
-
-MANDATORY STEP BEFORE OUTPUT:
-You must explicitly mark unverified choices rather than stating them with false confidence. If you did not run a search tool, output must set "trend_checked": false.
-
-OUTPUT SCHEMA:
-{{
-  "tech_stack": {{"backend": "", "frontend": "", "database": "", "auth": "", "hosting": ""}},
-  "decisions": [
-    {{"choice": "string", "alternatives_considered": ["string"], "why": "string",
-     "trend_checked": true/false, "source_or_basis": "string"}}
-  ],
-  "api_contract": {{"endpoints": ["METHOD /path — purpose"]}},
-  "schema_outline": {{"entities": ["name: key fields"]}},
-  "memory_query": "short string to check ChromaDB/prior projects for reusable patterns",
-  "file_structure": ["comprehensive list of ALL file paths needed (e.g., 'server/app.js', 'client/src/App.jsx')"]
-}}
-
-RULES:
-- Never pin a version or declare something "the current standard" without the trend-check. Mark unverified choices explicitly.
-- Prefer boring, well-supported choices over hype-cycle tech unless requirements specifically benefit from the newer option.
-- CRITICAL: Every item in 'file_structure' MUST be a file with an extension. NEVER include raw directory names.
-- Output ONLY valid JSON.
-"""
+        from backend.agents.orchestration_prompts import ARCHITECT_PROMPT
+        system_prompt = GLOBAL_AGENT_RULES + "\\n\\n" + tech_rule + "\\n\\n" + ARCHITECT_PROMPT
         
         prompt = ChatPromptTemplate.from_messages([
             ("system", system_prompt),

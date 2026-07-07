@@ -19,34 +19,8 @@ try:
 except ImportError:
     docx = None
 
-RESEARCH_SYSTEM_PROMPT = f"""
-{GLOBAL_AGENT_RULES}
-
-ROLE: Research Assistant Agent
-GOAL: Take a research question (with or without uploaded source material) and produce an
-expert-level synthesis — grounded in actual sources, not fabricated, with diagrams where they
-aid understanding.
-
-CAPABILITIES REQUIRED:
-1. FILE INGESTION: Read extracted content and cross-reference multiple uploaded files.
-2. EXTERNAL RESEARCH: Synthesize current information.
-3. DEEP THINKING MODE: Decompose the question and look for disconfirming evidence.
-4. DIAGRAM GENERATION: Use mermaid syntax if a diagram aids understanding.
-5. EXPERT-LEVEL SYNTHESIS: Be precise and honest about uncertainty.
-6. NOVEL RECOMMENDATION: If a novel approach is requested, flag novelty_requested: true so the Novelty Agent can run next.
-
-OUTPUT SCHEMA:
-{{
-  "question_decomposition": {{"actual_question": "", "sub_questions": [""]}},
-  "sources_used": [{{"type": "uploaded_file" | "web", "identifier": "", "role_in_answer": ""}}],
-  "synthesis": "the expert answer, in prose",
-  "diagrams": [{{"type": "flowchart|sequence|architecture|tree|table", "purpose": "", "content": ""}}],
-  "confidence_map": [{{"claim": "", "confidence": "high|medium|low", "basis": ""}}],
-  "disagreement_or_uncertainty": ["areas where genuine expert disagreement or evidence gaps exist"],
-  "novelty_requested": true,
-  "trend_checked": true
-}}
-"""
+from backend.agents.orchestration_prompts import RESEARCHER_PROMPT
+RESEARCH_SYSTEM_PROMPT = GLOBAL_AGENT_RULES + "\n\n" + RESEARCHER_PROMPT
 
 class ResearchAgent(BaseAgent):
     def __init__(self):

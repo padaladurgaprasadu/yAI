@@ -28,103 +28,49 @@ class MissionPlanner:
 
     async def execute_mission(self):
         """
-        Background task that executes the entire mission sequentially.
+        Background task that executes the entire mission sequentially using the new Orchestrator Core Loop.
         """
         logger.info(f"[MissionPlanner] Starting Autonomous Mission for {self.project_id}")
         
-        # STEP 1: Planning Phase
-        planner = PlannerAgent()
+        from backend.orchestrator.graph import build_orchestrator_graph
+        graph = build_orchestrator_graph()
+        
         initial_state = AiONState(
             goal=self.goal, 
             project_id=self.project_id, 
             project_dir=self.target_dir,
             agent_role=self.agent_role, 
-            modules=[]
+            modules=[],
+            revision_count=0,
+            visual_revision_count=0,
+            execution_retries=0
         )
-        planned_state = await asyncio.to_thread(planner.run, initial_state)
-        modules = planned_state.get("modules", [])
         
-        logger.info(f"[MissionPlanner] Planned {len(modules)} modules/tasks.")
-
-        # STEP 1.5: Innovation & Research Phase
-        logger.info("[MissionPlanner] Running Research Agent...")
-        from backend.agents.researcher import ResearchAgent
-        researcher = ResearchAgent()
-        researched_state = await asyncio.to_thread(researcher.run, planned_state)
-        semantic_context = researched_state.get("semantic_context", "")
-
-        # Save research to Digital Twin so later swarm coders can use it
-        self.twin.state["research"] = semantic_context
-        self.twin._save_state()
-
-        # STEP 2: Architecture Phase
-        architect = ArchitectAgent()
-        sys_prompt = f"You are a Senior Systems Architect acting as a {self.agent_role}. Given a goal and a list of modules, design a technology stack and a blueprint.\n\nCRITICAL ARCHITECTURE RULE: You MUST ALWAYS build a FULLSTACK application with a Node.js (Express) backend and a React frontend.\n\nReturn ONLY valid JSON with three keys: 'tech_stack' (a list of strings), 'blueprint_notes' (a short string), and 'file_structure' (a list of 5 to 10 file paths needed for the app). Do not include markdown formatting or backticks, just the raw JSON."
-        
-        from langchain_core.messages import SystemMessage, HumanMessage
-        messages = [
-            SystemMessage(content=sys_prompt),
-            HumanMessage(content=f"Goal: {self.goal}\nModules: {','.join(modules)}\n\nResearch Context (Innovation Brief):\n{semantic_context}\n")
-        ]
-        
-        logger.info("[MissionPlanner] Running Architect...")
-        arch_response = await asyncio.to_thread(architect.llm.invoke, messages)
-        content = arch_response.content.strip().strip('`').replace('json\n', '')
         try:
-            blueprint = json.loads(content)
-            self.twin.save_blueprint(blueprint)
+            # Run the unified LangGraph execution block synchronously in a thread
+            final_state = await asyncio.to_thread(graph.invoke, initial_state, {"recursion_limit": 50})
+            
+            # Save the final blueprint and code to the Digital Twin
+            if final_state.get("blueprint"):
+                self.twin.save_blueprint(final_state["blueprint"])
+            if final_state.get("code_files"):
+                self.twin.state["code_files"] = final_state["code_files"]
+                self.twin._save_state()
+                
+            # Check if execution passed or failed based on runtime errors
+            if final_state.get("runtime_error"):
+                logger.error(f"[MissionPlanner] Mission failed: {final_state['runtime_error']}")
+                self.twin.state["status"] = "FAILED"
+            else:
+                logger.info(f"[MissionPlanner] MISSION COMPLETE! Project {self.project_id} built successfully.")
+                self.twin.state["status"] = "DONE"
+                
+            self.twin._save_state()
+            
         except Exception as e:
-            logger.warning(f"[MissionPlanner] Architect JSON failed to parse, using raw: {e}")
-            blueprint = {"raw": content}
-            self.twin.save_blueprint(blueprint)
-
-        # STEP 3: Autonomous Execution Loop
-        graph = build_generate_graph()
-        
-        while True:
-            task = self.twin.get_next_pending_task()
-            if not task:
-                # Check if all are done, or if some are stuck
-                all_tasks = self.twin.get_tasks()
-                pending = [t for t in all_tasks.values() if t.get("status") in ["PENDING", "IN_PROGRESS"]]
-                if not pending:
-                    logger.info("[MissionPlanner] MISSION COMPLETE! All tasks finished.")
-                    break
-                else:
-                    logger.warning("[MissionPlanner] Mission Deadlock! Dependencies unresolved.")
-                    break
-                    
-            task_id = task["id"]
-            task_name = task["name"]
+            logger.error(f"[MissionPlanner] Mission {self.project_id} crashed: {e}")
+            self.twin.state["status"] = "CRASHED"
+            self.twin.state["error"] = str(e)
+            self.twin._save_state()
             
-            self.twin.update_task(task_id, "IN_PROGRESS", "Spawning swarm for task.")
-            
-            # Formulate the sub-goal for this task
-            sub_goal = f"Mission Goal: {self.goal}\nCurrent Task: Build '{task_name}'.\nReview the architecture blueprint and integrate this module properly."
-            
-            task_state = AiONState(
-                goal=sub_goal,
-                project_id=self.project_id,
-                project_dir=self.target_dir,
-                agent_role=self.agent_role,
-                blueprint=blueprint,
-                modules=[task_name],
-                code_files={}
-            )
-            
-            logger.info(f"[MissionPlanner] Spawning agents for Task: {task_id}")
-            
-            try:
-                # Run the LangGraph execution block synchronously in a thread
-                final_state = await asyncio.to_thread(graph.invoke, task_state)
-                
-                # Check if execution passed or failed based on runtime errors
-                if final_state.get("runtime_error"):
-                    self.twin.update_task(task_id, "FAILED", f"Execution failed: {final_state['runtime_error']}")
-                else:
-                    self.twin.update_task(task_id, "DONE", "Task executed successfully via red-green loop.")
-            except Exception as e:
-                logger.error(f"[MissionPlanner] Task {task_id} crashed swarm: {e}")
-                self.twin.update_task(task_id, "FAILED", str(e))
-                
         logger.info("[MissionPlanner] Shutting down.")

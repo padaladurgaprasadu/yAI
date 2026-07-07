@@ -14,27 +14,9 @@ class DevOpsAgent(BaseAgent):
     def __init__(self):
         super().__init__()
         from backend.agents.base import GLOBAL_AGENT_RULES
+        from backend.agents.orchestration_prompts import DEVOPS_PROMPT
         self.prompt = ChatPromptTemplate.from_messages([
-            ("system", GLOBAL_AGENT_RULES + """
-ROLE: DevOps
-GOAL: Write the deployment configuration for the app.
-
-OUTPUT SCHEMA:
-{
-  "infrastructure_files": {
-    "Dockerfile": "...",
-    "docker-compose.yml": "..."
-  },
-  "ci_cd": {
-    ".github/workflows/deploy.yml": "..."
-  },
-  "observability_notes": "string explaining how to access grafana/prometheus"
-}
-
-RULES:
-- Ensure the Dockerfile builds the app properly based on the tech_stack.
-- Output ONLY valid JSON.
-"""),
+            ("system", GLOBAL_AGENT_RULES + "\\n\\n" + DEVOPS_PROMPT),
             ("human", "Blueprint:\n{blueprint}\n\nFiles:\n{code_files}")
         ])
         self.chain = self.prompt | self.llm
@@ -85,17 +67,15 @@ RULES:
             # strict=False allows literal \n and \t in strings (fixing the Invalid control character error)
             devops_files = json.loads(content, strict=False)
             
-            # Merge the new infrastructure files into the project's code_files
             current_files = state.get("code_files", {})
-            infra_files = devops_files.get("infrastructure_files", {})
-            ci_cd_files = devops_files.get("ci_cd", {})
+            infra_files = devops_files.get("files", [])
             
-            all_generated = {**infra_files, **ci_cd_files}
-            
-            for path, file_content in all_generated.items():
-                print(f"   -> [DevOps] Generated infrastructure file: {path}")
-                current_files[path] = file_content
-                
+            for file_obj in infra_files:
+                path = file_obj.get("path")
+                file_content = file_obj.get("content")
+                if path and file_content:
+                    print(f"   -> [DevOps] Generated infrastructure file: {path}")
+                    current_files[path] = file_content
             state["code_files"] = current_files
             
             # Phase 1: Persistent Project Memory (Log to Neo4j)

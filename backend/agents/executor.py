@@ -13,26 +13,9 @@ class ExecutorAgent(BaseAgent):
     """
     def __init__(self):
         super().__init__()
-        from backend.agents.base import GLOBAL_AGENT_RULES
+        from backend.agents.orchestration_prompts import EXECUTOR_PROMPT
         self.prompt = ChatPromptTemplate.from_messages([
-            ("system", GLOBAL_AGENT_RULES + """
-ROLE: Executor
-GOAL: Determine the exact terminal commands required to initialize the project and install dependencies.
-
-OUTPUT SCHEMA:
-{
-  "commands": [
-    {"cmd": "string (e.g., 'npm install')", "cwd": "string (e.g., '.' or 'client')", "purpose": "string"}
-  ]
-}
-
-RULES:
-- If a root 'package.json' is present, output `npm install --no-audit --no-fund --legacy-peer-deps`.
-- If a 'client/package.json' is present, ALSO output `npm install --no-audit --no-fund --legacy-peer-deps` with cwd `client`.
-- To ensure compilation without missing component errors, if a 'client/package.json' is present, MUST output a final command `npm run build` with cwd `client`.
-- Do NOT start any servers (no 'npm start').
-- Output ONLY valid JSON.
-"""),
+            ("system", GLOBAL_AGENT_RULES + "\\n\\n" + EXECUTOR_PROMPT),
             ("human", "Blueprint: {blueprint}\n\nFiles:\n{code_files}")
         ])
         self.chain = self.prompt | self.llm

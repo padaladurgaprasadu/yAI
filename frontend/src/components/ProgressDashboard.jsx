@@ -11,9 +11,15 @@ const ProgressDashboard = ({ activeAgent, timeline, liveUpdates, streamFileName,
 
   const getAgentProgress = () => {
     switch(activeAgent) {
-      case 'architect': return 25;
-      case 'coder': return 65;
-      case 'reviewer': return 90;
+      case 'planner': return 10;
+      case 'architect': return 20;
+      case 'design': return 35;
+      case 'coder': return 50;
+      case 'reviewer': return 65;
+      case 'visual_critique': return 80;
+      case 'devops': return 90;
+      case 'executor': return 95;
+      case 'memory': return 98;
       case 'ready': return 100;
       default: return 0;
     }
@@ -21,9 +27,15 @@ const ProgressDashboard = ({ activeAgent, timeline, liveUpdates, streamFileName,
 
   const getAgentLabel = () => {
     switch(activeAgent) {
-      case 'architect': return '🧠 Architect is designing the system...';
-      case 'coder': return '⚡ Coder is writing the application...';
+      case 'planner': return '🧠 Planner is scoping the project...';
+      case 'architect': return '🏗️ Architect is designing the system...';
+      case 'design': return '🎨 Design Agent is generating tokens...';
+      case 'coder': return '⚡ Coder swarm is writing the application...';
       case 'reviewer': return '🔎 Reviewer is analyzing the code...';
+      case 'visual_critique': return '👀 Visual Critique is checking fidelity...';
+      case 'devops': return '🚀 DevOps is configuring infrastructure...';
+      case 'executor': return '📦 Executor is building the project...';
+      case 'memory': return '💾 Memory is persisting decisions...';
       case 'ready': return '✅ Preview Ready';
       default: return 'Initializing...';
     }
@@ -49,11 +61,11 @@ const ProgressDashboard = ({ activeAgent, timeline, liveUpdates, streamFileName,
                boxShadow: '0 0 10px var(--accent)'
             }} />
          </div>
-         <div style={{ marginTop: '12px', fontSize: '0.85rem', color: '#888', display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: activeAgent === 'architect' ? '#fff' : '#555' }}>1. Planning</span>
+         <div style={{ marginTop: '12px', fontSize: '0.75rem', color: '#888', display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: ['planner', 'architect', 'design'].includes(activeAgent) ? '#fff' : '#555' }}>1. Planning & Design</span>
             <span style={{ color: activeAgent === 'coder' ? '#fff' : '#555' }}>2. Generating</span>
-            <span style={{ color: activeAgent === 'reviewer' ? '#fff' : '#555' }}>3. Reviewing</span>
-            <span style={{ color: activeAgent === 'ready' ? '#fff' : '#555' }}>4. Compiling</span>
+            <span style={{ color: ['reviewer', 'visual_critique'].includes(activeAgent) ? '#fff' : '#555' }}>3. Review & Critique</span>
+            <span style={{ color: ['devops', 'executor', 'memory', 'ready'].includes(activeAgent) ? '#fff' : '#555' }}>4. Compiling & Persisting</span>
          </div>
       </div>
 

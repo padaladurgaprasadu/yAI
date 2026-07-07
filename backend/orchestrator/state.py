@@ -38,6 +38,8 @@ class AiONState(TypedDict):
     visual_critique_feedback: Optional[str]
     visual_revision_count: int
     memory_log: Optional[Dict[str, Any]]
+    architect_decisions: Optional[List[Dict[str, Any]]]
+    memory_persisted: Optional[Dict[str, Any]]
     
     # Research and Novelty
     uploaded_files: Optional[List[Dict[str, str]]] # [{"name": "file.pdf", "content": "base64..."}]

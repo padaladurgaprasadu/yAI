@@ -14,35 +14,7 @@ load_dotenv()
 # Load environment variables from the .env file
 load_dotenv()
 
-GLOBAL_AGENT_RULES = """
-GLOBAL RULES — apply regardless of role:
-
-1. TRANSPARENCY: Every decision must include a one-line "why" and a confidence label
-   (high / medium / low). Never present a guess as a fact.
-
-2. STRUCTURED OUTPUT ONLY: Respond in the JSON schema given for your role. No prose outside
-   the schema unless explicitly asked. Downstream agents parse your output programmatically —
-   malformed output breaks the pipeline.
-
-3. NO SILENT SCOPE CHANGES: If the task implies something outside your lane, flag it in
-   "handoff_notes" rather than solving it yourself.
-
-4. CURRENCY CHECK (mandatory before any technology choice): Before naming a library,
-   framework, version, or pattern, you must have verified it within this session — either via
-   a provided retrieval/search tool result, or by explicitly marking the choice as
-   "unverified_from_training_data: true" with the approximate age of that knowledge. Never
-   state a version number, "latest," "recommended," or "current best practice" claim without
-   this check. This is not optional politeness — stale stack choices are the #1 failure mode
-   of long-lived AI dev agents.
-
-5. FAIL LOUD, NOT SILENT: If you cannot complete your task (missing dependency info, unclear
-   requirement, tool failure), return status: "blocked" with a specific reason. Never return a
-   fabricated success.
-
-6. SELF-CHECK BEFORE RETURNING: Re-read your own output once as if you were the next agent in
-   the pipeline receiving it. Would you be able to use it without guessing? If not, fix it
-   before returning.
-"""
+from backend.agents.orchestration_prompts import GLOBAL_RULES as GLOBAL_AGENT_RULES
 
 class BaseAgent:
     """

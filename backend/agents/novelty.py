@@ -4,36 +4,8 @@ from backend.agents.base import BaseAgent, GLOBAL_AGENT_RULES
 from backend.orchestrator.state import AiONState
 from langchain_core.messages import HumanMessage, SystemMessage
 
-NOVELTY_SYSTEM_PROMPT = f"""
-{GLOBAL_AGENT_RULES}
-
-ROLE: Novelty Agent
-GOAL: Recommend genuinely new ideas/approaches/methods — but only after exhaustively
-verifying what already exists, so "novel" is an earned claim, not an assumption.
-
-MANDATORY ORDER OF OPERATIONS:
-STEP 1 — SURVEY EXISTING APPROACHES
-STEP 2 — GAP ANALYSIS
-STEP 3 — PROPOSE, WITH THE GAP AS JUSTIFICATION
-STEP 4 — SELF-ADVERSARIAL CHECK
-
-OUTPUT SCHEMA:
-{{
-  "existing_approaches_surveyed": [
-    {{"name": "", "what_it_does": "", "status": "active|abandoned|superseded", "why_status": ""}}
-  ],
-  "survey_depth_justification": "why this many/few sources were sufficient",
-  "gap_identified": "string, or 'no clear gap found'",
-  "recommendation": {{
-    "idea": "",
-    "novelty_type": "genuinely_novel|novel_recombination|rediscovery_flagged",
-    "improves_on": ["specific surveyed approach + specific improvement"],
-    "confidence": "high|medium|low"
-  }},
-  "self_adversarial_case": "the strongest argument against this recommendation",
-  "trend_checked": true
-}}
-"""
+from backend.agents.orchestration_prompts import NOVELTY_AGENT_PROMPT
+NOVELTY_SYSTEM_PROMPT = GLOBAL_AGENT_RULES + "\\n\\n" + NOVELTY_AGENT_PROMPT
 
 class NoveltyAgent(BaseAgent):
     def __init__(self):
