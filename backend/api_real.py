@@ -860,7 +860,7 @@ IMPORTANT RULES:
                         entity_det = intent_data.get("entity_detection", {})
                         if entity_det.get("requires_visuals"):
                             visual_query = entity_det.get("search_query") or sanitized_message
-                            v_count = 4
+                            v_count = 1
                             
                             res = await asyncio.to_thread(get_real_world_image, visual_query, v_count)
                             img_urls = res if isinstance(res, list) else ([res] if res else [])
@@ -986,7 +986,7 @@ IMPORTANT RULES:
                     from backend.utils.visuals import get_generative_image, get_real_world_image, get_pencil_sketch_image
                     try:
                         v_type = "real"
-                        v_count = 4
+                        v_count = 1
                         img_urls = []
                         if v_type == "sketch":
                             url = await asyncio.to_thread(get_pencil_sketch_image, visual_query_val)
