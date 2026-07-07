@@ -16,7 +16,7 @@ class CoderAgent(BaseAgent):
     def __init__(self):
         super().__init__()
 
-    def _generate_single_file(self, blueprint_str, feedback, runtime_error, target_file, agent_role, semantic_context):
+    def _generate_single_file(self, blueprint_str, feedback, runtime_error, target_file, agent_role, semantic_context, design_tokens="{}"):
         
         # Dynamically adapt rules based on agent_role
         if "Research" in agent_role:
@@ -26,11 +26,31 @@ class CoderAgent(BaseAgent):
         else:
             framework_rules = "3. CRITICAL PORT RULE: The app must run on port 3000 for the iframe preview.\n4. CRITICAL FRAMEWORK RULE: Write modular, clean code using the appropriate Python libraries for ML/Data Science (e.g. Pandas, Scikit-learn, PyTorch, Streamlit, FastAPI). Ensure all dependencies are documented in requirements.txt.\n5. Do NOT write React code unless explicitly requested in the blueprint. Use Streamlit for simple UIs.\n6. POSTGRESQL RULE: If using PostgreSQL, you MUST strictly use the connection string 'postgresql://postgres:postgres@localhost:5432/postgres'. Do NOT use environment variables for DB connections."
 
-        system_prompt = f"You are a Senior AI {agent_role}. Given a blueprint and semantic context from past successful projects, write the FULL production-grade content for the requested file: {{target_file}}.\n\nIMPORTANT RULES:\n1. Output the file EXACTLY in this format:\n\n<file path=\"{{target_file}}\">\n[YOUR CODE/CONTENT HERE]\n</file>\n\n2. ADVANCED CODE RULE: Write highly efficient, robust code. Use React performance hooks (useMemo, useCallback, React.memo) where appropriate. Ensure strict error handling (try/catch), edge-case fallbacks, input validation, and security best practices. Code MUST be clean, modular, and self-documenting.\n3. Do NOT use JSON. Do not use markdown backticks outside of the file tags.\n{framework_rules}\n10. MULTILINGUAL CAPABILITY: Automatically detect the language used in the human's Blueprint or context. All comments, UI text, and placeholder text you generate MUST be written in that same language.\n11. If you receive Review Feedback or a Runtime Error, you must fix the issues mentioned."
+        from backend.agents.base import GLOBAL_AGENT_RULES
+        system_prompt = GLOBAL_AGENT_RULES + f"""
+ROLE: Coder (Dispatcher Sub-Agent)
+GOAL: Write the FULL production-grade content for the requested file: {{target_file}}.
+
+IMPORTANT RULES:
+- You must use only dependencies already declared in the Architect's tech_stack. If a new dependency is needed, add it to 'dependency_requests'.
+- If UI/Design tokens are provided, you MUST derive all visual decisions from these tokens. Do not invent your own ad hoc hex values or font choices.
+{framework_rules}
+- ADVANCED CODE RULE: Write highly efficient, robust code. Strict error handling (try/catch), edge-case fallbacks, input validation.
+
+OUTPUT SCHEMA:
+{{
+  "file_path": "{{target_file}}",
+  "content": "raw code string (escape quotes properly)",
+  "depends_on": ["other file paths this assumes exist"],
+  "dependency_requests": ["package@version, with why"],
+  "confidence": "high" | "medium" | "low",
+  "known_gaps": ["e.g. 'no input validation on this endpoint yet'"]
+}}
+"""
 
         prompt = ChatPromptTemplate.from_messages([
             ("system", system_prompt),
-            ("human", "Blueprint: {blueprint}\nSemantic Context: {context}\nTarget File: {target_file}\nReview Feedback: {review_feedback}\nRuntime Error: {runtime_error}")
+            ("human", "Blueprint: {blueprint}\nDesign Tokens: {design_tokens}\nSemantic Context: {context}\nTarget File: {target_file}\nReview Feedback: {review_feedback}\nRuntime Error: {runtime_error}")
         ])
         chain = prompt | self.llm
         
@@ -41,6 +61,7 @@ class CoderAgent(BaseAgent):
             try:
                 response = chain.invoke({
                     "blueprint": blueprint_str,
+                    "design_tokens": design_tokens,
                     "context": semantic_context,
                     "target_file": target_file,
                     "review_feedback": feedback,
@@ -50,26 +71,19 @@ class CoderAgent(BaseAgent):
                 if isinstance(content, list):
                     content = "".join(c.get("text", "") if isinstance(c, dict) else str(c) for c in content)
                     
+                import json
                 import re
-                match = re.search(r'<file\s+path=[\'"][^\'"]*[\'"][^>]*>(.*?)</file>', content, re.DOTALL | re.IGNORECASE)
+                
+                # Extract JSON
+                match = re.search(r'\{.*\}', content, re.DOTALL)
                 if match:
-                    code = match.group(1).strip()
-                    print(f"   -> [Success] Generated {target_file}")
-                    return (target_file, code)
+                    data = json.loads(match.group(0))
                 else:
-                    # Fallback: Strip markdown block if present
-                    code = content.strip()
-                    code = re.sub(r'^```[a-zA-Z]*\n?', '', code)
-                    code = re.sub(r'\n?```$', '', code).strip()
+                    data = json.loads(content)
                     
-                    if code and len(code) > 10:
-                        print(f"   -> [Success] (Fallback Parsing) Generated {target_file}")
-                        return (target_file, code)
-                        
-                    print(f"   -> [Attempt {attempt+1}] Failed to parse XML tags for {target_file}.")
-                    if attempt == max_retries - 1:
-                        return target_file, f"// Error: AiON LLM failed to format {target_file} correctly\n// {content}"
-                    continue
+                code = data.get("content", "")
+                print(f"   -> [Success] Generated {target_file}")
+                return (target_file, code)
                     
             except Exception as e:
                 error_str = str(e)
@@ -176,17 +190,37 @@ class CoderAgent(BaseAgent):
             elif "Fullstack" in agent_role or "Web" in agent_role or "UI" in agent_role:
                 framework_rules = "3. CRITICAL PORT RULE: Your Express backend MUST run on PORT 5000. Your Vite React frontend will run on its default port, but you must configure your backend cors to accept requests.\n4. CRITICAL FRAMEWORK RULE: Write modular, clean code using React for the frontend and Node.js/Express for the backend. Use Tailwind CSS classes for styling.\n5. CRITICAL ROUTING RULE: You MUST use React Router v6 syntax. Do NOT use '<Switch>'. You MUST use '<Routes>' and '<Route path=\"/\" element={{<Component />}} />'.\n6. CRITICAL COMPONENT RULE: You MUST NOT import any components, contexts, or stores that you did not explicitly generate. If it's not in the blueprint's file_structure, DO NOT IMPORT IT.\n7. POSTGRESQL RULE: If using PostgreSQL, strictly use the connection string 'postgresql://postgres:postgres@localhost:5432/postgres'.\n8. CRITICAL BACKEND DEPENDENCY RULE: Your root 'package.json' MUST include 'express', 'cors', 'pg', 'dotenv', 'concurrently' and any other backend libraries. Its dev script MUST be: '\"dev\": \"concurrently \\\"node server.js\\\" \\\"cd client && npm run dev\\\"\"'.\n9. CRITICAL VITE RULE: The frontend is pre-scaffolded with Vite. You MUST NOT generate 'client/package.json', 'index.html', or 'main.jsx'. You ONLY generate 'client/src/App.jsx' and your custom components (e.g. 'client/src/components/Dashboard.jsx'). Every React file MUST end with '.jsx'.\n10. CRITICAL API PREVIEW RULE: The frontend preview runs in a Sandpack sandbox that DOES NOT RUN THE BACKEND. Therefore, every single API call (fetch/axios) in your React components MUST have a try/catch block that falls back to realistic MOCK DATA if the fetch fails! The UI must fully function and look beautiful using this mock data during the presentation!"
                 
-                design_system = state.get("blueprint", {}).get("designSystem")
-                if design_system:
-                    framework_rules += "\n\nCRITICAL DESIGN SYSTEM RULE: You MUST strictly adhere to the following design system:\n{design_system}\nEnsure all Tailwind classes, colors, CSS, layout, and animations perfectly reflect this exact premium style."
+                design_tokens = state.get("design_tokens", {})
+                if design_tokens:
+                    framework_rules += "\n\nCRITICAL DESIGN SYSTEM RULE: You MUST strictly adhere to the following design system tokens:\n{design_tokens}\nEnsure all Tailwind classes, colors, CSS, layout, and animations perfectly reflect this exact premium style."
             else:
                 framework_rules = "3. CRITICAL PORT RULE: The app must run on port 3000 for the iframe preview.\n4. CRITICAL FRAMEWORK RULE: Write modular, clean code using the appropriate Python libraries for ML/Data Science (e.g. Pandas, Scikit-learn, PyTorch, Streamlit, FastAPI). Ensure all dependencies are documented in requirements.txt.\n5. Do NOT write React code unless explicitly requested in the blueprint. Use Streamlit for simple UIs.\n6. POSTGRESQL RULE: If using PostgreSQL, you MUST strictly use the connection string 'postgresql://postgres:postgres@localhost:5432/postgres'. Do NOT use environment variables for DB connections."
 
-            system_prompt = f"You are a Senior AI {agent_role}. Given a blueprint and semantic context from past successful projects, write the FULL production-grade content for the requested file: {{target_file}}.\n\nIMPORTANT RULES:\n1. Output the file EXACTLY in this format:\n\n<file path=\"{{target_file}}\">\n[YOUR CODE/CONTENT HERE]\n</file>\n\n2. ADVANCED CODE RULE: Write highly efficient, robust code. Use React performance hooks (useMemo, useCallback, React.memo) where appropriate. Ensure strict error handling (try/catch), edge-case fallbacks, input validation, and security best practices. Code MUST be clean, modular, and self-documenting.\n3. Do NOT use JSON. Do not use markdown backticks outside of the file tags.\n{framework_rules}\n10. If you receive Review Feedback or a Runtime Error, you must fix the issues mentioned."
+            from backend.agents.base import GLOBAL_AGENT_RULES
+            system_prompt = GLOBAL_AGENT_RULES + f"""
+ROLE: Coder (Dispatcher Sub-Agent)
+GOAL: Write the FULL production-grade content for the requested file: {{target_file}}.
+
+IMPORTANT RULES:
+- You must use only dependencies already declared in the Architect's tech_stack. If a new dependency is needed, add it to 'dependency_requests'.
+{framework_rules}
+- ADVANCED CODE RULE: Write highly efficient, robust code. Strict error handling (try/catch), edge-case fallbacks, input validation.
+- If you receive Review Feedback or a Runtime Error, you must fix the issues mentioned.
+
+OUTPUT SCHEMA:
+{{
+  "file_path": "{{target_file}}",
+  "content": "raw code string (escape quotes properly)",
+  "depends_on": ["other file paths this assumes exist"],
+  "dependency_requests": ["package@version, with why"],
+  "confidence": "high" | "medium" | "low",
+  "known_gaps": ["e.g. 'no input validation on this endpoint yet'"]
+}}
+"""
 
             prompt = ChatPromptTemplate.from_messages([
                 ("system", system_prompt),
-                ("human", "Blueprint: {blueprint}\nSemantic Context: {context}\nTarget File: {target_file}\nReview Feedback: {review_feedback}\nRuntime Error: {runtime_error}")
+                ("human", "Blueprint: {blueprint}\nDesign Tokens: {design_tokens}\nSemantic Context: {context}\nTarget File: {target_file}\nReview Feedback: {review_feedback}\nRuntime Error: {runtime_error}")
             ])
             
             import time
@@ -200,7 +234,7 @@ class CoderAgent(BaseAgent):
                         target_file=target_file,
                         review_feedback=feedback,
                         runtime_error=runtime_error,
-                        design_system=json.dumps(state.get("blueprint", {}).get("designSystem", {}), indent=2) if state.get("blueprint", {}).get("designSystem") else ""
+                        design_tokens=json.dumps(state.get("design_tokens", {}), indent=2)
                     )
                     
                     response_text = ""
@@ -209,7 +243,7 @@ class CoderAgent(BaseAgent):
                         if chunk.content:
                             buffer += chunk.content
                             response_text += chunk.content
-                            if q and len(buffer) > 20:  # Advanced Streaming Engine: Flush every ~20 chars to prevent WS flood
+                            if q and len(buffer) > 20:
                                 q.put({"type": "code_token", "file": target_file, "token": buffer})
                                 buffer = ""
                     
@@ -218,21 +252,19 @@ class CoderAgent(BaseAgent):
                     
                     full_content = response_text
                     import re
-                    # Robust regex that matches <file path="xxx">...</file> regardless of quotes or exact whitespace
-                    match = re.search(r'<file[^>]*>(.*?)</file>', full_content, re.DOTALL | re.IGNORECASE)
-                    
+                    # Parse JSON Output
+                    match = re.search(r'\{.*\}', full_content, re.DOTALL)
                     if match:
-                        code = match.group(1).strip()
+                        data = json.loads(match.group(0))
+                        code = data.get("content", "")
+                        
+                        # Handle missing dependencies request
+                        dep_requests = data.get("dependency_requests", [])
+                        if dep_requests:
+                            logger.info(f"[Coder] Dependency requests for {target_file}: {dep_requests}")
                     else:
-                        # FALLBACK: If the LLM forgot XML tags, extract the first markdown code block!
-                        md_match = re.search(r'```(?:[a-zA-Z0-9_-]+)?\s*(.*?)```', full_content, re.DOTALL)
-                        if md_match:
-                            code = md_match.group(1).strip()
-                            logger.warning(f"   -> [Attempt {attempt+1}] Used fallback markdown extraction for {target_file}.")
-                        else:
-                            # Absolute fallback: Just use the raw content if no backticks found
-                            code = full_content.strip()
-                            logger.warning(f"   -> [Attempt {attempt+1}] Used raw content fallback for {target_file}.")
+                        data = json.loads(full_content)
+                        code = data.get("content", "")
                         
                     if code:
                         

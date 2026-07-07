@@ -32,3 +32,9 @@ class AiONState(TypedDict):
     swarm_tasks: Optional[List[Dict[str, Any]]] # Dynamic tasks for sub-agents
     swarm_results: Optional[List[Dict[str, Any]]] # Results collected from sub-agents
     federation_peer_id: Optional[str] # ID for cross-machine federation
+    
+    # Advanced Multi-Agent State
+    design_tokens: Optional[Dict[str, Any]]
+    visual_critique_feedback: Optional[str]
+    visual_revision_count: int
+    memory_log: Optional[Dict[str, Any]]

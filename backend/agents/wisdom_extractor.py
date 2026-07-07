@@ -38,8 +38,21 @@ class WisdomExtractorAgent(BaseAgent):
         if runtime_error or (audit_feedback and "APPROVED" not in audit_feedback):
             logger.info("[WisdomExtractor] Extracting Wisdom from resolved errors...")
             
+            from backend.agents.base import GLOBAL_AGENT_RULES
             prompt = ChatPromptTemplate.from_messages([
-                ("system", "You are an AI Architect extracting engineering wisdom. Given a resolved error and the final codebase, extract the root cause and the abstract solution rule. Output strictly as JSON: {\"root_cause\": \"...\", \"solution_rule\": \"...\"}"),
+                ("system", GLOBAL_AGENT_RULES + """
+ROLE: Wisdom Extractor
+GOAL: Extract root causes and solutions from resolved bugs and store them as 'Wisdom Vectors'.
+
+OUTPUT SCHEMA:
+{
+  "root_cause": "...",
+  "solution_rule": "..."
+}
+
+RULES:
+- Only return valid JSON.
+"""),
                 ("human", "Error encountered: {error}\n\nExtract the core rule to prevent this in the future.")
             ])
             

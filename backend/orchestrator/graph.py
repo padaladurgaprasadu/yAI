@@ -2,6 +2,8 @@ from langgraph.graph import StateGraph, END
 from backend.orchestrator.state import AiONState
 from backend.agents.planner import PlannerAgent
 from backend.agents.architect import ArchitectAgent
+from backend.agents.design import DesignAgent
+from backend.agents.visual_critique import VisualCritiqueAgent
 from backend.agents.swarm_orchestrator import SwarmOrchestratorAgent
 from backend.agents.coder import CoderAgent
 from backend.agents.reviewer import ReviewerAgent
@@ -13,6 +15,7 @@ from backend.agents.researcher import ResearchAgent
 from backend.agents.tester import TesterAgent
 from backend.agents.dependency_checker import DependencyCheckerAgent
 from backend.agents.auditor import AuditorAgent
+from backend.agents.wisdom_extractor import WisdomExtractorAgent
 
 def should_continue(state: AiONState):
     """
@@ -80,15 +83,17 @@ def should_retry_execution(state: AiONState):
 def build_graph():
     """
     Builds and returns the LangGraph state machine.
-    Flow: Planner -> Architect -> Coder <-> DependencyChecker -> ML Trainer -> ... -> END
+    Flow: Planner -> Researcher -> Architect -> Design -> SwarmOrchestrator -> Coder <-> DependencyChecker -> ML Trainer -> ... -> Reviewer -> VisualCritique -> Auditor -> DevOps -> Executor -> END
     """
     workflow = StateGraph(AiONState)
 
     planner = PlannerAgent()
     architect = ArchitectAgent()
+    design = DesignAgent()
     coder = CoderAgent()
     dep_checker = DependencyCheckerAgent()
     reviewer = ReviewerAgent()
+    visual_critique = VisualCritiqueAgent()
     devops = DevOpsAgent()
     executor = ExecutorAgent()
     ml_trainer = AIMLModelTrainingAgent()
@@ -101,6 +106,7 @@ def build_graph():
     workflow.add_node("planner", planner.run)
     workflow.add_node("researcher", researcher.run)
     workflow.add_node("architect", architect.run)
+    workflow.add_node("design", design.run)
     
     swarm_orchestrator = SwarmOrchestratorAgent()
     workflow.add_node("swarm_orchestrator", swarm_orchestrator.run)
@@ -111,6 +117,7 @@ def build_graph():
     workflow.add_node("hp_tuner", hp_tuner.run)
     workflow.add_node("tester", tester.run)
     workflow.add_node("reviewer", reviewer.run)
+    workflow.add_node("visual_critique", visual_critique.run)
     workflow.add_node("auditor", auditor.run)
     workflow.add_node("devops", devops.run)
     workflow.add_node("executor", executor.run)
@@ -118,7 +125,8 @@ def build_graph():
     workflow.set_entry_point("planner")
     workflow.add_edge("planner", "researcher")
     workflow.add_edge("researcher", "architect")
-    workflow.add_edge("architect", "swarm_orchestrator")
+    workflow.add_edge("architect", "design")
+    workflow.add_edge("design", "swarm_orchestrator")
     workflow.add_edge("swarm_orchestrator", "coder")
     
     workflow.add_edge("coder", "dependency_checker")
@@ -127,7 +135,8 @@ def build_graph():
     workflow.add_edge("ml_trainer", "hp_tuner")
     workflow.add_edge("hp_tuner", "tester")
     workflow.add_edge("tester", "reviewer")
-    workflow.add_conditional_edges("reviewer", should_continue, {"swarm_orchestrator": "swarm_orchestrator", "auditor": "auditor"})
+    workflow.add_conditional_edges("reviewer", should_continue, {"swarm_orchestrator": "swarm_orchestrator", "visual_critique": "visual_critique"})
+    workflow.add_conditional_edges("visual_critique", should_continue_visual, {"swarm_orchestrator": "swarm_orchestrator", "auditor": "auditor"})
     workflow.add_conditional_edges("auditor", should_continue_audit, {"swarm_orchestrator": "swarm_orchestrator", "devops": "devops"})
     workflow.add_edge("devops", "executor")
     workflow.add_conditional_edges("executor", should_retry_execution, {"swarm_orchestrator": "swarm_orchestrator", END: END})
@@ -136,21 +145,24 @@ def build_graph():
 
 def build_plan_graph():
     """
-    Builds the first half of the graph (Phase 4): Planner -> Researcher -> Architect -> END
+    Builds the first half of the graph (Phase 4): Planner -> Researcher -> Architect -> Design -> END
     """
     workflow = StateGraph(AiONState)
     planner = PlannerAgent()
     researcher = ResearchAgent()
     architect = ArchitectAgent()
+    design = DesignAgent()
     
     workflow.add_node("planner", planner.run)
     workflow.add_node("researcher", researcher.run)
     workflow.add_node("architect", architect.run)
+    workflow.add_node("design", design.run)
     
     workflow.set_entry_point("planner")
     workflow.add_edge("planner", "researcher")
     workflow.add_edge("researcher", "architect")
-    workflow.add_edge("architect", END)
+    workflow.add_edge("architect", "design")
+    workflow.add_edge("design", END)
     
     return workflow.compile()
 
@@ -159,9 +171,25 @@ from langgraph.checkpoint.memory import MemorySaver
 # Global memory saver for human-in-the-loop persistence across requests
 workflow_memory = MemorySaver()
 
+def should_continue_visual(state: AiONState):
+    """
+    Routing function for the visual aesthetic review phase.
+    """
+    feedback = state.get("visual_critique_feedback", "")
+    revision_count = state.get("visual_revision_count", 0)
+    
+    if feedback == "APPROVED" or not feedback:
+        return "auditor"
+    
+    if revision_count >= 2:
+        print("   -> [System] Max visual revisions reached. Proceeding to auditor.")
+        return "auditor"
+        
+    return "coder"
+
 def build_generate_graph():
     """
-    Builds the second half of the graph (Phase 4): ContextOrchestrator -> Coder <-> Reviewer -> DevOps -> Executor -> END
+    Builds the second half of the graph (Phase 4): ContextOrchestrator -> Coder <-> Reviewer -> VisualCritique -> DevOps -> Executor -> END
     """
     workflow = StateGraph(AiONState)
     from backend.memory.context_orchestrator import ContextOrchestratorAgent
@@ -169,6 +197,7 @@ def build_generate_graph():
     ctx_orchestrator = ContextOrchestratorAgent()
     coder = CoderAgent()
     reviewer = ReviewerAgent()
+    visual_critique = VisualCritiqueAgent()
     devops = DevOpsAgent()
     executor = ExecutorAgent()
     ml_trainer = AIMLModelTrainingAgent()
@@ -182,6 +211,7 @@ def build_generate_graph():
     workflow.add_node("hp_tuner", hp_tuner.run)
     workflow.add_node("tester", tester.run)
     workflow.add_node("reviewer", reviewer.run)
+    workflow.add_node("visual_critique", visual_critique.run)
     workflow.add_node("auditor", auditor.run)
     workflow.add_node("devops", devops.run)
     workflow.add_node("executor", executor.run)
@@ -194,7 +224,8 @@ def build_generate_graph():
     workflow.add_edge("hp_tuner", "tester")
     workflow.add_edge("tester", "reviewer")
     
-    workflow.add_conditional_edges("reviewer", should_continue, {"coder": "coder", "auditor": "auditor"})
+    workflow.add_conditional_edges("reviewer", should_continue, {"coder": "coder", "visual_critique": "visual_critique"})
+    workflow.add_conditional_edges("visual_critique", should_continue_visual, {"coder": "coder", "auditor": "auditor"})
     workflow.add_conditional_edges("auditor", should_continue_audit, {"coder": "coder", "devops": "devops"})
     workflow.add_edge("devops", "executor")
     workflow.add_conditional_edges("executor", should_retry_execution, {"coder": "coder", END: END})

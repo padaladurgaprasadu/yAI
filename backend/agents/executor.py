@@ -13,8 +13,26 @@ class ExecutorAgent(BaseAgent):
     """
     def __init__(self):
         super().__init__()
+        from backend.agents.base import GLOBAL_AGENT_RULES
         self.prompt = ChatPromptTemplate.from_messages([
-            ("system", "You are a DevOps Engineer. Given a blueprint and the generated code files, determine the exact terminal commands required to initialize the project and install the dependencies.\n\nIMPORTANT: Output each command EXACTLY in this format:\n\n<command>npm install</command>\n\nCRITICAL RULE: If a root 'package.json' is present, output `<command>npm install --no-audit --no-fund --legacy-peer-deps</command>`. If a 'client/package.json' is present, you MUST ALSO output `<command>cd client && npm install --no-audit --no-fund --legacy-peer-deps</command>`. \n\nCRITICAL BUILD VERIFICATION: To ensure the code compiles without missing component errors, if a 'client/package.json' is present, you MUST output a final command `<command>cd client && npm run build</command>`. If it fails, our auto-heal system will catch the missing files and fix them.\n\nDo NOT start any servers (no 'npm start')."),
+            ("system", GLOBAL_AGENT_RULES + """
+ROLE: Executor
+GOAL: Determine the exact terminal commands required to initialize the project and install dependencies.
+
+OUTPUT SCHEMA:
+{
+  "commands": [
+    {"cmd": "string (e.g., 'npm install')", "cwd": "string (e.g., '.' or 'client')", "purpose": "string"}
+  ]
+}
+
+RULES:
+- If a root 'package.json' is present, output `npm install --no-audit --no-fund --legacy-peer-deps`.
+- If a 'client/package.json' is present, ALSO output `npm install --no-audit --no-fund --legacy-peer-deps` with cwd `client`.
+- To ensure compilation without missing component errors, if a 'client/package.json' is present, MUST output a final command `npm run build` with cwd `client`.
+- Do NOT start any servers (no 'npm start').
+- Output ONLY valid JSON.
+"""),
             ("human", "Blueprint: {blueprint}\n\nFiles:\n{code_files}")
         ])
         self.chain = self.prompt | self.llm
@@ -173,11 +191,30 @@ class ExecutorAgent(BaseAgent):
         if isinstance(content, list):
             content = "".join(c.get("text", "") if isinstance(c, dict) else str(c) for c in content)
         
-        # Extract commands using regex: <command>...</command>
-        pattern = r'<command>\s*(.*?)\s*</command>'
-        matches = re.finditer(pattern, content, re.DOTALL)
-        
-        commands = [match.group(1).strip() for match in matches]
+        # Parse JSON
+        import re
+        match = re.search(r'\{.*\}', content, re.DOTALL)
+        if match:
+            data = json.loads(match.group(0))
+        else:
+            try:
+                data = json.loads(content)
+            except:
+                data = {"commands": []}
+                
+        commands = []
+        for cmd_obj in data.get("commands", []):
+            cmd = cmd_obj.get("cmd", "")
+            cwd = cmd_obj.get("cwd", ".")
+            if cwd and cwd != ".":
+                # Ensure we handle nested directories properly
+                if not cmd.startswith("cd "):
+                    commands.append(f"cd {cwd} && {cmd}")
+                else:
+                    commands.append(cmd)
+            else:
+                commands.append(cmd)
+
         execution_logs = []
         
         if not commands:

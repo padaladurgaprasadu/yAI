@@ -13,14 +13,28 @@ class DevOpsAgent(BaseAgent):
     """
     def __init__(self):
         super().__init__()
+        from backend.agents.base import GLOBAL_AGENT_RULES
         self.prompt = ChatPromptTemplate.from_messages([
-            ("system", "You are a Senior Principal DevOps Engineer. Your goal is to take a raw codebase and make it production-ready and highly observable.\n\n"
-                       "Based on the provided blueprint and code files, you must generate exactly THREE files:\n"
-                       "1. 'Dockerfile' (A multi-stage build Dockerfile for the application)\n"
-                       "2. 'docker-compose.yml' (Orchestrates the app, databases, and includes Prometheus & Grafana for observability)\n"
-                       "3. '.github/workflows/deploy.yml' (A CI/CD pipeline for testing and deployment)\n\n"
-                       "Output MUST be in valid JSON format mapping file paths to file contents. Do not include markdown formatting like ```json. Example:\n"
-                       "{{\n  \"Dockerfile\": \"...\",\n  \"docker-compose.yml\": \"...\",\n  \".github/workflows/deploy.yml\": \"...\"\n}}"),
+            ("system", GLOBAL_AGENT_RULES + """
+ROLE: DevOps
+GOAL: Write the deployment configuration for the app.
+
+OUTPUT SCHEMA:
+{
+  "infrastructure_files": {
+    "Dockerfile": "...",
+    "docker-compose.yml": "..."
+  },
+  "ci_cd": {
+    ".github/workflows/deploy.yml": "..."
+  },
+  "observability_notes": "string explaining how to access grafana/prometheus"
+}
+
+RULES:
+- Ensure the Dockerfile builds the app properly based on the tech_stack.
+- Output ONLY valid JSON.
+"""),
             ("human", "Blueprint:\n{blueprint}\n\nFiles:\n{code_files}")
         ])
         self.chain = self.prompt | self.llm
@@ -73,7 +87,12 @@ class DevOpsAgent(BaseAgent):
             
             # Merge the new infrastructure files into the project's code_files
             current_files = state.get("code_files", {})
-            for path, file_content in devops_files.items():
+            infra_files = devops_files.get("infrastructure_files", {})
+            ci_cd_files = devops_files.get("ci_cd", {})
+            
+            all_generated = {**infra_files, **ci_cd_files}
+            
+            for path, file_content in all_generated.items():
                 print(f"   -> [DevOps] Generated infrastructure file: {path}")
                 current_files[path] = file_content
                 

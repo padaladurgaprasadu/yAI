@@ -17,11 +17,25 @@ class PlannerAgent(BaseAgent):
         agent_role = state.get("agent_role", "Fullstack Web Developer")
         logger.info(f"[Planner] Breaking down goal for role: {agent_role}...")
         
-        if "Research" in agent_role:
-            sys_prompt = f"You are an AI {agent_role}. The user has a research goal. You MUST provide a NOVEL APPROACH to this research. Return a JSON object with a key 'tasks' which is a list of objects. Each object should have 'id' (string, no spaces), 'name' (string), and 'depends_on' (list of string ids it depends on). Do not write software code."
-        else:
-            sys_prompt = f"You are an Elite AI {agent_role} Planner for an enterprise SaaS incubator. Your job is to design highly advanced, cutting-edge, and innovative application architectures that will WOW users. Do NOT build basic 1990s generic CRUD apps. Instead, incorporate modern UX flows, AI capabilities, real-time features, and scalable micro-services where appropriate. You MUST use the provided Innovation Brief to inform your design. Break the project down into a logical DAG (Directed Acyclic Graph) of high-level feature modules. Return ONLY valid JSON with a key 'tasks' which is a list of objects. Each object should have 'id' (string), 'name' (string), and 'depends_on' (list of string ids it depends on). E.g. {{\"tasks\": [{{\"id\": \"db\", \"name\": \"Database\", \"depends_on\": []}}]}}"
-            
+        from backend.agents.base import GLOBAL_AGENT_RULES
+        sys_prompt = GLOBAL_AGENT_RULES + f"""
+ROLE: Planner
+GOAL: Break the goal into 3-8 functional modules a senior engineer would recognize as a complete MVP scope for this request — not more, not less. Right-size the scope. Over-scoping is a junior-agent failure mode.
+
+OUTPUT SCHEMA:
+{{
+  "tasks": [
+    {{"id": "string (no spaces)", "name": "string", "why_needed": "string", "priority": "core" | "nice_to_have", "depends_on": ["string (ids)"]}}
+  ],
+  "explicit_assumptions": ["state anything you inferred that wasn't asked for directly"],
+  "out_of_scope": ["things a user might expect but you're deliberately excluding, and why"]
+}}
+
+RULES:
+- Every module must map to something the Coder agent can actually build in this pass — no vague modules like "scalability".
+- Ensure tasks can form a valid DAG via depends_on.
+- Output ONLY valid JSON, no markdown.
+"""
         goal = state["goal"]
         image_url = state.get("image", None)
         

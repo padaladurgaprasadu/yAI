@@ -15,15 +15,27 @@ class ReviewerAgent(BaseAgent):
     def __init__(self):
         super().__init__()
         
+        from backend.agents.base import GLOBAL_AGENT_RULES
         self.prompt = ChatPromptTemplate.from_messages([
-            ("system", "You are an elite Autonomous Code Reviewer. Your job is to verify the codebase syntactically and logically.\n\n"
-             "RULES:\n"
-             "1. Read the provided file structures and logic.\n"
-             "2. DEEP SEMANTIC REVIEW: You MUST actively search for memory leaks, race conditions, unhandled edge cases, missing error boundaries, and security vulnerabilities (e.g., missing input validation, hardcoded secrets).\n"
-             "3. If you find ANY critical syntax errors, missing imports, broken logic, or security flaws, return a detailed critique.\n"
-             "4. If the code is solid, highly efficient, and logically sound, you MUST return exactly the word 'APPROVED' and nothing else.\n\n"
-             "CRITICAL: Do NOT write code yourself, just provide feedback."),
-            ("human", "Project Workspace: {workspace}\nBlueprint: {blueprint}\nCode Files Generated: {code_files}\n\nPlease run your semantic verification. If everything passes, output 'APPROVED'. Otherwise, output the exact error feedback for the Coder to fix.")
+            ("system", GLOBAL_AGENT_RULES + """
+ROLE: Reviewer (Static Semantic Review)
+GOAL: Verify the codebase syntactically and logically without running it.
+
+RULES:
+- Read the provided file structures and logic.
+- DEEP SEMANTIC REVIEW: Search for memory leaks, race conditions, unhandled edge cases, missing error boundaries, and security vulnerabilities.
+- Only return "fail" for functional/logic errors. Do not fail for aesthetic/styling issues (the Visual Critique agent handles that).
+
+OUTPUT SCHEMA:
+{
+  "status": "pass" | "fail",
+  "issues": [
+    {"file": "string", "line": "number or range", "severity": "critical" | "warning", "description": "string", "suggested_fix": "string"}
+  ],
+  "praise": ["things done well"]
+}
+"""),
+            ("human", "Project Workspace: {workspace}\nBlueprint: {blueprint}\nCode Files Generated: {code_files}")
         ])
         
         self.chain = self.prompt | self.fast_llm
@@ -76,7 +88,19 @@ class ReviewerAgent(BaseAgent):
                     "code_files": json.dumps(code_files_summary)
                 })
                 
-                feedback = response.content.strip()
+                response_content = response.content.strip()
+                import re
+                match = re.search(r'\{.*\}', response_content, re.DOTALL)
+                if match:
+                    data = json.loads(match.group(0))
+                else:
+                    data = json.loads(response_content)
+                
+                status = data.get("status", "fail")
+                if status == "pass":
+                    feedback = "APPROVED"
+                else:
+                    feedback = json.dumps(data.get("issues", []))
                 break
                 
             except Exception as e:
@@ -90,7 +114,7 @@ class ReviewerAgent(BaseAgent):
                     feedback = "APPROVED" # Fail open
                     break
         
-        if feedback == "APPROVED" or feedback.startswith("APPROVED"):
+        if feedback == "APPROVED":
             logger.info("[Reviewer] Code approved.")
             state["review_feedback"] = "APPROVED"
             if q:

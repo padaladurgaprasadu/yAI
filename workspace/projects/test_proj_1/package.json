@@ -1,0 +1,1 @@
+{"name": "test-app", "scripts": {"dev": "node server/app.js"}}
