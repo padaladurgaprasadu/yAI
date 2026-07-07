@@ -333,7 +333,12 @@ async def plan_project(request_data: PlanRequest, request: Request, auth: dict =
             print(f"[Error in Architect stream]: {e}")
             yield f"data: {json.dumps({'type': 'error', 'message': 'Internal Server Error.'})}\n\n"
 
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+    headers = {
+        "X-Accel-Buffering": "no",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive"
+    }
+    return StreamingResponse(event_generator(), media_type="text/event-stream", headers=headers)
 
 stream_queues = {}
 
@@ -823,6 +828,26 @@ IMPORTANT RULES:
             # Immediately yield heartbeat to prevent frontend timeout
             yield f"data: {json.dumps({'type': 'status', 'message': '✨ Analyzing Intent...'})}\n\n"
             api_logger.info(f"TTFT_heartbeat: {(time.time() - start_time) * 1000:.2f}ms")
+            
+            # 🟢 ZERO-SHOT BYPASS FOR SUPER-FAST CHAT (No Router/Memory lag)
+            words = sanitized_message.split()
+            visual_triggers = ["show", "image", "picture", "photo", "draw", "look", "visual", "ui", "design", "app", "build", "create", "architecture", "system", "diagram"]
+            is_simple_chat = len(words) < 10 and not any(t in sanitized_message.lower() for t in visual_triggers)
+            
+            if is_simple_chat:
+                yield f"data: {json.dumps({'type': 'status', 'message': '✨ Generating...'})}\n\n"
+                messages = [SystemMessage(content="You are AiON, a concise and friendly AI architect. Answer briefly.")]
+                for hm in request_data.history[-4:]:
+                    if hm.get("role") == "user":
+                        messages.append(HumanMessage(content=hm.get("content", "")))
+                    else:
+                        messages.append(AIMessage(content=hm.get("content", "")))
+                messages.append(HumanMessage(content=sanitized_message))
+                
+                async for text_chunk in agent.llm.astream(messages):
+                    token = text_chunk.content if hasattr(text_chunk, 'content') else str(text_chunk)
+                    yield f"data: {json.dumps({'type': 'chat', 'token': token})}\n\n"
+                return
 
             # 🟢 PHASE 2 & 3 CONCURRENT: Fast Intent Routing & Memory Retrieval
             from backend.agents.router import OmniIntelligenceEngine
@@ -1117,7 +1142,12 @@ IMPORTANT RULES:
                 # Expose the actual error for debugging
                 yield f"data: {json.dumps({'type': 'chat', 'token': f'⚠️ AI Error: {str(e)}'})}\n\n"
 
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+    headers = {
+        "X-Accel-Buffering": "no",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive"
+    }
+    return StreamingResponse(event_generator(), media_type="text/event-stream", headers=headers)
 
 @app.get("/api/download")
 async def download_project(project_id: str):
