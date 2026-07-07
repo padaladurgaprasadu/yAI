@@ -80,23 +80,21 @@ class ChromaClient:
             self.embedding_fn = DummyEmbeddingFunction()
             print("[ChromaDB] WARNING: No API keys found. Using Dummy Embeddings to prevent OOM crash.")
         
+        # Helper to safely get or create collection to avoid ValueError on embedding function conflict
+        def safe_get_or_create(name):
+            try:
+                return self.client.get_collection(name=name)
+            except Exception:
+                return self.client.create_collection(name=name, embedding_function=self.embedding_fn)
+                
         # Get or create our 'blueprints' collection
-        self.collection = self.client.get_or_create_collection(
-            name="blueprints",
-            embedding_function=self.embedding_fn
-        )
+        self.collection = safe_get_or_create("blueprints")
         
         # Get or create semantic cache collection
-        self.cache_collection = self.client.get_or_create_collection(
-            name="semantic_cache",
-            embedding_function=self.embedding_fn
-        )
+        self.cache_collection = safe_get_or_create("semantic_cache")
         
         # Get or create user memory collection
-        self.memory_collection = self.client.get_or_create_collection(
-            name="user_memory",
-            embedding_function=self.embedding_fn
-        )
+        self.memory_collection = safe_get_or_create("user_memory")
         
         self._initialized = True
 
