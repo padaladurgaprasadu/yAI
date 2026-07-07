@@ -283,7 +283,8 @@ async def plan_project(request_data: PlanRequest, request: Request, auth: dict =
         yield f"data: {json.dumps({'type': 'metadata', 'project_id': project_id})}\n\n"
         
         try:
-            yield f"data: {json.dumps({'type': 'token', 'token': '### 🔍 Phase 1: Researching & Gathering Context...\\n'})}\n\n"
+            msg1 = json.dumps({'type': 'token', 'token': '### 🔍 Phase 1: Researching & Gathering Context...\n'})
+            yield f"data: {msg1}\n\n"
             from backend.agents.researcher import ResearchAgent
             researcher = ResearchAgent()
             initial_state = AiONState(goal=goal, project_id=project_id, agent_role=request_data.agent_role, modules=[])
@@ -293,13 +294,15 @@ async def plan_project(request_data: PlanRequest, request: Request, auth: dict =
             researched_state = await asyncio.to_thread(researcher.run, initial_state)
             semantic_context = researched_state.get("semantic_context", "")
 
-            yield f"data: {json.dumps({'type': 'token', 'token': '✅ Context gathered.\\n\\n### 🧠 Phase 2: Defining Core Modules...\\n'})}\n\n"
+            msg2 = json.dumps({'type': 'token', 'token': '✅ Context gathered.\n\n### 🧠 Phase 2: Defining Core Modules...\n'})
+            yield f"data: {msg2}\n\n"
             from backend.agents.planner import PlannerAgent
             planner = PlannerAgent()
             planned_state = await asyncio.to_thread(planner.run, researched_state)
             modules = planned_state.get("modules", [])
 
-            yield f"data: {json.dumps({'type': 'token', 'token': '✅ Modules defined.\\n\\n### 🏗️ Phase 3: Drafting System Blueprint...\\n\\n'})}\n\n"
+            msg3 = json.dumps({'type': 'token', 'token': '✅ Modules defined.\n\n### 🏗️ Phase 3: Drafting System Blueprint...\n\n'})
+            yield f"data: {msg3}\n\n"
 
             # Dynamically define architectural rules based on role (mirroring architect.py)
             agent_role = request_data.agent_role
