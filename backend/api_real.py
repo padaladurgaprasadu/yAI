@@ -1052,8 +1052,10 @@ IMPORTANT RULES:
             # 🟢 [INSTRUCTION REINFORCEMENT] Append formatting constraints to the final message
             is_architecture_req = any(word in sanitized_message.lower() for word in ["diagram", "architecture", "flowchart", "workflow"])
             
-            build_triggers = ["build ", "create a ", "develop a ", "design a ", "make a ", "code a ", "generate a ", "write a ", "app", "system", "website"]
-            is_build_req = "Project Development" in str(intent_data.get("primary_intent", "")) or any(w in sanitized_message.lower() for w in build_triggers)
+            intent_mode = intent_data.get("mode", "tutor")
+            intent_scope = intent_data.get("scope_estimate", "trivial")
+            
+            is_build_req = (intent_mode == "builder" and intent_scope != "trivial") or "Project Development" in str(intent_data.get("primary_intent", ""))
             
             if is_architecture_req:
                 formatting_reminder = "\n\n[CRITICAL REMINDER]: You MUST output EXACTLY the `<architecture>` JSON block. DO NOT write any markdown text. DO NOT generate ASCII art. ONLY output the `<architecture>` tags containing the JSON payload."
