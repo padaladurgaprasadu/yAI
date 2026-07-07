@@ -124,7 +124,7 @@ const ExecutionLifecycle = ({ activeTab, onCrash }) => {
   );
 };
 
-export const ExecutionManager = ({ files, dynamicDependencies, activeTab, isBackend, previewUrl, previewError, projectId }) => {
+export const ExecutionManager = ({ files, dynamicDependencies, activeTab, isBackend, previewUrl, previewError, projectId, hasFrontendFiles }) => {
   const [restartKey, setRestartKey] = useState(0);
 
   const handleCrash = () => {
@@ -132,7 +132,8 @@ export const ExecutionManager = ({ files, dynamicDependencies, activeTab, isBack
      setRestartKey(prev => prev + 1);
   };
 
-  if (isBackend) {
+  // Pure backend project (no UI)
+  if (isBackend && !hasFrontendFiles) {
       return (
           <BackendSandbox 
               activeTab={activeTab} 
@@ -143,23 +144,40 @@ export const ExecutionManager = ({ files, dynamicDependencies, activeTab, isBack
       );
   }
 
+  // Frontend or Full-stack project
+  // If full-stack, Sandpack serves UI, BackendSandbox runs in background
   return (
-    <div style={{ width: '100%', height: '100%', backgroundColor: '#151515', position: 'relative' }}>
-      <SandpackProvider
-        key={`sp-reboot-${restartKey}`}
-        template="vite-react"
-        theme="dark"
-        files={files}
-        customSetup={{ dependencies: dynamicDependencies }}
-        options={{
-            recompileMode: "delayed",
-            recompileDelay: 2500
-        }}
-      >
-        <SandpackLayout style={{ height: '100%', border: 'none', background: 'transparent', display: 'flex', flexDirection: 'column' }}>
-          <ExecutionLifecycle activeTab={activeTab} onCrash={handleCrash} />
-        </SandpackLayout>
-      </SandpackProvider>
+    <div style={{ width: '100%', height: '100%', backgroundColor: '#151515', position: 'relative', display: 'flex', flexDirection: 'column' }}>
+      
+      {/* If full-stack and user clicked terminal, show backend logs in a split pane */}
+      {isBackend && activeTab === 'terminal' && (
+         <div style={{ height: '40%', borderBottom: '2px solid #333' }}>
+             <BackendSandbox activeTab="terminal" previewUrl={previewUrl} previewError={previewError} projectId={projectId} />
+         </div>
+      )}
+
+      <div style={{ flex: 1, position: 'relative' }}>
+          <SandpackProvider
+            key={`sp-reboot-${restartKey}`}
+            template="vite-react"
+            theme="dark"
+            files={files}
+            customSetup={{ 
+                dependencies: dynamicDependencies,
+                environment: {
+                   VITE_API_URL: previewUrl || ""
+                }
+            }}
+            options={{
+                recompileMode: "delayed",
+                recompileDelay: 2500
+            }}
+          >
+            <SandpackLayout style={{ height: '100%', border: 'none', background: 'transparent', display: 'flex', flexDirection: 'column' }}>
+              <ExecutionLifecycle activeTab={activeTab} onCrash={handleCrash} />
+            </SandpackLayout>
+          </SandpackProvider>
+      </div>
     </div>
   );
 };

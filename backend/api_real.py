@@ -406,7 +406,9 @@ async def websocket_generate(websocket: WebSocket):
                                     if sandbox_info.get("status") == "error":
                                         await websocket.send_json({"type": "PREVIEW_ERROR", "message": sandbox_info.get("message", "Sandbox error")})
                                     else:
-                                        await websocket.send_json({"type": "PREVIEW_URL", "url": sandbox_info.get("url")})
+                                        await websocket.send_json({"type": "PREVIEW_READY", "url": sandbox_info.get("url"), "isBackend": True})
+                                else:
+                                    await websocket.send_json({"type": "PREVIEW_READY", "url": "sandpack-preview", "isBackend": False})
                             except Exception as e:
                                 print(f"Cache Sandbox Error: {e}")
                                 

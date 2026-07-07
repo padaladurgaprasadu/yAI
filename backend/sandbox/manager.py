@@ -42,16 +42,26 @@ class SandboxManager:
         env["PORT"] = str(port)
         
         # Check if we need to install dependencies first
-        has_package_json = "package.json" in code_files
-        has_requirements = "requirements.txt" in code_files
+        has_root_package_json = "package.json" in code_files
+        has_root_requirements = "requirements.txt" in code_files
+        has_server_package_json = "server/package.json" in code_files
+        has_server_requirements = "server/requirements.txt" in code_files
         
         cmd = ""
-        if has_package_json:
+        if has_server_package_json:
+            cmd = "cd server && npm install --legacy-peer-deps && npm run dev"
+        elif has_server_requirements:
+            cmd = "cd server && pip install -r requirements.txt && python app.py"
+        elif has_root_package_json:
             cmd = "npm install --legacy-peer-deps && npm run dev"
-        elif has_requirements:
+        elif has_root_requirements:
             cmd = "pip install -r requirements.txt && python app.py"
         else:
-            cmd = "python app.py" # Fallback
+            # Fallback based on files present
+            if any(k.startswith("server/") and k.endswith(".py") for k in code_files):
+                cmd = "cd server && python app.py"
+            else:
+                cmd = "python app.py"
             
         print(f"[Sandbox] Starting project {project_id} on port {port} with cmd: {cmd}")
         

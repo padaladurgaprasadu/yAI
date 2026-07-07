@@ -487,6 +487,7 @@ export const ${baseName} = () => null;
                     previewUrl={previewUrl}
                     previewError={previewError}
                     projectId={projectId}
+                    hasFrontendFiles={codeFiles && Object.keys(codeFiles).some(f => f.includes('client/') || f.includes('src/') || f.endsWith('.jsx') || f.endsWith('.html'))}
                 />
               </div>
             </div>
