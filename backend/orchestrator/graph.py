@@ -16,6 +16,16 @@ from backend.agents.tester import TesterAgent
 from backend.agents.dependency_checker import DependencyCheckerAgent
 from backend.agents.auditor import AuditorAgent
 from backend.agents.wisdom_extractor import WisdomExtractorAgent
+from backend.agents.novelty import NoveltyAgent
+
+def should_run_novelty(state: AiONState):
+    """
+    Routes from Researcher either to NoveltyAgent or Architect depending on novelty request.
+    """
+    synth = state.get("research_synthesis", {})
+    if synth.get("novelty_requested") is True:
+        return "novelty_agent"
+    return "architect"
 
 def should_continue(state: AiONState):
     """
@@ -102,9 +112,11 @@ def build_graph():
     auditor = AuditorAgent()
 
     researcher = ResearchAgent()
+    novelty_agent = NoveltyAgent()
 
     workflow.add_node("planner", planner.run)
     workflow.add_node("researcher", researcher.run)
+    workflow.add_node("novelty_agent", novelty_agent.run)
     workflow.add_node("architect", architect.run)
     workflow.add_node("design", design.run)
     
@@ -124,7 +136,8 @@ def build_graph():
 
     workflow.set_entry_point("planner")
     workflow.add_edge("planner", "researcher")
-    workflow.add_edge("researcher", "architect")
+    workflow.add_conditional_edges("researcher", should_run_novelty, {"novelty_agent": "novelty_agent", "architect": "architect"})
+    workflow.add_edge("novelty_agent", "architect")
     workflow.add_edge("architect", "design")
     workflow.add_edge("design", "swarm_orchestrator")
     workflow.add_edge("swarm_orchestrator", "coder")
@@ -145,22 +158,25 @@ def build_graph():
 
 def build_plan_graph():
     """
-    Builds the first half of the graph (Phase 4): Planner -> Researcher -> Architect -> Design -> END
+    Builds the first half of the graph (Phase 4): Planner -> Researcher -> Novelty (opt) -> Architect -> Design -> END
     """
     workflow = StateGraph(AiONState)
     planner = PlannerAgent()
     researcher = ResearchAgent()
+    novelty_agent = NoveltyAgent()
     architect = ArchitectAgent()
     design = DesignAgent()
     
     workflow.add_node("planner", planner.run)
     workflow.add_node("researcher", researcher.run)
+    workflow.add_node("novelty_agent", novelty_agent.run)
     workflow.add_node("architect", architect.run)
     workflow.add_node("design", design.run)
     
     workflow.set_entry_point("planner")
     workflow.add_edge("planner", "researcher")
-    workflow.add_edge("researcher", "architect")
+    workflow.add_conditional_edges("researcher", should_run_novelty, {"novelty_agent": "novelty_agent", "architect": "architect"})
+    workflow.add_edge("novelty_agent", "architect")
     workflow.add_edge("architect", "design")
     workflow.add_edge("design", END)
     
