@@ -1247,7 +1247,6 @@ function App() {
                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--accent)', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#fff', fontWeight: 'bold' }}>A</div>
                    <div style={{ padding: '6px 0', display: 'flex', alignItems: 'center', gap: '12px' }}>
                      <div className="spinner" style={{ width: '18px', height: '18px' }}></div>
-                     {chatStatus && <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontStyle: 'italic', letterSpacing: '0.5px' }}>{chatStatus}</span>}
                    </div>
                 </div>
               )}
@@ -1293,24 +1292,7 @@ function App() {
               </div>
             )}
             
-            {chatStatus && (
-              <div style={{
-                marginBottom: '12px',
-                padding: '8px 16px',
-                backgroundColor: 'rgba(10, 10, 10, 0.7)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '16px',
-                color: '#a6accd',
-                fontSize: '0.85rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                animation: 'fadeIn 0.3s ease-in-out'
-              }}>
-                <div className="spinner" style={{ width: '14px', height: '14px', borderWidth: '2px', borderTopColor: 'var(--accent)' }}></div>
-                ✨ {chatStatus}
-              </div>
-            )}
+
 
             <form onSubmit={handleChatSubmit} style={{ 
               width: '100%', 
