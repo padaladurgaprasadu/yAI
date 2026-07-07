@@ -844,9 +844,18 @@ IMPORTANT RULES:
                         messages.append(AIMessage(content=hm.get("content", "")))
                 messages.append(HumanMessage(content=sanitized_message))
                 
-                async for text_chunk in agent.llm.astream(messages):
-                    token = text_chunk.content if hasattr(text_chunk, 'content') else str(text_chunk)
-                    yield f"data: {json.dumps({'type': 'chat', 'token': token})}\n\n"
+                try:
+                    async def fetch_fast():
+                        async for text_chunk in agent.fast_llm.astream(messages):
+                            token = text_chunk.content if hasattr(text_chunk, 'content') else str(text_chunk)
+                            yield f"data: {json.dumps({'type': 'chat', 'token': token})}\n\n"
+                    
+                    # Yield from the async generator directly
+                    async for chunk in fetch_fast():
+                        yield chunk
+                except Exception as e:
+                    api_logger.error(f"Fast Lane Error: {e}")
+                    yield f"data: {json.dumps({'type': 'chat', 'token': f'⚠️ Fast Lane Error: {str(e)}'})}\n\n"
                 return
 
             # 🟢 PHASE 2 & 3 CONCURRENT: Fast Intent Routing & Memory Retrieval
@@ -868,8 +877,16 @@ IMPORTANT RULES:
             router_task = asyncio.create_task(router.adetect_intent(sanitized_message, request_data.history))
             memory_task = asyncio.create_task(get_memory())
             
-            intent_data, USER_MEMORY = await asyncio.gather(router_task, memory_task)
-            
+            try:
+                intent_data, USER_MEMORY = await asyncio.wait_for(
+                    asyncio.gather(router_task, memory_task),
+                    timeout=5.0
+                )
+            except asyncio.TimeoutError:
+                api_logger.warning("Router or memory task timed out! Falling back to defaults.")
+                intent_data = {}
+                USER_MEMORY = "No past memory recorded yet."
+                
             if not USER_MEMORY:
                 USER_MEMORY = "No past memory recorded yet."
             
