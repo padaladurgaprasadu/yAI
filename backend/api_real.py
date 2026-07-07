@@ -1003,7 +1003,7 @@ IMPORTANT RULES:
                                 "type": "visual",
                                 "media_type": "image",
                                 "url": img_url,
-                                "alt": intent_data["visual_query"]
+                                "alt": visual_query_val
                             })
                     except Exception as e:
                         api_logger.warning(f"Error fetching visuals: {e}")
