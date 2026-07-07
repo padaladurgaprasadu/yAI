@@ -205,7 +205,7 @@ function App() {
     activeAgent: null,
     timeline: []
   })
-  const [liveCodeFiles, setLiveCodeFiles] = useState({})
+
   
   // Execution state
   const [isPreviewRunning, setIsPreviewRunning] = useState(false)
@@ -909,17 +909,10 @@ function App() {
         if (data.type === "progress") {
           setLiveUpdates(prev => [...prev, data.message])
         } else if (data.type === "file_start") {
-          setLiveCodeFiles(prev => ({ ...prev, [data.file]: "" }))
           setLiveUpdates(prev => [...prev, `Writing code for ${data.file}...`])
         } else if (data.type === "code_token") {
-          setLiveCodeFiles(prev => {
-             const targetFile = data.file || (Object.keys(prev).length > 0 ? Object.keys(prev)[Object.keys(prev).length - 1] : null);
-             if (!targetFile) return prev;
-             return {
-                 ...prev,
-                 [targetFile]: (prev[targetFile] || "") + data.token
-             };
-          })
+          // Intentionally doing nothing on each code token.
+          // Updating React state on every single token (100x/sec) freezes the browser.
         } else if (data.type === "code_complete") {
           // [ZERO-LATENCY] Instantly unlock the UI and show the Artifact Viewer!
           setCodeFiles(data.code_files)

@@ -41,13 +41,13 @@ class ModelRouter:
         # Try to instantiate the optimal model
         try:
             if provider == "anthropic" and os.getenv("ANTHROPIC_API_KEY"):
-                return ChatAnthropic(model=model_name, temperature=0.1)
+                return ChatAnthropic(model=model_name, temperature=0.1, timeout=90, max_retries=2)
             elif provider == "groq" and os.getenv("GROQ_API_KEY"):
-                return ChatGroq(model_name=model_name, temperature=0.1)
+                return ChatGroq(model_name=model_name, temperature=0.1, timeout=90, max_retries=2)
             elif provider == "google" and os.getenv("GOOGLE_API_KEY"):
-                return ChatGoogleGenerativeAI(model=model_name, temperature=0.1)
+                return ChatGoogleGenerativeAI(model=model_name, temperature=0.1, timeout=90, max_retries=2)
             elif provider == "openai" and os.getenv("OPENAI_API_KEY"):
-                return ChatOpenAI(model=model_name, temperature=0.1)
+                return ChatOpenAI(model=model_name, temperature=0.1, request_timeout=90, max_retries=2)
         except Exception as e:
             logger.warning(f"[LiquidRouting] Failed to initialize {provider} {model_name}: {e}")
             
