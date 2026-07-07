@@ -841,9 +841,10 @@ IMPORTANT RULES:
             
             # 🟢 ZERO-SHOT BYPASS FOR SUPER-FAST CHAT (No Router/Memory lag)
             words = sanitized_message.split()
-            visual_triggers = ["show", "image", "picture", "photo", "draw", "look", "visual", "ui", "design", "app", "build", "create", "architecture", "system", "diagram"]
-            is_simple_chat = len(words) < 10 and not any(t in sanitized_message.lower() for t in visual_triggers)
+            conversational_fillers = ["hi", "hello", "hey", "how are you", "who are you", "what is your name", "thanks", "thank you", "good morning", "good evening"]
+            is_simple_chat = sanitized_message.lower().strip() in conversational_fillers
             
+
             if is_simple_chat:
                 visual_queue = asyncio.Queue()
                 
