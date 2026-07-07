@@ -199,7 +199,12 @@ function App() {
   const [previewError, setPreviewError] = useState(null)
   const [isBackend, setIsBackend] = useState(false)
   
-  // Streaming state
+  // Streaming state  
+  const [streamedCode, setStreamedCode] = useState("")
+  const [streamFileName, setStreamFileName] = useState("")
+  const streamBufferRef = useRef("")
+  const streamFileNameRef = useRef("")
+  
   const [liveUpdates, setLiveUpdates] = useState([])
   const [agentState, setAgentState] = useState({
     activeAgent: null,
@@ -235,6 +240,20 @@ function App() {
   const [selectedNode, setSelectedNode] = useState(null)
 
   const chatEndRef = useRef(null)
+
+  // Advanced Streaming Engine: Flush JS Buffer to React State using RequestAnimationFrame
+  useEffect(() => {
+    let animationFrameId;
+    const flushBuffer = () => {
+      if (streamBufferRef.current !== "") {
+        setStreamedCode(prev => prev + streamBufferRef.current);
+        streamBufferRef.current = ""; // Clear buffer after flush
+      }
+      animationFrameId = requestAnimationFrame(flushBuffer);
+    };
+    animationFrameId = requestAnimationFrame(flushBuffer);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, []);
 
   // Cloud Sync Logic
   const saveTimeoutRef = useRef(null);
@@ -910,9 +929,16 @@ function App() {
           setLiveUpdates(prev => [...prev, data.message])
         } else if (data.type === "file_start") {
           setLiveUpdates(prev => [...prev, `Writing code for ${data.file}...`])
+          setStreamFileName(data.file)
+          streamFileNameRef.current = data.file;
+          streamBufferRef.current = ""; // Reset buffer for new file
+          setStreamedCode(""); // Reset UI state for new file
         } else if (data.type === "code_token") {
-          // Intentionally doing nothing on each code token.
-          // Updating React state on every single token (100x/sec) freezes the browser.
+          // Push to JS buffer instead of React State to prevent 100hz re-renders
+          if (data.file === streamFileNameRef.current) {
+            streamBufferRef.current += data.token;
+          }
+
         } else if (data.type === "code_complete") {
           // [ZERO-LATENCY] Instantly unlock the UI and show the Artifact Viewer!
           setCodeFiles(data.code_files)
@@ -1505,6 +1531,8 @@ function App() {
                      activeAgent={agentState.activeAgent} 
                      timeline={agentState.timeline} 
                      liveUpdates={liveUpdates} 
+                     streamFileName={streamFileName}
+                     streamedCode={streamedCode}
                   />
                 </div>
               )}

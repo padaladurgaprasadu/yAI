@@ -204,10 +204,17 @@ class CoderAgent(BaseAgent):
                     )
                     
                     response_text = ""
+                    buffer = ""
                     for chunk in self.fast_llm.stream(messages):
-                        if q and chunk.content:
-                            q.put({"type": "code_token", "file": target_file, "token": chunk.content})
-                        response_text += chunk.content
+                        if chunk.content:
+                            buffer += chunk.content
+                            response_text += chunk.content
+                            if q and len(buffer) > 20:  # Advanced Streaming Engine: Flush every ~20 chars to prevent WS flood
+                                q.put({"type": "code_token", "file": target_file, "token": buffer})
+                                buffer = ""
+                    
+                    if q and buffer:
+                        q.put({"type": "code_token", "file": target_file, "token": buffer})
                     
                     full_content = response_text
                     import re
