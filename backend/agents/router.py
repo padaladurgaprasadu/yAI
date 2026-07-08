@@ -41,34 +41,36 @@ class ModelRouter:
         # Try to instantiate the optimal model
         try:
             if provider == "anthropic" and os.getenv("ANTHROPIC_API_KEY"):
-                return ChatAnthropic(model=model_name, temperature=0.1, timeout=90, max_retries=2)
+                return ChatAnthropic(model=model_name, temperature=0.1, timeout=90, max_retries=2, streaming=True)
             elif provider == "groq" and os.getenv("GROQ_API_KEY"):
-                return ChatGroq(model_name=model_name, temperature=0.1, timeout=90, max_retries=2)
+                return ChatGroq(model_name=model_name, temperature=0.1, timeout=90, max_retries=2, streaming=True)
             elif provider == "google" and os.getenv("GOOGLE_API_KEY"):
-                return ChatGoogleGenerativeAI(model=model_name, temperature=0.1, timeout=90, max_retries=2)
+                return ChatGoogleGenerativeAI(model=model_name, temperature=0.1, timeout=90, max_retries=2, streaming=True)
             elif provider == "openai" and os.getenv("OPENAI_API_KEY"):
-                return ChatOpenAI(model=model_name, temperature=0.1, request_timeout=90, max_retries=2)
+                return ChatOpenAI(model=model_name, temperature=0.1, request_timeout=90, max_retries=2, streaming=True)
         except Exception as e:
             logger.warning(f"[LiquidRouting] Failed to initialize {provider} {model_name}: {e}")
             
         # Fallback to whatever is available
         if os.getenv("OPENAI_API_KEY"):
-            return ChatOpenAI(model="gpt-4o-mini" if complexity == "fast" else "gpt-4o", temperature=0.1)
+            return ChatOpenAI(model="gpt-4o-mini" if complexity == "fast" else "gpt-4o", temperature=0.1, streaming=True)
         elif os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY"):
-            return ChatGoogleGenerativeAI(model="gemini-1.5-flash" if complexity == "fast" else "gemini-1.5-pro", temperature=0.1)
+            return ChatGoogleGenerativeAI(model="gemini-1.5-flash" if complexity == "fast" else "gemini-1.5-pro", temperature=0.1, streaming=True)
         elif os.getenv("NVIDIA_API_KEY"):
             return ChatOpenAI(
                 base_url="https://integrate.api.nvidia.com/v1",
                 api_key=os.getenv("NVIDIA_API_KEY"),
                 model="meta/llama-3.1-8b-instruct" if complexity == "fast" else "meta/llama-3.1-70b-instruct",
-                temperature=0.1
+                temperature=0.1,
+                streaming=True
             )
         elif os.getenv("OPENROUTER_API_KEY"):
             return ChatOpenAI(
                 base_url="https://openrouter.ai/api/v1",
                 api_key=os.getenv("OPENROUTER_API_KEY"),
                 model="anthropic/claude-3.5-haiku" if complexity == "fast" else "anthropic/claude-3.5-sonnet",
-                temperature=0.1
+                temperature=0.1,
+                streaming=True
             )
         
         raise Exception("Missing credentials: No API keys configured for Liquid Routing.")
