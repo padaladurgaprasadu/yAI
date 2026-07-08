@@ -833,10 +833,12 @@ IMPORTANT RULES:
             api_logger.info(f"TTFT_heartbeat: {(time.time() - start_time) * 1000:.2f}ms")
             
             # 🟢 ZERO-SHOT BYPASS FOR SUPER-FAST CHAT (No Router/Memory lag)
-            words = sanitized_message.split()
-            conversational_fillers = ["hi", "hello", "hey", "how are you", "who are you", "what is your name", "thanks", "thank you", "good morning", "good evening"]
-            is_simple_chat = sanitized_message.lower().strip() in conversational_fillers
+            build_keywords = ["build", "create", "make", "generate", "code", "app", "website", "project", "system", "dashboard", "ui", "component", "script", "deploy"]
+            requires_routing = any(kw in sanitized_message.lower() for kw in build_keywords)
             
+            # If no build/code intent is detected, route to Ultra-Fast Chat Lane for instant TTFT (< 500ms)
+            is_simple_chat = not requires_routing
+
 
             if is_simple_chat:
                 visual_queue = asyncio.Queue()
