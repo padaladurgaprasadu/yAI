@@ -894,9 +894,14 @@ IMPORTANT RULES:
                         messages.append(AIMessage(content=hm.get("content", "")))
                 messages.append(HumanMessage(content=sanitized_message))
                 
+                # Zero-shot smart routing based on keywords
+                smart_keywords = ["build", "code", "create", "project", "app", "website", "component", "generate", "write", "debug", "fix", "architecture", "diagram", "draw", "system"]
+                is_complex = any(kw in sanitized_message.lower() for kw in smart_keywords)
+                llm_to_use = agent.smart_llm if is_complex else agent.fast_llm
+                
                 try:
                     async def fetch_fast():
-                        async for text_chunk in agent.fast_llm.astream(messages):
+                        async for text_chunk in llm_to_use.astream(messages):
                             token = text_chunk.content if hasattr(text_chunk, 'content') else str(text_chunk)
                             yield f"data: {json.dumps({'type': 'chat', 'token': token})}\n\n"
                             
