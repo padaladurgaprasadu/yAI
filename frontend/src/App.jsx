@@ -45,7 +45,8 @@ const handleMarkdownClick = async (e) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           language: pistonLang,
-          code: code
+          code: btoa(unescape(encodeURIComponent(code))),
+          is_base64: true
         })
       });
       const data = await res.json();

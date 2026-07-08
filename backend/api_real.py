@@ -1284,10 +1284,19 @@ async def download_project(project_id: str):
 @app.post("/api/execute")
 async def execute_code(request: Request):
     import subprocess
+    import base64
     data = await request.json()
     language = data.get("language")
     code = data.get("code")
     
+    # Check if code is base64 encoded
+    is_base64 = data.get("is_base64", False)
+    if is_base64 and code:
+        try:
+            code = base64.b64decode(code).decode('utf-8')
+        except Exception:
+            pass # fallback to raw
+            
     if language not in ["python", "javascript", "js", "py", "node"]:
         raise HTTPException(status_code=400, detail="Unsupported language")
         
