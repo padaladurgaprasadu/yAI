@@ -827,9 +827,8 @@ IMPORTANT RULES:
                 yield f"data: {json.dumps({'type': 'status', 'message': '✨ Hot-Reloading Preview...'})}\n\n"
                 yield f"data: {json.dumps({'type': 'refine_done'})}\n\n"
                 return
-
             # Immediately yield heartbeat to prevent frontend timeout
-            yield f"data: {json.dumps({'type': 'status', 'message': '✨ Analyzing Intent...'})}\n\n"
+            yield f"data: {json.dumps({'type': 'status', 'message': '✨ Processing...'})}\n\n"
             api_logger.info(f"TTFT_heartbeat: {(time.time() - start_time) * 1000:.2f}ms")
             
             # 🟢 ZERO-SHOT BYPASS FOR SUPER-FAST CHAT (No Router/Memory lag)
@@ -844,22 +843,15 @@ IMPORTANT RULES:
                 visual_queue = asyncio.Queue()
                 
                 async def background_router():
+                    # For Ultra-Fast Chat Lane, skip the LLM router to avoid NVIDIA API concurrency throttling!
+                    # Only do basic keyword matching for visuals to keep it 100% instant.
                     try:
-                        from backend.agents.router import OmniIntelligenceEngine
-                        from backend.agents.base import BaseAgent
-                        from backend.utils.visuals import get_real_world_image
-                        
-                        router = OmniIntelligenceEngine(llm=BaseAgent().fast_llm)
-                        intent_data = await router.adetect_intent(sanitized_message, request_data.history)
-                        
-                        entity_det = intent_data.get("entity_detection", {})
-                        if entity_det.get("requires_visuals"):
-                            visual_query = entity_det.get("search_query") or sanitized_message
-                            v_count = 1
-                            
-                            res = await asyncio.to_thread(get_real_world_image, visual_query, v_count)
+                        visual_keywords = ["show me", "picture of", "image of", "photo of", "what does it look like"]
+                        if any(kw in sanitized_message.lower() for kw in visual_keywords):
+                            from backend.utils.visuals import get_real_world_image
+                            visual_query = sanitized_message
+                            res = await asyncio.to_thread(get_real_world_image, visual_query, 1)
                             img_urls = res if isinstance(res, list) else ([res] if res else [])
-                            
                             for img_url in img_urls:
                                 await visual_queue.put({
                                     "type": "visual",
@@ -868,7 +860,7 @@ IMPORTANT RULES:
                                     "alt": visual_query
                                 })
                     except Exception as e:
-                        api_logger.warning(f"Background router error: {e}")
+                        api_logger.warning(f"Background visual error: {e}")
                     finally:
                         await visual_queue.put(None)
 
