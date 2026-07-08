@@ -36,11 +36,7 @@ class BaseAgent:
             logger.warning(f"Failed to initialize ModelRouter: {e}")
             
             # Safe instantiation that doesn't crash pydantic if keys are missing
-            if os.getenv("GROQ_API_KEY"):
-                from langchain_groq import ChatGroq
-                self.smart_llm = ChatGroq(model_name="llama-3.1-70b-versatile", temperature=0.1, timeout=90, max_retries=2, streaming=True)
-                self.fast_llm = ChatGroq(model_name="llama-3.1-8b-instant", temperature=0.1, timeout=90, max_retries=2, streaming=True)
-            elif os.getenv("OPENAI_API_KEY"):
+            if os.getenv("OPENAI_API_KEY"):
                 self.smart_llm = ChatOpenAI(model="gpt-4o", temperature=0.1, request_timeout=90, max_retries=2, streaming=True)
                 self.fast_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.1, request_timeout=90, max_retries=2, streaming=True)
             elif os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY"):

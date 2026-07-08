@@ -827,31 +827,45 @@ IMPORTANT RULES:
                 yield f"data: {json.dumps({'type': 'status', 'message': '✨ Hot-Reloading Preview...'})}\n\n"
                 yield f"data: {json.dumps({'type': 'refine_done'})}\n\n"
                 return
+
             # Immediately yield heartbeat to prevent frontend timeout
-            yield f"data: {json.dumps({'type': 'status', 'message': '✨ Processing...'})}\n\n"
+            yield f"data: {json.dumps({'type': 'status', 'message': '✨ Analyzing Intent...'})}\n\n"
             api_logger.info(f"TTFT_heartbeat: {(time.time() - start_time) * 1000:.2f}ms")
             
             # 🟢 ZERO-SHOT BYPASS FOR SUPER-FAST CHAT (No Router/Memory lag)
-            build_keywords = ["build", "create", "make", "generate", "code", "app", "website", "project", "system", "dashboard", "ui", "component", "script", "deploy"]
-            requires_routing = any(kw in sanitized_message.lower() for kw in build_keywords)
+            # 🟢 ZERO-SHOT BYPASS FOR SUPER-FAST CHAT (No Router/Memory lag)
+            words = sanitized_message.split()
+            conversational_fillers = ["hi", "hello", "hey", "how are you", "who are you", "what is your name", "thanks", "thank you", "good morning", "good evening"]
             
-            # If no build/code intent is detected, route to Ultra-Fast Chat Lane for instant TTFT (< 500ms)
-            is_simple_chat = not requires_routing
-
+            is_simple_chat = False
+            if sanitized_message.lower().strip() in conversational_fillers:
+                is_simple_chat = True
+            elif len(words) < 25 and len(request_data.history) < 4:
+                # If short query, check if it's a coding/project request
+                coding_keywords = ["build", "code", "create", "project", "app", "website", "component", "generate", "write", "debug", "fix"]
+                if not any(kw in sanitized_message.lower() for kw in coding_keywords):
+                    is_simple_chat = True
 
             if is_simple_chat:
                 visual_queue = asyncio.Queue()
                 
                 async def background_router():
-                    # For Ultra-Fast Chat Lane, skip the LLM router to avoid NVIDIA API concurrency throttling!
-                    # Only do basic keyword matching for visuals to keep it 100% instant.
                     try:
-                        visual_keywords = ["show me", "picture of", "image of", "photo of", "what does it look like"]
-                        if any(kw in sanitized_message.lower() for kw in visual_keywords):
-                            from backend.utils.visuals import get_real_world_image
-                            visual_query = sanitized_message
-                            res = await asyncio.to_thread(get_real_world_image, visual_query, 1)
+                        from backend.agents.router import OmniIntelligenceEngine
+                        from backend.agents.base import BaseAgent
+                        from backend.utils.visuals import get_real_world_image
+                        
+                        router = OmniIntelligenceEngine(llm=BaseAgent().fast_llm)
+                        intent_data = await router.adetect_intent(sanitized_message, request_data.history)
+                        
+                        entity_det = intent_data.get("entity_detection", {})
+                        if entity_det.get("requires_visuals"):
+                            visual_query = entity_det.get("search_query") or sanitized_message
+                            v_count = 1
+                            
+                            res = await asyncio.to_thread(get_real_world_image, visual_query, v_count)
                             img_urls = res if isinstance(res, list) else ([res] if res else [])
+                            
                             for img_url in img_urls:
                                 await visual_queue.put({
                                     "type": "visual",
@@ -860,7 +874,7 @@ IMPORTANT RULES:
                                     "alt": visual_query
                                 })
                     except Exception as e:
-                        api_logger.warning(f"Background visual error: {e}")
+                        api_logger.warning(f"Background router error: {e}")
                     finally:
                         await visual_queue.put(None)
 
@@ -868,10 +882,9 @@ IMPORTANT RULES:
                 
                 yield f"data: {json.dumps({'type': 'status', 'message': '✨ Generating...'})}\n\n"
                 sys_prompt = get_system_prompt({
-                    "primary_intent": "General Conversation",
-                    "user_goal": "Provide a quick, concise, and helpful conversational answer.",
-                    "complexity": "Fast",
-                    "response_style": "Concise and direct"
+                    "primary_intent": "General Knowledge",
+                    "user_goal": "Provide a comprehensive, highly-structured response utilizing Markdown.",
+                    "complexity": "Deep Dive"
                 })
                 messages = [SystemMessage(content=sys_prompt)]
                 for hm in request_data.history[-4:]:

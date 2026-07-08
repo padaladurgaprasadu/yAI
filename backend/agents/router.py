@@ -52,10 +52,7 @@ class ModelRouter:
             logger.warning(f"[LiquidRouting] Failed to initialize {provider} {model_name}: {e}")
             
         # Fallback to whatever is available
-        if os.getenv("GROQ_API_KEY"):
-            from langchain_groq import ChatGroq
-            return ChatGroq(model_name="llama-3.1-8b-instant" if complexity == "fast" else "llama-3.1-70b-versatile", temperature=0.1, streaming=True)
-        elif os.getenv("OPENAI_API_KEY"):
+        if os.getenv("OPENAI_API_KEY"):
             return ChatOpenAI(model="gpt-4o-mini" if complexity == "fast" else "gpt-4o", temperature=0.1, streaming=True)
         elif os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY"):
             return ChatGoogleGenerativeAI(model="gemini-1.5-flash" if complexity == "fast" else "gemini-1.5-pro", temperature=0.1, streaming=True)
