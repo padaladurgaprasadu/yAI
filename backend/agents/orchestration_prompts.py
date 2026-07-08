@@ -65,8 +65,9 @@ INPUT: raw user message
 
 OUTPUT SCHEMA:
 {{
-  "mode": "tutor" | "builder",
+  "mode": "tutor" | "builder" | "chat",
   "scope_estimate": "trivial" | "small_app" | "multi_service",
+  "complexity": "fast" | "smart",
   "ambiguity_flags": ["list any missing critical info, e.g. 'no mention of auth requirement'"],
   "entity_detection": {{
     "requires_visuals": true,
@@ -76,6 +77,8 @@ OUTPUT SCHEMA:
 }}
 
 RULES:
+- Set `complexity` to "fast" for basic definitions, simple chat, casual questions, and trivial requests (these get sub-second responses).
+- Set `complexity` to "smart" for deep coding requests, complex tutoring, architectural planning, and anything requiring high-tier reasoning.
 - Default to Builder mode if the user names a deliverable (system, app, site, dashboard, tool).
 - Only add an ambiguity_flag if it would change the architecture (e.g., multi-tenant vs. single-tenant).
 - Do not ask the user a clarifying question yourself. Pass flags downstream.
