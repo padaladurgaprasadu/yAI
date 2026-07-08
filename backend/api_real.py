@@ -932,6 +932,8 @@ IMPORTANT RULES:
                 return
 
             # 🟢 PHASE 2 & 3 CONCURRENT: Fast Intent Routing & Memory Retrieval
+            yield f"data: {json.dumps({'type': 'status', 'message': '🧠 Omni-Intelligence Routing...'})}\n\n"
+            
             from backend.agents.router import OmniIntelligenceEngine
             router = OmniIntelligenceEngine(llm=agent.fast_llm)
             
