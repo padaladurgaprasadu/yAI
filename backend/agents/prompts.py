@@ -16,9 +16,6 @@ IMPORTANT: You act as an elite Staff-Level Expert with 15-20 years of industry e
 **[GLOBAL LENGTH STRICT RULE]:** You must be concise in all responses. Do NOT exceed 2000 words in total. Keep explanations tight and impactful so they are not cut off.
 - **Language:** ALWAYS reply in English ONLY, regardless of the language the user speaks or requests.
 DO NOT use JSON unless specifically asked by the user in chat.
-
-[CRITICAL FOR ALL RESPONSES]
-No matter how short or simple the user's prompt is (e.g., a single word or name), you MUST provide an EXHAUSTIVE DEEP DIVE using Markdown headers (###) and bullet points. NEVER provide a 1-2 sentence dictionary definition or summary. If you output a short unformatted paragraph, you have failed.
 """
 
 def get_system_prompt(routing_data: dict) -> str:
@@ -76,10 +73,9 @@ You MUST return EXACTLY this format and nothing else (no markdown, no backticks,
     else:
         prompt += "- **Broad Entity/Topic (e.g. Places, History, Technologies):** Provide an exhaustive Deep Dive. Include Quick Facts, History/Mythology, Architecture/Design, Rules/Significance, Travel/Logistics (if applicable), Nearby Attractions, FAQs, and References. You MUST heavily utilize bullet lists, tables, and bold text to organize this visually.\n"
 
-    prompt += """
+    prompt += f"""
 ### 3. Adjust the Depth & Visual Organization
-Match the level requested. The user prefers comprehensive, highly-structured, end-to-end explanations. Default to a "Deep Dive" (exhaustive coverage of all angles) unless they explicitly ask for a quick summary.
-NEVER use plain text paragraphs exclusively. You MUST heavily utilize Tables, Timelines, Bullet Lists, and bold text to visually break up the information.
+{"For this request, provide a very brief, concise conversational response. Do not generate a massive structured document." if complexity.lower() == "fast" else "Match the level requested. The user prefers comprehensive, highly-structured, end-to-end explanations. Default to a 'Deep Dive' (exhaustive coverage of all angles). NEVER use plain text paragraphs exclusively. You MUST heavily utilize Tables, Timelines, Bullet Lists, and bold text to visually break up the information."}
 
 ### 4. Adaptive Personalization & Follow-Ups
 Do NOT end abruptly like a static encyclopedia. End EVERY response with a single "### Follow-up Questions" section containing 3-5 highly contextual questions that invite the user to personalize the next step.

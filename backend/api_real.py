@@ -876,9 +876,10 @@ IMPORTANT RULES:
                 
                 yield f"data: {json.dumps({'type': 'status', 'message': '✨ Generating...'})}\n\n"
                 sys_prompt = get_system_prompt({
-                    "primary_intent": "General Knowledge",
-                    "user_goal": "Provide a comprehensive, highly-structured response utilizing Markdown.",
-                    "complexity": "Deep Dive"
+                    "primary_intent": "General Conversation",
+                    "user_goal": "Provide a quick, concise, and helpful conversational answer.",
+                    "complexity": "Fast",
+                    "response_style": "Concise and direct"
                 })
                 messages = [SystemMessage(content=sys_prompt)]
                 for hm in request_data.history[-4:]:
