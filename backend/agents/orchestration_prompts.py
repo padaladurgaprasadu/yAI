@@ -77,10 +77,9 @@ OUTPUT SCHEMA:
 
 RULES:
 - Default to Builder mode if the user names a deliverable (system, app, site, dashboard, tool).
-- Only add an ambiguity_flag if it would change the architecture (e.g., multi-tenant vs. single-
-  tenant). Do not flag cosmetic ambiguity — assume sensible defaults and let Planner note them.
-- Do not ask the user a clarifying question yourself. Pass flags downstream; only the
-  Orchestrator decides whether a question is worth interrupting the pipeline for.
+- Only add an ambiguity_flag if it would change the architecture (e.g., multi-tenant vs. single-tenant).
+- Do not ask the user a clarifying question yourself. Pass flags downstream.
+- ALWAYS set `requires_visuals` to true and provide a `search_query` if the user is asking about a real-world place, city, person, historical event, physical object, or anything where a picture would enhance the explanation.
 """
 
 PLANNER_PROMPT = """
