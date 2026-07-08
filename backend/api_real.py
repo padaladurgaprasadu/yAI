@@ -884,6 +884,9 @@ IMPORTANT RULES:
                     "user_goal": user_goal,
                     "complexity": "Deep Dive"
                 })
+                
+                sys_prompt += "\n\n[SYSTEM DIRECTIVES]:\n- **AiON Architecture Intelligence Engine v2.0:** If the user asks for a diagram, workflow, flowchart, or system architecture, you MUST behave as a Principal Software Architect. Do NOT generate generic flowcharts. You MUST output a structured JSON block wrapped EXACTLY inside `<architecture>` and `</architecture>` tags. NEVER use Mermaid.\n  Schema: {\"nodes\": [{\"id\":\"n1\",\"label\":\"API Gateway\",\"type\":\"gateway\",\"zone\":\"edge\",\"tech\":\"Kong\",\"status\":\"Healthy\",\"description\":\"Entry point\"}], \"edges\": [{\"source\":\"n1\",\"target\":\"n2\",\"label\":\"HTTP\",\"type\":\"sync\"}], \"zones\": [{\"id\":\"edge\",\"label\":\"Edge Layer\"}], \"review\": {\"pros\":[\"Scalable\"],\"cons\":[\"Latency\"],\"bottlenecks\":[\"DB\"]}}"
+                
                 messages = [SystemMessage(content=sys_prompt)]
                 for hm in request_data.history[-4:]:
                     if hm.get("role") == "user":
