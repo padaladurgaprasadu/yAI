@@ -834,17 +834,10 @@ IMPORTANT RULES:
             
             # 🟢 ZERO-SHOT BYPASS FOR SUPER-FAST CHAT (No Router/Memory lag)
             # 🟢 ZERO-SHOT BYPASS FOR SUPER-FAST CHAT (No Router/Memory lag)
-            words = sanitized_message.split()
-            conversational_fillers = ["hi", "hello", "hey", "how are you", "who are you", "what is your name", "thanks", "thank you", "good morning", "good evening"]
-            
-            is_simple_chat = False
-            if sanitized_message.lower().strip() in conversational_fillers:
-                is_simple_chat = True
-            elif len(words) < 25 and len(request_data.history) < 4:
-                # If short query, check if it's a coding/project request
-                coding_keywords = ["build", "code", "create", "project", "app", "website", "component", "generate", "write", "debug", "fix"]
-                if not any(kw in sanitized_message.lower() for kw in coding_keywords):
-                    is_simple_chat = True
+            # 🟢 ZERO-SHOT BYPASS FOR SUPER-FAST CHAT (No Router/Memory lag)
+            # User requested INSTANT LIVE STREAMING for EVERY question.
+            # We will bypass the OmniIntelligenceEngine entirely for ALL chat queries!
+            is_simple_chat = True
 
             if is_simple_chat:
                 visual_queue = asyncio.Queue()
@@ -881,10 +874,15 @@ IMPORTANT RULES:
                 router_task = asyncio.create_task(background_router())
                 
                 yield f"data: {json.dumps({'type': 'status', 'message': '✨ Generating...'})}\n\n"
+                
+                user_goal = "Provide a comprehensive, highly-structured response utilizing Markdown."
+                if len(sanitized_message.split()) < 20:
+                    user_goal = "Provide a clear, concise, and direct response."
+                    
                 sys_prompt = get_system_prompt({
                     "primary_intent": "General Knowledge",
-                    "user_goal": "Provide a clear, brief, and extremely concise response.",
-                    "complexity": "Basic"
+                    "user_goal": user_goal,
+                    "complexity": "Deep Dive"
                 })
                 messages = [SystemMessage(content=sys_prompt)]
                 for hm in request_data.history[-4:]:
