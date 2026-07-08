@@ -1160,7 +1160,8 @@ IMPORTANT RULES:
                         text_chunk = text_task.result()
                     except Exception as llm_err:
                         api_logger.error(f"LLM Stream Error: {llm_err}")
-                        yield f"data: {json.dumps({'type': 'chat', 'token': f'\\n\\n⚠️ **AI Connection Error:** `{str(llm_err)}`\\n'})}\n\n"
+                        err_str = f"\n\n⚠️ **AI Connection Error:** `{str(llm_err)}`\n"
+                        yield f"data: {json.dumps({'type': 'chat', 'token': err_str})}\n\n"
                         break
                         
                     if text_chunk is None:
