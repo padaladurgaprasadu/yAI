@@ -883,8 +883,8 @@ IMPORTANT RULES:
                 yield f"data: {json.dumps({'type': 'status', 'message': '✨ Generating...'})}\n\n"
                 sys_prompt = get_system_prompt({
                     "primary_intent": "General Knowledge",
-                    "user_goal": "Provide a comprehensive, highly-structured response utilizing Markdown.",
-                    "complexity": "Deep Dive"
+                    "user_goal": "Provide a clear, brief, and extremely concise response.",
+                    "complexity": "Basic"
                 })
                 messages = [SystemMessage(content=sys_prompt)]
                 for hm in request_data.history[-4:]:
@@ -1281,7 +1281,7 @@ async def download_project(project_id: str):
         filename=f"aion_generated_project_{project_id}.zip"
     )
 
-@app.post("/api/execute")
+@app.post("/api/run-code")
 async def execute_code(request: Request):
     import subprocess
     import base64
