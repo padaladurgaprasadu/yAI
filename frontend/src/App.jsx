@@ -1247,6 +1247,9 @@ function App() {
                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--accent)', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#fff', fontWeight: 'bold' }}>A</div>
                    <div style={{ padding: '6px 0', display: 'flex', alignItems: 'center', gap: '12px' }}>
                      <div className="spinner" style={{ width: '18px', height: '18px' }}></div>
+                     {chatStatus && (
+                         <span style={{ fontSize: '0.9rem', color: '#9ca3af', fontStyle: 'italic', animation: 'pulse 2s infinite' }}>{chatStatus}</span>
+                     )}
                    </div>
                 </div>
               )}

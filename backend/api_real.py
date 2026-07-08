@@ -1116,6 +1116,7 @@ IMPORTANT RULES:
                     pass
 
             # 🟢 PHASE 4: Direct Streaming (With Real-Time Compliance Middleware)
+            yield f"data: {json.dumps({'type': 'status', 'message': '⚡ Generating Advanced Response...'})}\n\n"
             from backend.utils.compliance import StreamingComplianceEngine
             compliance_engine = StreamingComplianceEngine(active_llm.astream(messages))
             
