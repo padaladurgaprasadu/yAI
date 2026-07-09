@@ -14,7 +14,8 @@ load_dotenv()
 # Load environment variables from the .env file
 load_dotenv()
 
-from backend.agents.orchestration_prompts import GLOBAL_RULES as GLOBAL_AGENT_RULES
+from backend.agents.orchestration_prompts import GLOBAL_RULES, PRECEDENCE_RULE
+GLOBAL_AGENT_RULES = f"{GLOBAL_RULES}\n\n{PRECEDENCE_RULE}"
 
 class BaseAgent:
     """
