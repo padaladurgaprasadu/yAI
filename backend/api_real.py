@@ -832,117 +832,6 @@ IMPORTANT RULES:
             yield f"data: {json.dumps({'type': 'status', 'message': '✨ Analyzing Intent...'})}\n\n"
             api_logger.info(f"TTFT_heartbeat: {(time.time() - start_time) * 1000:.2f}ms")
             
-            # 🟢 ZERO-SHOT BYPASS FOR SUPER-FAST CHAT (No Router/Memory lag)
-            # 🟢 ZERO-SHOT BYPASS FOR SUPER-FAST CHAT (No Router/Memory lag)
-            # 🟢 ZERO-SHOT BYPASS FOR SUPER-FAST CHAT (No Router/Memory lag)
-            # User requested INSTANT LIVE STREAMING for EVERY question.
-            # We will bypass the OmniIntelligenceEngine entirely for ALL chat queries!
-            is_simple_chat = True
-
-            if is_simple_chat:
-                visual_queue = asyncio.Queue()
-                
-                async def background_router():
-                    try:
-                        from backend.agents.router import OmniIntelligenceEngine
-                        from backend.agents.base import BaseAgent
-                        from backend.utils.visuals import get_real_world_image
-                        
-                        router = OmniIntelligenceEngine(llm=BaseAgent().fast_llm)
-                        intent_data = await router.adetect_intent(sanitized_message, request_data.history)
-                        
-                        entity_det = intent_data.get("entity_detection", {})
-                        if entity_det.get("requires_visuals"):
-                            visual_query = entity_det.get("search_query") or sanitized_message
-                            v_count = 1
-                            
-                            res = await asyncio.to_thread(get_real_world_image, visual_query, v_count)
-                            img_urls = res if isinstance(res, list) else ([res] if res else [])
-                            
-                            for img_url in img_urls:
-                                await visual_queue.put({
-                                    "type": "visual",
-                                    "media_type": "image",
-                                    "url": img_url,
-                                    "alt": visual_query
-                                })
-                    except Exception as e:
-                        api_logger.warning(f"Background router error: {e}")
-                    finally:
-                        await visual_queue.put(None)
-
-                router_task = asyncio.create_task(background_router())
-                
-                yield f"data: {json.dumps({'type': 'status', 'message': '✨ Generating...'})}\n\n"
-                
-                user_goal = "Provide a comprehensive, highly-structured response utilizing Markdown."
-                if len(sanitized_message.split()) < 20:
-                    user_goal = "Provide a clear, concise, and direct response."
-                    
-                sys_prompt = get_system_prompt({
-                    "primary_intent": "General Knowledge",
-                    "user_goal": user_goal,
-                    "complexity": "Deep Dive"
-                })
-                sys_prompt += "\n\n[SYSTEM DIRECTIVES]:\n- **AiON Architecture Intelligence Engine v2.0:** If the user asks for a diagram, workflow, flowchart, or system architecture, you MUST behave as a Principal Software Architect. Do NOT generate generic flowcharts. You MUST output a structured JSON block wrapped EXACTLY inside `<architecture>` and `</architecture>` tags. NEVER use Mermaid.\n  You MUST include a deep architectural review.\n  Schema:\n  {\n    \"nodes\": [{\"id\":\"n1\",\"label\":\"API Gateway\",\"type\":\"gateway\",\"zone\":\"edge\",\"tech\":\"Kong\",\"status\":\"Healthy\",\"description\":\"Entry point for all external traffic\"}],\n    \"edges\": [{\"source\":\"n1\",\"target\":\"n2\",\"label\":\"HTTP\",\"type\":\"sync\"}],\n    \"zones\": [{\"id\":\"edge\",\"label\":\"Edge Layer\"}],\n    \"review\": {\n      \"score\": 95,\n      \"pros\": [\"High availability\", \"Scalable\"],\n      \"cons\": [\"Increased latency\", \"Complex deployment\"],\n      \"bottlenecks\": [\"Database connection limits\"],\n      \"recommendations\": [\"Implement Redis caching\"]\n    }\n  }"
-                
-                messages = [SystemMessage(content=sys_prompt)]
-                for hm in request_data.history[-4:]:
-                    if hm.get("role") == "user":
-                        messages.append(HumanMessage(content=hm.get("content", "")))
-                    else:
-                        messages.append(AIMessage(content=hm.get("content", "")))
-                messages.append(HumanMessage(content=sanitized_message))
-                
-                # Zero-shot smart routing based on keywords
-                smart_keywords = ["build", "code", "create", "project", "app", "website", "component", "generate", "write", "debug", "fix", "architecture", "diagram", "draw", "system"]
-                is_complex = any(kw in sanitized_message.lower() for kw in smart_keywords)
-                llm_to_use = agent.smart_llm if is_complex else agent.fast_llm
-                
-                try:
-                    async def fetch_fast():
-                        async for text_chunk in llm_to_use.astream(messages):
-                            token = text_chunk.content if hasattr(text_chunk, 'content') else str(text_chunk)
-                            yield f"data: {json.dumps({'type': 'chat', 'token': token})}\n\n"
-                            
-                    text_gen = fetch_fast()
-                    
-                    async def get_next_token():
-                        try: return await anext(text_gen)
-                        except StopAsyncIteration: return "EOF"
-                        
-                    text_task = asyncio.create_task(get_next_token())
-                    queue_task = asyncio.create_task(visual_queue.get())
-                    
-                    while True:
-                        tasks = []
-                        if text_task: tasks.append(text_task)
-                        if queue_task: tasks.append(queue_task)
-                        
-                        if not tasks: break
-                        
-                        done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
-                        
-                        if text_task in done:
-                            token = text_task.result()
-                            if token == "EOF":
-                                text_task = None
-                            else:
-                                yield token
-                                text_task = asyncio.create_task(get_next_token())
-                                
-                        if queue_task in done:
-                            visual_item = queue_task.result()
-                            if visual_item:
-                                yield f"data: {json.dumps(visual_item)}\n\n"
-                                queue_task = asyncio.create_task(visual_queue.get())
-                            else:
-                                queue_task = None
-                                
-                except Exception as e:
-                    api_logger.error(f"Fast Lane Error: {e}")
-                    yield f"data: {json.dumps({'type': 'chat', 'token': f'⚠️ Fast Lane Error: {str(e)}'})}\n\n"
-                return
 
             # 🟢 PHASE 2 & 3 CONCURRENT: Fast Intent Routing & Memory Retrieval
             yield f"data: {json.dumps({'type': 'status', 'message': '🧠 Omni-Intelligence Routing...'})}\n\n"
@@ -1097,10 +986,10 @@ IMPORTANT RULES:
             # 🟢 MULTI-SPEED LATENCY TIERING 🟢
             # - Normal text / small questions: 0.2-0.5s (fast_llm)
             # - Reasoning / Coding: 1-5s (smart_llm)
-            is_speed_mode = "task_complexity" not in intent_data
-            complexity = str(intent_data.get("task_complexity", "")).lower()
+            is_speed_mode = "complexity" not in intent_data
+            complexity = str(intent_data.get("complexity", "")).lower()
             
-            if is_speed_mode or complexity in ["trivial", "low"]:
+            if is_speed_mode or complexity in ["trivial", "low", "fast"]:
                 active_llm = base_agent.fast_llm
                 api_logger.info("Using Tier 1 (Fast LLM) for sub-second latency.")
             else:

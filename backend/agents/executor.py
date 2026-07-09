@@ -175,6 +175,7 @@ class ExecutorAgent(BaseAgent):
             content = "".join(c.get("text", "") if isinstance(c, dict) else str(c) for c in content)
         
         # Parse JSON
+        # Parse JSON
         import re
         match = re.search(r'\{.*\}', content, re.DOTALL)
         if match:
@@ -183,29 +184,26 @@ class ExecutorAgent(BaseAgent):
             try:
                 data = json.loads(content)
             except:
-                data = {"commands": []}
+                data = {"status": "failed", "verification": "Failed to parse executor output", "logs_excerpt": content}
                 
-        commands = []
-        for cmd_obj in data.get("commands", []):
-            cmd = cmd_obj.get("cmd", "")
-            cwd = cmd_obj.get("cwd", ".")
-            if cwd and cwd != ".":
-                # Ensure we handle nested directories properly
-                if not cmd.startswith("cd "):
-                    commands.append(f"cd {cwd} && {cmd}")
-                else:
-                    commands.append(cmd)
-            else:
-                commands.append(cmd)
+        status = data.get("status", "failed")
+        preview_url = data.get("preview_url")
+        verification = data.get("verification", "")
+        logs_excerpt = data.get("logs_excerpt", "")
 
         execution_logs = []
-        
-        if not commands:
-            print("   -> [Executor] No commands identified.")
-            state["execution_logs"] = ["No initialization commands needed."]
-            return state
+        if status == "running":
+            execution_logs.append(f"> [Executor Verification] {verification}")
+            if preview_url:
+                execution_logs.append(f"> [Executor] Preview URL available: {preview_url}")
+        else:
+            execution_logs.append(f"> [Executor Verification Failed] {verification}")
+            execution_logs.append(f"> Logs: {logs_excerpt}")
             
-        print(f"   -> [Executor] Found {len(commands)} commands to run.")
+        print(f"   -> [Executor] Status: {status}")
+        
+        # Legacy support: if the LLM still returns commands due to fallback, we execute them
+        commands = data.get("commands", [])
         
         # Determine the target directory for execution
         project_id = state.get("project_id", "default")
