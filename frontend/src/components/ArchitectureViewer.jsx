@@ -208,6 +208,20 @@ export default function ArchitectureViewer({ architectureJson, onNodeSelect }) {
   
   const rfInstanceRef = useRef(null);
 
+  const handleNodeChange = (field, value) => {
+    if (!selectedNodeData || !selectedNodeData.id) return;
+    const updatedData = { ...selectedNodeData, [field]: value };
+    setSelectedNodeData(updatedData);
+    setNodes(nds => nds.map(n => {
+      if (n.id === selectedNodeData.id) {
+        return { ...n, data: updatedData };
+      }
+      return n;
+    }));
+    if (onNodeSelect) onNodeSelect(updatedData);
+  };
+
+
   useEffect(() => {
     if (rfInstanceRef.current && nodes.length > 0) {
       // Robustly fit view across multiple render frames to ensure DOM layout is complete
@@ -292,7 +306,7 @@ export default function ArchitectureViewer({ architectureJson, onNodeSelect }) {
       const rfNodes = data.nodes.map(n => ({
         id: n.id,
         type: 'custom',
-        data: { label: n.label, type: n.type, zone: n.zone, tech: n.tech, status: n.status, description: n.description },
+        data: { id: n.id, label: n.label, type: n.type, zone: n.zone, tech: n.tech, status: n.status, description: n.description },
         position: { x: 0, y: 0 }
       }));
 
@@ -407,21 +421,65 @@ export default function ArchitectureViewer({ architectureJson, onNodeSelect }) {
             </button>
           </div>
           
-          <div style={{ background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-            <div style={{ color: '#a1a1aa', fontSize: '12px', textTransform: 'uppercase', marginBottom: '4px', fontWeight: 600 }}>Name</div>
-            <div style={{ color: 'white', fontSize: '16px', fontWeight: 700 }}>{selectedNodeData.label}</div>
-          </div>
+          {isUnlocked ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ color: '#a1a1aa', fontSize: '12px', textTransform: 'uppercase', marginBottom: '8px', fontWeight: 600 }}>Name</div>
+                <input 
+                  value={selectedNodeData.label || ''} 
+                  onChange={(e) => handleNodeChange('label', e.target.value)}
+                  style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', padding: '8px', borderRadius: '6px', fontSize: '14px', boxSizing: 'border-box' }}
+                />
+              </div>
+              
+              <div style={{ background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ color: '#a1a1aa', fontSize: '12px', textTransform: 'uppercase', marginBottom: '8px', fontWeight: 600 }}>Type</div>
+                <select 
+                  value={selectedNodeData.type || 'microservice'} 
+                  onChange={(e) => handleNodeChange('type', e.target.value)}
+                  style={{ width: '100%', background: 'rgba(24,24,27,1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', padding: '8px', borderRadius: '6px', fontSize: '14px', boxSizing: 'border-box' }}
+                >
+                  <option value="microservice">Microservice</option>
+                  <option value="database">Database</option>
+                  <option value="gateway">Gateway</option>
+                  <option value="cache">Cache</option>
+                  <option value="queue">Queue</option>
+                  <option value="ai">AI Node</option>
+                  <option value="external">External</option>
+                  <option value="user">User</option>
+                  <option value="security">Security</option>
+                  <option value="monitoring">Monitoring</option>
+                </select>
+              </div>
 
-          <div style={{ background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-            <div style={{ color: '#a1a1aa', fontSize: '12px', textTransform: 'uppercase', marginBottom: '4px', fontWeight: 600 }}>Type & Tech</div>
-            <div style={{ color: '#3b82f6', fontSize: '14px', fontWeight: 600 }}>{selectedNodeData.type}</div>
-            <div style={{ color: 'white', fontSize: '14px', marginTop: '4px' }}>{selectedNodeData.tech}</div>
-          </div>
-
-          <div style={{ background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', flexGrow: 1 }}>
-            <div style={{ color: '#a1a1aa', fontSize: '12px', textTransform: 'uppercase', marginBottom: '8px', fontWeight: 600 }}>Description</div>
-            <div style={{ color: '#e4e4e7', fontSize: '14px', lineHeight: 1.6 }}>{selectedNodeData.description || 'No description provided for this component.'}</div>
-          </div>
+              <div style={{ background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ color: '#a1a1aa', fontSize: '12px', textTransform: 'uppercase', marginBottom: '8px', fontWeight: 600 }}>Tech Stack</div>
+                <input 
+                  value={selectedNodeData.tech || ''} 
+                  onChange={(e) => handleNodeChange('tech', e.target.value)}
+                  style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', padding: '8px', borderRadius: '6px', fontSize: '14px', boxSizing: 'border-box' }}
+                />
+              </div>
+            </div>
+          ) : (
+            <>
+              <div style={{ background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ color: '#a1a1aa', fontSize: '12px', textTransform: 'uppercase', marginBottom: '4px', fontWeight: 600 }}>Name</div>
+                <div style={{ color: 'white', fontSize: '16px', fontWeight: 700 }}>{selectedNodeData.label}</div>
+              </div>
+    
+              <div style={{ background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ color: '#a1a1aa', fontSize: '12px', textTransform: 'uppercase', marginBottom: '4px', fontWeight: 600 }}>Type & Tech</div>
+                <div style={{ color: '#3b82f6', fontSize: '14px', fontWeight: 600 }}>{selectedNodeData.type}</div>
+                <div style={{ color: 'white', fontSize: '14px', marginTop: '4px' }}>{selectedNodeData.tech}</div>
+              </div>
+    
+              <div style={{ background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', flexGrow: 1 }}>
+                <div style={{ color: '#a1a1aa', fontSize: '12px', textTransform: 'uppercase', marginBottom: '8px', fontWeight: 600 }}>Description</div>
+                <div style={{ color: '#e4e4e7', fontSize: '14px', lineHeight: 1.6 }}>{selectedNodeData.description || 'No description provided for this component.'}</div>
+              </div>
+            </>
+          )}
         </div>
       )}
 
@@ -435,6 +493,8 @@ export default function ArchitectureViewer({ architectureJson, onNodeSelect }) {
             <button onClick={() => { setActiveView('data'); setIsSimulating(false); }} style={{ padding: '6px 12px', borderRadius: '8px', background: activeView === 'data' ? '#f59e0b' : 'transparent', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '12px' }}>Data View</button>
             <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)', margin: '0 4px' }} />
             <button onClick={() => setIsSimulating(!isSimulating)} style={{ padding: '6px 12px', borderRadius: '8px', background: isSimulating ? '#ec4899' : 'transparent', color: 'white', border: '1px solid rgba(255,255,255,0.2)', cursor: 'pointer', fontWeight: 600, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}><Zap size={14} /> {isSimulating ? 'Stop Simulation' : 'Live Traffic'}</button>
+            <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)', margin: '0 4px' }} />
+            <button onClick={() => setIsUnlocked(!isUnlocked)} style={{ padding: '6px 12px', borderRadius: '8px', background: isUnlocked ? '#ef4444' : 'transparent', color: 'white', border: '1px solid rgba(255,255,255,0.2)', cursor: 'pointer', fontWeight: 600, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>{isUnlocked ? 'Lock Canvas' : 'Unlock Canvas'}</button>
             <button onClick={handleExportTerraform} style={{ padding: '6px 12px', borderRadius: '8px', background: '#10b981', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}><DownloadCloud size={14} /> Export IaC</button>
         </div>
 
