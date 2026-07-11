@@ -958,7 +958,7 @@ IMPORTANT RULES:
                 async def fetch_visuals():
                     from backend.utils.visuals import get_generative_image, get_real_world_image, get_pencil_sketch_image
                     try:
-                        v_type = "real"
+                        v_type = "generative"
                         v_count = 1
                         img_urls = []
                         if v_type == "sketch":

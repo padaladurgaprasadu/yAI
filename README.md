@@ -205,6 +205,85 @@ This is the **full, unfiltered** walkthrough of what happens when a user interac
 
 ---
 
+# Template Intelligence Layer (Core Innovation)
+
+Unlike traditional AI coding assistants, **yAI does not generate every line of code from scratch.** Instead, it uses a **Template Intelligence Layer** that discovers, understands, and adapts high-quality open-source templates and UI components from trusted sources before generating any new code.
+
+This approach reduces development time, improves code quality, and produces more consistent, production-ready applications.
+
+## How it Works
+
+```text
+User Request
+      │
+      ▼
+Requirement Analysis
+      │
+      ▼
+Template Intelligence Layer
+      │
+      ├── Search Trusted UI Sources
+      │
+      ├── Find Best Matching Templates
+      │
+      ├── Analyze Architecture
+      │
+      ├── Extract Required Components
+      │
+      ├── Modify Business Logic
+      │
+      ├── Generate Missing Code
+      │
+      └── Build & Preview
+```
+
+## Trusted Template Sources
+
+The Template Intelligence Layer maintains a catalogue of trusted UI and component libraries, including:
+
+* **ReactBits** – Animations, interactive components, hero sections, loading effects.
+* **shadcn/ui** – Production-ready application UI components.
+* **Aceternity UI** – Interactive layouts and premium visual sections.
+* **Magic UI** – Modern AI interfaces and animated components.
+* **yAI Component Library** – Proprietary reusable components, templates, and design systems developed by yAI.
+
+Future sources can be added as the platform evolves.
+
+## Intelligent Retrieval Instead of Full Generation
+
+For example, if a user requests:
+
+> Build an AI SaaS Dashboard
+
+yAI will:
+
+1. Analyze the project requirements.
+2. Search trusted template sources for suitable dashboards, authentication flows, navigation systems, charts, and UI components.
+3. Retrieve the most appropriate building blocks.
+4. Adapt them to match the requested product.
+5. Generate only the project-specific logic, APIs, database schema, and integrations.
+6. Validate, build, and launch a live preview.
+
+This means yAI **does not reinvent common UI patterns**. It intelligently reuses proven implementations and focuses AI generation on the parts that are unique to the user's application.
+
+## Benefits
+
+* Faster project generation.
+* Higher-quality UI using proven component libraries.
+* Reduced AI hallucinations.
+* Consistent design systems.
+* Less generated code and lower inference costs.
+* Easier maintenance through standardized components.
+* More reliable production-ready applications.
+
+## Guiding Principle
+
+> **Generate only what is unique. Reuse what is already excellent.**
+
+The goal of yAI is **not to regenerate an entire website or application from scratch**. Instead, it intelligently retrieves the most suitable templates and components from trusted sources, adapts them to the user's requirements, and generates only the missing functionality needed to deliver a complete, production-ready application.
+
+---
+
 ## 📊 Time Breakdown
 
 | Phase | Agent | Time | User Sees |
