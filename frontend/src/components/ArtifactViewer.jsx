@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Sandpack } from "@codesandbox/sandpack-react";
 import ReactMarkdown from 'react-markdown';
 import JSZip from 'jszip';
@@ -7,11 +7,100 @@ import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
 import { motion } from 'framer-motion';
 import { ExecutionManager } from './ExecutionManager';
+import Editor from '@monaco-editor/react';
 
-const ArtifactViewer = ({ codeFiles, projectId, isPreviewRunning, API_URL, executionLogs, isBackend, previewUrl, previewError }) => {
+const ArtifactViewer = ({ codeFiles, setCodeFiles, projectId, isPreviewRunning, API_URL, executionLogs, isBackend, previewUrl, previewError }) => {
   const [activeTab, setActiveTab] = useState('preview');
   const [selectedFile, setSelectedFile] = useState(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  
+  const saveTimeoutRef = useRef(null);
+  const [saveStatus, setSaveStatus] = useState("idle"); // "idle", "saving", "saved", "error"
+  const [rebuildStatus, setRebuildStatus] = useState("idle"); // "idle", "rebuilding", "success", "error"
+
+  const getFileLanguage = (filename) => {
+    if (!filename) return 'javascript';
+    const ext = filename.split('.').pop().toLowerCase();
+    switch (ext) {
+      case 'js':
+      case 'jsx':
+        return 'javascript';
+      case 'ts':
+      case 'tsx':
+        return 'typescript';
+      case 'html':
+        return 'html';
+      case 'css':
+        return 'css';
+      case 'json':
+        return 'json';
+      case 'py':
+        return 'python';
+      case 'sh':
+        return 'shell';
+      case 'md':
+        return 'markdown';
+      default:
+        return 'javascript';
+    }
+  };
+
+  const saveFileToDisk = (path, content) => {
+    setSaveStatus("saving");
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    
+    saveTimeoutRef.current = setTimeout(async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/write-file/${projectId}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ path, content })
+        });
+        
+        if (response.ok) {
+          setSaveStatus("saved");
+          setTimeout(() => setSaveStatus("idle"), 2000);
+        } else {
+          setSaveStatus("error");
+        }
+      } catch (err) {
+        console.error("Failed to save file to disk:", err);
+        setSaveStatus("error");
+      }
+    }, 1000);
+  };
+
+  const handleEditorChange = (value) => {
+    if (!selectedFile || !setCodeFiles) return;
+    setCodeFiles(prev => ({
+      ...prev,
+      [selectedFile]: value
+    }));
+    saveFileToDisk(selectedFile, value);
+  };
+
+  const handleRebuildPreview = async () => {
+    setRebuildStatus("rebuilding");
+    try {
+      const endpoint = isBackend ? "restart-sandbox" : "start-preview";
+      const response = await fetch(`${API_URL}/api/${endpoint}/${projectId}`, {
+        method: "POST"
+      });
+      if (response.ok) {
+        setRebuildStatus("success");
+        setTimeout(() => setRebuildStatus("idle"), 2000);
+      } else {
+        setRebuildStatus("error");
+      }
+    } catch (err) {
+      console.error("Rebuild failed:", err);
+      setRebuildStatus("error");
+    }
+  };
 
   const handleDownload = () => {
     const zip = new JSZip();
@@ -458,13 +547,70 @@ export const ${baseName} = () => null;
             
             {/* Code Editor View */}
             <div style={{ flex: 1, backgroundColor: '#0d0d0d', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ padding: '12px 20px', borderBottom: '1px solid #1a1a1a', color: '#888', fontSize: '0.85rem', fontFamily: 'monospace' }}>
-                {selectedFile}
+              <div style={{ 
+                padding: '8px 20px', 
+                borderBottom: '1px solid #1a1a1a', 
+                color: '#888', 
+                fontSize: '0.85rem', 
+                fontFamily: 'monospace',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                backgroundColor: '#111'
+              }}>
+                <span style={{ fontWeight: '500' }}>{selectedFile}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                  {/* Status Indicator */}
+                  <span style={{ 
+                    fontSize: '0.75rem', 
+                    color: saveStatus === 'saving' ? '#fbbf24' : saveStatus === 'saved' ? '#34d399' : saveStatus === 'error' ? '#f87171' : '#666' 
+                  }}>
+                    {saveStatus === 'saving' ? '● Saving to disk...' : saveStatus === 'saved' ? '✔ Saved' : saveStatus === 'error' ? '✖ Save failed' : ''}
+                  </span>
+                  
+                  {/* Rebuild Trigger */}
+                  <button
+                    onClick={handleRebuildPreview}
+                    disabled={rebuildStatus === 'rebuilding'}
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: '4px',
+                      border: '1px solid #333',
+                      backgroundColor: rebuildStatus === 'rebuilding' ? '#222' : '#1e3a8a',
+                      color: rebuildStatus === 'rebuilding' ? '#888' : '#60a5fa',
+                      cursor: rebuildStatus === 'rebuilding' ? 'not-allowed' : 'pointer',
+                      fontSize: '0.75rem',
+                      fontWeight: '500',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    {rebuildStatus === 'rebuilding' ? 'Rebuilding...' : isBackend ? '🔄 Restart Server' : '🚀 Rebuild Preview'}
+                  </button>
+                </div>
               </div>
-              <div style={{ flex: 1, overflow: 'auto', padding: '20px' }}>
-                <pre style={{ margin: 0, color: '#a6accd', fontFamily: 'monospace', fontSize: '0.9rem', lineHeight: '1.6' }}>
-                  {codeFiles && selectedFile ? codeFiles[selectedFile] : ''}
-                </pre>
+              <div style={{ flex: 1, overflow: 'hidden' }}>
+                {selectedFile && codeFiles ? (
+                  <Editor
+                    height="100%"
+                    theme="vs-dark"
+                    language={getFileLanguage(selectedFile)}
+                    value={codeFiles[selectedFile] || ''}
+                    onChange={handleEditorChange}
+                    options={{
+                      fontSize: 14,
+                      minimap: { enabled: true },
+                      automaticLayout: true,
+                      tabSize: 2,
+                      scrollBeyondLastLine: false,
+                      lineNumbers: 'on',
+                      wordWrap: 'on'
+                    }}
+                  />
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#666', fontSize: '0.9rem' }}>
+                    Select a file from the explorer to view/edit code.
+                  </div>
+                )}
               </div>
             </div>
           </div>

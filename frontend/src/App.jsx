@@ -1494,6 +1494,7 @@ function App() {
                 <div style={{ height: 'calc(100dvh - 60px)', animation: 'fadeIn 0.5s ease-out' }}>
                   <ArtifactViewer 
                     codeFiles={codeFiles} 
+                    setCodeFiles={setCodeFiles}
                     onClose={() => setStep(0)} 
                     previewUrl={previewUrl}
                     previewError={previewError}

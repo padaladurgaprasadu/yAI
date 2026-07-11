@@ -34,11 +34,8 @@ class VisualCritiqueAgent(BaseAgent):
             content = response.content
             
             # Extract JSON
-            match = re.search(r'\{.*\}', content, re.DOTALL)
-            if match:
-                critique = json.loads(match.group(0))
-            else:
-                critique = json.loads(content)
+            from backend.utils.json_parser import parse_json_robustly
+            critique = parse_json_robustly(content)
                 
             return {
                 "visual_critique_feedback": critique.get("revision_targets", []),

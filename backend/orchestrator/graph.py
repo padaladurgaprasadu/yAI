@@ -36,6 +36,17 @@ def should_continue_visual(state: AiONState):
     print(f"   -> [Graph] Visual critique failed (Attempt {rev_count}/2). Routing back to Coder.")
     return "coder"
 
+def should_continue_execution(state: AiONState):
+    runtime_error = state.get("runtime_error")
+    retries = state.get("execution_retries", 0)
+    if not runtime_error:
+        return "memory"
+    if retries >= 3:
+        print("   -> [Graph] Max execution retries reached. Proceeding to memory.")
+        return "memory"
+    print(f"   -> [Graph] Execution failed with error: {runtime_error}. Routing back to Coder (Attempt {retries}/3).")
+    return "coder"
+
 def build_orchestrator_graph():
     """
     Builds the unified 12-agent Orchestrator Pipeline as defined in the user prompt set.
@@ -76,7 +87,7 @@ def build_orchestrator_graph():
     workflow.add_conditional_edges("visual_critique", should_continue_visual, {"coder": "coder", "devops": "devops"})
     
     workflow.add_edge("devops", "executor")
-    workflow.add_edge("executor", "memory")
+    workflow.add_conditional_edges("executor", should_continue_execution, {"coder": "coder", "memory": "memory"})
     workflow.add_edge("memory", END)
     
     # Compile with memory saver (for human-in-the-loop persistence if needed)

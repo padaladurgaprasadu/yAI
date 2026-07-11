@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@codesandbox/sandpack-react": "^2.20.0",
+    "@monaco-editor/react": "^4.7.0",
     "@supabase/supabase-js": "^2.108.2",
     "dagre": "^0.8.5",
     "file-saver": "^2.0.5",

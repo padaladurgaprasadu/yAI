@@ -723,6 +723,82 @@ async def serve_live_preview(project_id: str, file_path: str):
         
     return FileResponse(full_path)
 
+@app.post("/api/write-file/{project_id}")
+async def write_file_endpoint(project_id: str, request: Request):
+    """
+    Saves/writes edits made back to the host disk.
+    Supports writing files in both local compiled folders and sandbox workspaces.
+    """
+    data = await request.json()
+    file_path = data.get("path")
+    content = data.get("content")
+    
+    if not file_path or content is None:
+        raise HTTPException(status_code=400, detail="path and content are required")
+        
+    # Check possible project workspace locations
+    # 1. generated_projects (frontend / standard path)
+    project_path = os.path.join(os.getcwd(), "generated_projects", project_id)
+    if not os.path.exists(project_path):
+        # 2. workspace/projects (sandbox path)
+        project_path = os.path.join(os.getcwd(), "workspace", "projects", project_id)
+        if not os.path.exists(project_path):
+            # If neither exist, create it in generated_projects
+            project_path = os.path.join(os.getcwd(), "generated_projects", project_id)
+            os.makedirs(project_path, exist_ok=True)
+            
+    full_path = os.path.abspath(os.path.join(project_path, file_path))
+    
+    # Path Traversal Check
+    if not full_path.startswith(os.path.abspath(project_path)):
+        raise HTTPException(status_code=403, detail="Access denied: Path traversal detected")
+        
+    try:
+        os.makedirs(os.path.dirname(full_path), exist_ok=True)
+        with open(full_path, "w", encoding="utf-8") as f:
+            f.write(content)
+        return {"status": "saved", "path": file_path}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to write file: {str(e)}")
+
+@app.post("/api/restart-sandbox/{project_id}")
+async def restart_sandbox(project_id: str):
+    """
+    Restarts a running backend sandbox process after file modifications on disk.
+    """
+    from backend.sandbox.manager import global_sandbox_manager
+    
+    # Stop existing if running
+    global_sandbox_manager.stop_sandbox(project_id)
+    
+    # Get files from workspace to reload
+    project_path = os.path.join(os.getcwd(), "workspace", "projects", project_id)
+    if not os.path.exists(project_path):
+        raise HTTPException(status_code=404, detail="Sandbox project workspace not found")
+        
+    # Walk and collect current files
+    code_files = {}
+    for root, _, files in os.walk(project_path):
+        for file in files:
+            full_path = os.path.join(root, file)
+            rel_path = os.path.relpath(full_path, project_path)
+            rel_path = rel_path.replace("\\", "/")
+            try:
+                with open(full_path, "r", encoding="utf-8") as f:
+                    code_files[rel_path] = f.read()
+            except Exception:
+                pass
+                
+    try:
+        sandbox_info = await global_sandbox_manager.start_sandbox(project_id, code_files)
+        return {
+            "status": "restarted",
+            "url": sandbox_info.get("url"),
+            "message": "Sandbox restarted successfully!"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to restart sandbox: {str(e)}")
+
 @app.post("/api/stop-preview/{project_id}")
 async def stop_preview(project_id: str):
     """

@@ -117,8 +117,8 @@ TARGET FILE: {{target_file}}
                     "error": runtime_error,
                     "feedback": audit_feedback if audit_feedback else (feedback if feedback else state.get("goal"))
                 })
-                content = res.content.replace("```json", "").replace("```", "").strip()
-                files_to_fix = json.loads(content)
+                from backend.utils.json_parser import parse_json_robustly
+                files_to_fix = parse_json_robustly(res.content)
                 if isinstance(files_to_fix, list) and len(files_to_fix) > 0:
                     files_to_generate = [f for f in files_to_fix if f in files_to_generate]
                     if not files_to_generate: # Fallback if hallucinated

@@ -176,16 +176,11 @@ class ExecutorAgent(BaseAgent):
             content = "".join(c.get("text", "") if isinstance(c, dict) else str(c) for c in content)
         
         # Parse JSON
-        # Parse JSON
-        import re
-        match = re.search(r'\{.*\}', content, re.DOTALL)
-        if match:
-            data = json.loads(match.group(0))
-        else:
-            try:
-                data = json.loads(content)
-            except:
-                data = {"status": "failed", "verification": "Failed to parse executor output", "logs_excerpt": content}
+        from backend.utils.json_parser import parse_json_robustly
+        try:
+            data = parse_json_robustly(content)
+        except Exception:
+            data = {"status": "failed", "verification": "Failed to parse executor output", "logs_excerpt": content}
                 
         status = data.get("status", "failed")
         preview_url = data.get("preview_url")
