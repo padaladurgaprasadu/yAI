@@ -275,7 +275,7 @@ export default function ArchitectureViewer({ architectureJson, onNodeSelect }) {
   const handleExportTerraform = useCallback(() => {
     try {
       const data = typeof architectureJson === 'string' ? JSON.parse(architectureJson) : architectureJson;
-      let tfContent = `# Auto-generated Terraform Scaffolding by AiON Architecture Studio\n\n`;
+      let tfContent = `# Auto-generated Terraform Scaffolding by yAI Architecture Studio\n\n`;
       data.nodes.forEach(node => {
         const resourceName = node.label.toLowerCase().replace(/[^a-z0-9]/g, '_');
         if (node.type === 'database') {

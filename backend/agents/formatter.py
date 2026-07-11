@@ -16,7 +16,7 @@ class FormatterAgent(BaseAgent):
             self.llm = llm
 
         self.system_prompt = """
-You are the AiON Output Formatter. Your ONLY job is to take the provided draft text and reformat it into a beautiful, highly readable Markdown structure.
+You are the yAI Output Formatter. Your ONLY job is to take the provided draft text and reformat it into a beautiful, highly readable Markdown structure.
 
 FORMATTING RULES:
 1. Break up any long paragraphs.

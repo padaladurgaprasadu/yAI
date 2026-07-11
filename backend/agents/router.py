@@ -11,7 +11,7 @@ logger = get_logger(__name__)
 
 class ModelRouter:
     """
-    AiON Swarm Protocol: Liquid Routing.
+    yAI Swarm Protocol: Liquid Routing.
     Dynamically routes micro-tasks to the most optimal frontier model based on the required specialization.
     """
     
@@ -28,7 +28,7 @@ class ModelRouter:
 class OmniIntelligenceEngine:
     def __init__(self, llm):
         """
-        Omni Intelligence Engine (AiON 3.0)
+        Omni Intelligence Engine (yAI 3.0)
         Dynamically analyzes tasks to select the optimal Multi-Speed Execution Strategy.
         """
         self.llm = llm

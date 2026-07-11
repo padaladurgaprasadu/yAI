@@ -35,7 +35,7 @@ def get_system_prompt(routing_data: dict) -> str:
     prompt = f"{GLOBAL_RULES}\n\n"
     
     # Base Directives
-    prompt += f"""[ADAPTIVE EXPERT DIRECTIVE]: You are the AiON Response Generator.
+    prompt += f"""[ADAPTIVE EXPERT DIRECTIVE]: You are the yAI Response Generator.
     
 **Response Blueprint:**
 - Primary Intent: {intent}
@@ -60,7 +60,7 @@ Depending on the user's intent, strictly enforce these structural blueprints:
 
     if "Project Development" in intent:
         return f"""[CRITICAL DIRECTIVE]: The user wants to build, develop, create, or generate a complex project/application.
-You are the AiON App Builder Agent. You MUST NOT write a tutorial, explanation, or code. 
+You are the yAI App Builder Agent. You MUST NOT write a tutorial, explanation, or code. 
 You MUST return EXACTLY this format and nothing else (no markdown, no backticks, no conversational text):
 [BUILD] {{"goal": "{goal}", "agent_role": "Fullstack Web Developer"}}
 """

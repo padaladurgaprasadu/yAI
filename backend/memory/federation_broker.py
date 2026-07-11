@@ -7,8 +7,8 @@ logger = get_logger(__name__)
 
 class FederationBroker:
     """
-    AiON Swarm Protocol (AiON-SP) Federation Broker.
-    Manages cross-machine communication between independent AiON instances.
+    yAI Swarm Protocol (yAI-SP) Federation Broker.
+    Manages cross-machine communication between independent yAI instances.
     Gracefully falls back to local in-memory queues if Redis is not available.
     """
     _instance = None

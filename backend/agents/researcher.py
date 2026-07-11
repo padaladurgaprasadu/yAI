@@ -69,7 +69,7 @@ class ResearchAgent(BaseAgent):
     def _fetch_wikipedia_summary(self, query: str) -> str:
         try:
             url = f'https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=1&explaintext=1&titles={urllib.parse.quote(query)}&format=json'
-            req = urllib.request.Request(url, headers={'User-Agent': 'AiON/1.0'})
+            req = urllib.request.Request(url, headers={'User-Agent': 'yAI/1.0'})
             with urllib.request.urlopen(req, timeout=5) as response:
                 data = json.loads(response.read().decode())
                 pages = data.get('query', {}).get('pages', {})
@@ -80,10 +80,11 @@ class ResearchAgent(BaseAgent):
             pass
         return ""
 
-    def _search_web(self, query: str) -> List[Dict[str, str]]:
+    def _search_web(self, query: str, requires_visuals: bool = False) -> List[Dict[str, str]]:
         """
         Performs a web search using DuckDuckGo.
         Returns a list of search results with titles, snippets, and links.
+        If requires_visuals is True, it fetches image URLs too.
         """
         results = []
         try:
@@ -94,8 +95,25 @@ class ResearchAgent(BaseAgent):
                     results.append({
                         "title": r.get("title", ""),
                         "snippet": r.get("body", ""),
-                        "link": r.get("href", "")
+                        "link": r.get("href", ""),
+                        "image": ""
                     })
+                
+                if requires_visuals:
+                    try:
+                        img_results = list(ddgs.images(query, max_results=3))
+                        for idx, img in enumerate(img_results):
+                            if idx < len(results):
+                                results[idx]["image"] = img.get("image", "")
+                            else:
+                                results.append({
+                                    "title": img.get("title", ""),
+                                    "snippet": "Image search result",
+                                    "link": img.get("url", ""),
+                                    "image": img.get("image", "")
+                                })
+                    except Exception as img_e:
+                        print(f"[ResearchAgent] Image fetch failed: {img_e}")
         except Exception as e:
             print(f"[ResearchAgent] DDG search failed: {e}")
             wiki_summary = self._fetch_wikipedia_summary(query)
@@ -130,16 +148,27 @@ class ResearchAgent(BaseAgent):
         if uploaded_files:
             file_context = self._parse_files(uploaded_files)
         
-        # Live web search with citations
+        # Live web search with citations and visual retrieval
         web_context = ""
         citations = []
         try:
+            router_analysis = state.get("router_analysis", {})
+            requires_visuals = False
             search_query = " ".join(goal.split()[:5])
-            web_results = self._search_web(search_query)
+            
+            if isinstance(router_analysis, dict):
+                entity_detection = router_analysis.get("entity_detection", {})
+                if isinstance(entity_detection, dict):
+                    requires_visuals = entity_detection.get("requires_visuals", False)
+                    if entity_detection.get("search_query"):
+                        search_query = entity_detection.get("search_query")
+            
+            web_results = self._search_web(search_query, requires_visuals)
             for idx, res in enumerate(web_results):
                 cite_num = idx + 1
-                web_context += f"[{cite_num}] Title: {res['title']}\nSnippet: {res['snippet']}\nSource: {res['link']}\n\n"
-                citations.append(f"[{cite_num}] {res['title']} ({res['link']})")
+                img_md = f"![{res['title']}]({res['image']})" if res.get('image') else ""
+                web_context += f"[{cite_num}] Title: {res['title']}\nSnippet: {res['snippet']}\n{img_md}\nSource: {res['link']}\n\n"
+                citations.append(f"[{cite_num}] [{res['title']}]({res['link']})")
         except Exception as e:
             print(f"   -> [ResearchAgent] Web search failed: {e}")
             

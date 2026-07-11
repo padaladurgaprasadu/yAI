@@ -82,7 +82,7 @@ class PlannerAgent(BaseAgent):
             
         if q:
             modules_str = "\n".join([f"✅ {m}" for m in modules_list[:5]])
-            q.put({"type": "timeline", "title": f"🧠 Planner: {len(modules_list)} modules identified.", "reason": modules_str, "status": "active"})
+            q.put({"type": "timeline", "title": f"yAI Template Intelligence: {len(modules_list)} modules mapped", "reason": modules_str, "status": "active"})
         
         # Update and return the state
         state["modules"] = modules_list

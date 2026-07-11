@@ -28,7 +28,7 @@ from backend.orchestrator.state import AiONState
 load_dotenv()
 
 app = FastAPI(
-    title="AiON API",
+    title="yAI API",
     docs_url=None,
     redoc_url=None,
     openapi_url=None
@@ -71,7 +71,7 @@ except Exception as e:
 
 @app.api_route("/", methods=["GET", "HEAD"])
 def health_check():
-    return {"status": "ok", "message": "AiON Backend is running with PostgreSQL & Redis"}
+    return {"status": "ok", "message": "yAI Backend is running with PostgreSQL & Redis"}
 
 # Initialize Redis for Rate Limiting
 # Note: slowapi requires an async redis connection string for storage
@@ -367,7 +367,7 @@ async def websocket_generate(websocket: WebSocket):
         import asyncio
         import os
         
-        # --- AiON OVERDRIVE: Zero-Latency Semantic Caching ---
+        # --- yAI OVERDRIVE: Zero-Latency Semantic Caching ---
         if goal:
             try:
                 from backend.db.database import SessionLocal
@@ -990,7 +990,7 @@ IMPORTANT RULES:
             system_prompt = f"""{base_prompt}
 
 [SYSTEM DIRECTIVES]:
-- **AiON Architecture Intelligence Engine v2.0:** If the user asks for a diagram, workflow, flowchart, or system architecture, you MUST behave as a Principal Software Architect. Do NOT generate generic flowcharts. You MUST output a structured JSON block wrapped EXACTLY inside `<architecture>` and `</architecture>` tags. NEVER use Mermaid.
+- **yAI Architecture Intelligence Engine v2.0:** If the user asks for a diagram, workflow, flowchart, or system architecture, you MUST behave as a Principal Software Architect. Do NOT generate generic flowcharts. You MUST output a structured JSON block wrapped EXACTLY inside `<architecture>` and `</architecture>` tags. NEVER use Mermaid.
   You MUST include a deep architectural review.
   Schema: 
   {{
@@ -1236,7 +1236,7 @@ async def download_project(project_id: str):
     from fastapi.responses import FileResponse
     from starlette.background import BackgroundTasks
     
-    # AiON phase 1 saves generated code in generated_projects/{project_id}
+    # yAI phase 1 saves generated code in generated_projects/{project_id}
     target_dir = os.path.join(os.getcwd(), "generated_projects", project_id)
     if not os.path.exists(target_dir):
         raise HTTPException(status_code=404, detail="No generated project found")
@@ -1302,7 +1302,7 @@ async def execute_code(request: Request):
 
 @app.get("/api/health")
 async def health_check():
-    return {"status": "ok", "message": "AiON Multi-Agent Brain 3.0 is running!"}
+    return {"status": "ok", "message": "yAI Multi-Agent Brain 3.0 is running!"}
 
 @app.websocket("/api/ws/sandbox/{project_id}")
 async def websocket_sandbox_logs(websocket: WebSocket, project_id: str):
@@ -1324,7 +1324,7 @@ async def websocket_sandbox_logs(websocket: WebSocket, project_id: str):
 @limiter.limit("10/minute")
 async def get_metrics(request: Request):
     """
-    Simulated dashboard metrics for AiON.
+    Simulated dashboard metrics for yAI.
     """
     return {
         "active_swarms": 4,

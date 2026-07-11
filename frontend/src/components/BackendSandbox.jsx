@@ -21,7 +21,7 @@ export const BackendSandbox = ({ activeTab, previewUrl, previewError, projectId 
         if (msg.type === 'log') {
           setLogs(prev => [...prev, msg.data]);
         } else if (msg.type === 'error') {
-          setLogs(prev => [...prev, `[AiON Error] ${msg.message}\n`]);
+          setLogs(prev => [...prev, `[yAI Error] ${msg.message}\n`]);
         }
       } catch (e) {
         setLogs(prev => [...prev, event.data + '\n']);
@@ -29,7 +29,7 @@ export const BackendSandbox = ({ activeTab, previewUrl, previewError, projectId 
     };
     
     ws.onerror = () => {
-       setLogs(prev => [...prev, '[AiON Sandbox] Failed to connect to log stream.\n']);
+       setLogs(prev => [...prev, '[yAI Sandbox] Failed to connect to log stream.\n']);
     };
     
     return () => ws.close();
@@ -65,7 +65,7 @@ export const BackendSandbox = ({ activeTab, previewUrl, previewError, projectId 
       {/* TERMINAL TAB */}
       <div style={{ display: activeTab === 'terminal' ? 'flex' : 'none', flexDirection: 'column', height: '100%', width: '100%' }}>
          <div style={{ padding: '12px 20px', borderBottom: '1px solid #222', color: '#888', fontSize: '0.85rem', display: 'flex', justifyContent: 'space-between', backgroundColor: '#000' }}>
-             <span>AiON Native Execution Logs (Host Process)</span>
+             <span>yAI Native Execution Logs (Host Process)</span>
              <span style={{ color: '#10b981' }}>● Live</span>
          </div>
          <div style={{ flex: 1, overflow: 'auto', backgroundColor: '#000', padding: '10px', color: '#a6accd', fontFamily: 'monospace', fontSize: '13px', whiteSpace: 'pre-wrap' }}>

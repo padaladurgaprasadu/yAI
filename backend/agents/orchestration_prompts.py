@@ -1,4 +1,4 @@
-# AiON Multi-Agent Orchestration — Prompt Set
+# yAI Multi-Agent Orchestration — Prompt Set
 # Auto-generated from user's aion-agent-prompts.md
 
 GLOBAL_RULES = """
@@ -54,6 +54,7 @@ OUTPUT SCHEMA:
   "scope_estimate": "trivial" | "small_app" | "multi_service",
   "complexity": "fast" | "smart",
   "ambiguity_flags": ["list any missing critical info, e.g. 'no mention of auth requirement'"],
+  "domain_expert": "Software Engineering" | "AI/ML" | "Data Science" | "Data Analysis" | "Medical Research" | "Finance" | "Education",
   "entity_detection": {{
     "requires_visuals": true,
     "search_query": "string, the specific place/thing to fetch an image of, if visual required"
@@ -62,6 +63,7 @@ OUTPUT SCHEMA:
 }}
 
 RULES:
+- yAI is an AI Engineering OS. Always classify the target domain so the Universal Orchestrator can route to the correct Domain Expert model.
 - Set `complexity` to "fast" for basic definitions, simple chat, casual questions, and trivial requests (these get sub-second responses).
 - Set `complexity` to "smart" for deep coding requests, complex tutoring, architectural planning, and anything requiring high-tier reasoning.
 - Default to Builder mode if the user names a deliverable (system, app, site, dashboard, tool).
@@ -89,10 +91,15 @@ OUTPUT SCHEMA:
     {{"name": "string", "why_needed": "string", "priority": "core" | "nice_to_have"}}
   ],
   "explicit_assumptions": ["state anything you inferred that wasn't asked for directly"],
-  "out_of_scope": ["things a user might expect but you're deliberately excluding, and why"]
+  "out_of_scope": ["things a user might expect but you're deliberately excluding, and why"],
+  "template_intelligence": {{
+    "source_template": "string (e.g. Airbnb, Uber)",
+    "adaptation_steps": ["what stays", "what gets ripped out", "what is added"]
+  }}
 }}
 
 RULES:
+- Template Intelligence 2.0: If the user asks to build X for Y (e.g., Airbnb for Pets), actively map out how the base template must be adapted.
 - Right-size the scope. A "library management system" prompt does NOT need a recommendation
   engine or multi-language i18n unless asked. Over-scoping is a junior-agent failure mode as
   much as under-scoping is.
@@ -132,12 +139,18 @@ OUTPUT SCHEMA:
     {{"choice": "string", "alternatives_considered": ["string"], "why": "string",
      "trend_checked": true/false, "source_or_basis": "string"}}
   ],
+  "detailed_architecture_diagram": {{
+    "zones": [{{"id": "frontend_tier", "label": "Client Layer"}}, {{"id": "backend_tier", "label": "API Services"}}, {{"id": "data_tier", "label": "Data Storage"}}],
+    "nodes": [{{"id": "api_gateway", "type": "gateway", "label": "API Gateway", "zone": "backend_tier"}}],
+    "edges": [{{"source": "api_gateway", "target": "auth_service", "label": "gRPC auth check"}}]
+  }},
   "api_contract": {{"endpoints": ["METHOD /path — purpose"]}},
   "schema_outline": {{"entities": ["name: key fields"]}},
   "memory_query": "short string to check ChromaDB/prior projects for reusable patterns"
 }}
 
 RULES:
+- DETAILED ARCHITECTURE MANDATORY: Do not use basic 3-box templates. Your `detailed_architecture_diagram` must map out every microservice, cache, database, and queue. Nodes must have explicit types (e.g., database, queue, ai, microservice, gateway) and be assigned to logical zones (e.g., Public Subnet, Private VPC).
 - Never pin a version or declare something "the current standard" without the trend-check.
   Mark unverified choices explicitly rather than stating them with false confidence.
 - Prefer boring, well-supported choices over hype-cycle tech unless the user's requirements

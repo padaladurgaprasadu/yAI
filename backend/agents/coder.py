@@ -79,7 +79,7 @@ TARGET FILE: {{target_file}}
                     time.sleep(wait_time)
                 else:
                     print(f"      - [ERROR] Exception while generating {target_file} after {max_retries} attempts: {e}")
-                    return target_file, f"// Error: AiON encountered an exception: {e}"
+                    return target_file, f"// Error: yAI encountered an exception: {e}"
 
     @measure_time(logger)
     def run(self, state: AiONState, q=None) -> AiONState:
@@ -160,7 +160,7 @@ TARGET FILE: {{target_file}}
                 print(f"[Coder] Auto-Heal Triggered! Attempting to fix runtime error...")
                 if q:
                     q.put({"type": "progress", "message": "Auto-Heal Triggered! Attempting to fix runtime error..."})
-                    q.put({"type": "timeline", "title": "Auto-Heal Triggered", "reason": "Attempting to fix runtime error...", "status": "active"})
+                    q.put({"type": "timeline", "title": "yAI Autonomous Debugger", "reason": "Locating issue in logs and patching...", "status": "active"})
         elif q:
             q.put({"type": "timeline", "title": f"Generating {len(files_to_generate)} modules", "reason": "Translating architecture to code", "status": "active"})
         
@@ -282,7 +282,7 @@ OUTPUT SCHEMA:
                         if attempt < max_retries - 1:
                             time.sleep(2)
             
-            return (target_file, f"// Error: AiON failed to generate {target_file}. Exception: {last_error if 'last_error' in locals() else 'Unknown'}")
+            return (target_file, f"// Error: yAI failed to generate {target_file}. Exception: {last_error if 'last_error' in locals() else 'Unknown'}")
 
         # Execute parallel generation for speed
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:

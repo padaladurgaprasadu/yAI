@@ -26,7 +26,7 @@ class BaseAgent:
         self.model_name = model_name
         self.temperature = temperature
         
-        # AiON Swarm Protocol: Liquid Routing integration
+        # yAI Swarm Protocol: Liquid Routing integration
         from backend.agents.router import ModelRouter
         self_role = self.__class__.__name__
         

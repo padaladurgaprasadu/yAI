@@ -8,7 +8,7 @@ logger = get_logger(__name__)
 
 class SwarmOrchestratorAgent(BaseAgent):
     """
-    AiON Swarm Protocol: The Hive Mind Leader.
+    yAI Swarm Protocol: The Hive Mind Leader.
     Instead of generating code sequentially, this agent analyzes the blueprint
     and spins up dynamic sub-tasks (mapped to LangGraph 'Send' nodes) for 
     parallel, multi-agent code generation.

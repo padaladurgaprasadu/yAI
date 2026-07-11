@@ -8,7 +8,7 @@ logger = get_logger(__name__)
 
 class WisdomExtractorAgent(BaseAgent):
     """
-    AiON Swarm Protocol: The Self-Learning Module.
+    yAI Swarm Protocol: The Self-Learning Module.
     Extracts root causes and solutions from resolved bugs and stores them
     in ChromaDB as 'Wisdom Vectors' for future swarms to learn from.
     """

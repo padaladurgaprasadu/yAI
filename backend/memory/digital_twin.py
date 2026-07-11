@@ -19,7 +19,7 @@ class DigitalTwinManager:
         # Ensure the .aion directory exists
         os.makedirs(self.aion_dir, exist_ok=True)
         
-        # AiON Swarm Protocol: Neo4j Knowledge Graph
+        # yAI Swarm Protocol: Neo4j Knowledge Graph
         self.neo4j_driver = None
         try:
             from neo4j import GraphDatabase
@@ -66,7 +66,7 @@ class DigitalTwinManager:
         return self._read_json(self.blueprint_file)
 
     def sync_agent_state(self, agent_role: str, file_path: str, code: str):
-        """AiON Swarm Protocol: Real-time state syncing to Knowledge Graph"""
+        """yAI Swarm Protocol: Real-time state syncing to Knowledge Graph"""
         if self.neo4j_driver:
             try:
                 with self.neo4j_driver.session() as session:

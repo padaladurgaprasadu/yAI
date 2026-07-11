@@ -3,7 +3,7 @@ from sandbox.manager import global_sandbox_manager
 
 async def test():
     files = {
-        "server/app.js": "const http = require('http');\nconst server = http.createServer((req, res) => {\n  res.writeHead(200, {'Content-Type': 'text/plain'});\n  res.end('Hello AiON Sandbox Engine!');\n});\nserver.listen(process.env.PORT, () => console.log('Server running!'));",
+        "server/app.js": "const http = require('http');\nconst server = http.createServer((req, res) => {\n  res.writeHead(200, {'Content-Type': 'text/plain'});\n  res.end('Hello yAI Sandbox Engine!');\n});\nserver.listen(process.env.PORT, () => console.log('Server running!'));",
         "package.json": "{\"name\": \"test-app\", \"scripts\": {\"dev\": \"node server/app.js\"}}"
     }
     

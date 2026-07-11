@@ -454,7 +454,7 @@ function App() {
     setChatInput(msgToEdit)
     setChatMessages(prev => prev.slice(0, idx))
     setTimeout(() => {
-      document.querySelector('input[placeholder="Message AiON..."]')?.focus()
+      document.querySelector('input[placeholder="Message yAI..."]')?.focus()
     }, 10)
   }
 
@@ -1066,7 +1066,7 @@ function App() {
             ☰
           </button>
           <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'linear-gradient(135deg, var(--accent), #2563eb)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold', fontSize: '1.2rem' }}>A</div>
-          <h1 style={{ margin: 0, fontSize: '1.2rem', letterSpacing: '1px', fontWeight: '600' }}>AiON</h1>
+          <h1 style={{ margin: 0, fontSize: '1.2rem', letterSpacing: '1px', fontWeight: '600' }}>yAI</h1>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
           <button 
@@ -1146,7 +1146,7 @@ function App() {
             </div>
             
             <div style={{ fontSize: '0.75rem', color: '#94a3b8', textAlign: 'center', marginTop: '10px' }}>
-              AiON 2.0
+              yAI 2.0
             </div>
           </div>
         </aside>
@@ -1360,7 +1360,7 @@ function App() {
                 type="text" 
                 value={chatInput} 
                 onChange={(e) => setChatInput(e.target.value)} 
-                placeholder={step === 1 ? "Message AiON..." : "Update your app..."} 
+                placeholder={step === 1 ? "Message yAI..." : "Update your app..."} 
                 style={{ 
                   flex: 1, 
                   minWidth: 0,
@@ -1456,7 +1456,7 @@ function App() {
                 return (
                   <div style={{ animation: 'fadeIn 0.5s ease-out', width: '100%', height: 'calc(100dvh - 60px)', display: 'flex', flexDirection: 'column' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                      <h2 style={{ margin: 0, fontWeight: '500' }}>AiON Architect Studio</h2>
+                      <h2 style={{ margin: 0, fontWeight: '500' }}>yAI Architect Studio</h2>
                       {review && review.score && (
                         <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid #10b981', color: '#10b981', padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <span>🏆 Architecture Score:</span> {review.score}/100
@@ -1478,7 +1478,7 @@ function App() {
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--text-secondary)' }}>
           <div style={{ fontSize: '4rem', marginBottom: '20px' }}>🤖</div>
           <h2>Welcome to the Omni-Chat Builder</h2>
-          <p>Talk to AiON Advisor on the left.</p>
+          <p>Talk to yAI Advisor on the left.</p>
           <p>Ask questions, or ask it to "build a new project" and watch the magic happen!</p>
         </div>
       )}
@@ -1543,7 +1543,7 @@ function App() {
                         ) : (
                            <div className="spinner" style={{ width: '20px', height: '20px' }}></div>
                         )}
-                        {awaitingApproval ? 'Paused for Approval' : 'AiON is engineering your application...'}
+                        {awaitingApproval ? 'Paused for Approval' : 'yAI is engineering your application...'}
                      </h3>
                      <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                        {awaitingApproval && (

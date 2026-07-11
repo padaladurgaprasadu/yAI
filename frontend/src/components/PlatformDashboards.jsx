@@ -56,7 +56,7 @@ const PlatformDashboards = ({ API_URL }) => {
         <div>
           <h1 style={{ fontSize: '2rem', fontWeight: 'bold', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '12px' }}>
             <Server className="animate-pulse-glow" style={{ color: 'var(--accent)', borderRadius: '50%' }} size={32} />
-            AiON Command Center
+            yAI Command Center
           </h1>
           <p style={{ color: 'var(--text-secondary)', margin: 0 }}>Production monitoring, API gateway routing, and enterprise controls.</p>
         </div>

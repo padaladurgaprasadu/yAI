@@ -18,7 +18,7 @@ def main():
     # Get the user's goal from the command line arguments
     user_goal = sys.argv[1]
     
-    print("[SYSTEM] Starting AiON Build Process...")
+    print("[SYSTEM] Starting yAI Build Process...")
     print(f"Goal: {user_goal}")
     print("-" * 40)
 

@@ -22,7 +22,7 @@ class AIMLModelTrainingAgent(BaseAgent):
         code_files = state.get("code_files", {})
         semantic_context = state.get("semantic_context", "No context available.")
         
-        system_prompt = """You are the AiON AI/ML Model Training Agent.
+        system_prompt = """You are the yAI AI/ML Model Training Agent.
 Your job is to analyze the user's ML goal and the current codebase, and generate a HIGH-QUALITY, robust `train.py` script.
 Use the provided Semantic Context from past successful projects to guide your architectural decisions.
 

@@ -6,7 +6,7 @@ from fastapi.responses import PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 # Fallback app in case the real app crashes on import
-app = FastAPI(title="AiON API (Debug Fallback)")
+app = FastAPI(title="yAI API (Debug Fallback)")
 
 app.add_middleware(
     CORSMiddleware,

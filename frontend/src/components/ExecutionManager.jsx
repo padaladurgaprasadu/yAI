@@ -17,10 +17,10 @@ const ExecutionLifecycle = ({ activeTab, onCrash }) => {
 
   const triggerRecovery = useCallback((reason) => {
     if (retryCount >= 3) {
-      console.error(`[AiON DevOps] Max auto-recovery attempts reached. Failed to recover from: ${reason}`);
+      console.error(`[yAI DevOps] Max auto-recovery attempts reached. Failed to recover from: ${reason}`);
       return;
     }
-    console.warn(`[AiON DevOps] Intercepted infrastructure crash (${reason}), attempting hard reboot... Attempt ${retryCount + 1}/3`);
+    console.warn(`[yAI DevOps] Intercepted infrastructure crash (${reason}), attempting hard reboot... Attempt ${retryCount + 1}/3`);
     setRestarting(true);
     setRetryCount(prev => prev + 1);
     
@@ -69,7 +69,7 @@ const ExecutionLifecycle = ({ activeTab, onCrash }) => {
       <div style={{ display: activeTab === 'preview' ? 'block' : 'none', height: '100%', width: '100%' }}>
         {restarting ? (
           <div style={{ padding: '20px', color: '#10b981', fontFamily: 'monospace', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-            [AiON DevOps] Hard Rebooting WebContainer...
+            [yAI DevOps] Hard Rebooting WebContainer...
           </div>
         ) : (
           <div style={{ position: 'relative', height: '100%' }}>
@@ -113,7 +113,7 @@ const ExecutionLifecycle = ({ activeTab, onCrash }) => {
 
       <div style={{ display: activeTab === 'terminal' ? 'flex' : 'none', flexDirection: 'column', height: '100%', width: '100%' }}>
          <div style={{ padding: '12px 20px', borderBottom: '1px solid #222', color: '#888', fontSize: '0.85rem', display: 'flex', justifyContent: 'space-between', backgroundColor: '#000' }}>
-             <span>AiON Execution Logs (WebContainer)</span>
+             <span>yAI Execution Logs (WebContainer)</span>
              <span style={{ color: restarting ? '#ef4444' : '#10b981' }}>{restarting ? '● Rebooting' : '● Live'}</span>
          </div>
          <div style={{ flex: 1, overflow: 'auto', backgroundColor: '#000', padding: '10px' }}>

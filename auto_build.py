@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-AiON Auto-Pilot - Full End-to-End Automation with API Key Support
+yAI Auto-Pilot - Full End-to-End Automation with API Key Support
 """
 
 import os
@@ -25,7 +25,7 @@ class AiONAutoPilot:
     def run(self):
         """Main execution flow"""
         print("\n" + "="*60)
-        print("🚀 AiON AUTO-PILOT - Full Automation")
+        print("🚀 yAI AUTO-PILOT - Full Automation")
         print("="*60)
         print(f"📝 Goal: {self.goal}\n")
         
@@ -64,8 +64,8 @@ class AiONAutoPilot:
         return True
     
     def generate_project(self):
-        """Step 1: Generate code using AiON"""
-        print("📦 [1/8] Generating project with AiON...")
+        """Step 1: Generate code using yAI"""
+        print("📦 [1/8] Generating project with yAI...")
         
         try:
             result = subprocess.run(

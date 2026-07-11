@@ -38,7 +38,7 @@ def get_real_world_image(query: str, count: int = 1):
     # STEP 1: Try Wikipedia PageImages First (Curated by editors, much higher quality)
     try:
         wiki_url = f"https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch={urllib.parse.quote(query)}&prop=pageimages&pithumbsize=800&format=json"
-        req = urllib.request.Request(wiki_url, headers={'User-Agent': 'AiON/1.0 (contact@aion.ai)'})
+        req = urllib.request.Request(wiki_url, headers={'User-Agent': 'yAI/1.0 (contact@aion.ai)'})
         with urllib.request.urlopen(req) as response:
             data = json.loads(response.read().decode())
         
@@ -67,7 +67,7 @@ def get_real_world_image(query: str, count: int = 1):
     # STEP 2: Fallback to Wikimedia Commons Search if Wikipedia has no pages
     try:
         url = f"https://commons.wikimedia.org/w/api.php?action=query&list=search&srsearch={urllib.parse.quote(query)}&srnamespace=6&utf8=&format=json"
-        req = urllib.request.Request(url, headers={'User-Agent': 'AiON/1.0 (contact@aion.ai)'})
+        req = urllib.request.Request(url, headers={'User-Agent': 'yAI/1.0 (contact@aion.ai)'})
         
         with urllib.request.urlopen(req) as response:
             data = json.loads(response.read().decode())
@@ -86,7 +86,7 @@ def get_real_world_image(query: str, count: int = 1):
         for title in sorted_titles:
             # Fetch the direct image URL for the found file
             img_url_req = f"https://commons.wikimedia.org/w/api.php?action=query&prop=imageinfo&iiprop=url&titles={urllib.parse.quote(title)}&format=json"
-            req2 = urllib.request.Request(img_url_req, headers={'User-Agent': 'AiON/1.0 (contact@aion.ai)'})
+            req2 = urllib.request.Request(img_url_req, headers={'User-Agent': 'yAI/1.0 (contact@aion.ai)'})
             
             with urllib.request.urlopen(req2) as response2:
                 img_data = json.loads(response2.read().decode())

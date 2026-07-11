@@ -147,7 +147,7 @@ export default function Chat() {
             alignItems: 'center',
             gap: '8px'
           }}>
-            <span>🎓</span> AiON Mentor
+            <span>🎓</span> yAI Mentor
           </div>
           
           <div style={{
@@ -160,7 +160,7 @@ export default function Chat() {
           }}>
             {messages.length === 0 && (
               <div style={{ color: '#888', textAlign: 'center', marginTop: '20px' }}>
-                Ask me anything about code, architecture, or AiON concepts! I will format perfectly every time.
+                Ask me anything about code, architecture, or yAI concepts! I will format perfectly every time.
               </div>
             )}
             
@@ -208,7 +208,7 @@ export default function Chat() {
               type="text" 
               value={input}
               onChange={e => setInput(e.target.value)}
-              placeholder="Ask AiON Mentor..."
+              placeholder="Ask yAI Mentor..."
               disabled={isLoading}
               style={{
                 flex: 1,

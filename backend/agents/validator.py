@@ -17,7 +17,7 @@ class ResponseValidatorAgent(BaseAgent):
             self.llm = llm
 
         self.system_prompt = """
-You are the AiON Response Validator. Your job is to review an AI-generated draft response before it is shown to the user.
+You are the yAI Response Validator. Your job is to review an AI-generated draft response before it is shown to the user.
 
 Check for the following criteria:
 1. Grammar & Spelling: Are there any glaring errors?

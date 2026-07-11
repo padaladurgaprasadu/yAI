@@ -22,7 +22,7 @@ class AutoHyperparameterTuningAgent(BaseAgent):
         code_files = state.get("code_files", {})
         semantic_context = state.get("semantic_context", "No context available.")
         
-        system_prompt = """You are the AiON Auto Hyperparameter Tuning Agent.
+        system_prompt = """You are the yAI Auto Hyperparameter Tuning Agent.
 Your job is to analyze the user's ML goal and the current codebase (specifically the training loop), and generate an advanced, highly robust hyperparameter optimization script using Optuna.
 Use the provided Semantic Context from past successful projects to guide your optimization strategies.
 

@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 class AiONCache:
     """
-    Smart Caching Layer for AiON.
+    Smart Caching Layer for yAI.
     Caches LLM responses, generated code, and search results to improve execution speed.
     """
     def __init__(self):

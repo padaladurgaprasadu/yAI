@@ -35,7 +35,7 @@ export default function Auth() {
         <div style={{ textAlign: 'center', marginBottom: '30px' }}>
           <div style={{ fontSize: '3rem', marginBottom: '10px' }}>⚡</div>
           <h2 style={{ fontSize: '1.8rem', fontWeight: '600', color: '#fff', margin: '0 0 8px 0' }}>{isLoginMode ? 'Welcome back' : 'Create an account'}</h2>
-          <p style={{ color: '#888', margin: 0, fontSize: '0.95rem' }}>{isLoginMode ? 'Enter your details to access AiON.' : 'Start building with AiON today.'}</p>
+          <p style={{ color: '#888', margin: 0, fontSize: '0.95rem' }}>{isLoginMode ? 'Enter your details to access yAI.' : 'Start building with yAI today.'}</p>
         </div>
         
         <form onSubmit={handleAuth} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>

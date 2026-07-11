@@ -130,7 +130,7 @@ const ArtifactViewer = ({ codeFiles, setCodeFiles, projectId, isPreviewRunning, 
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AiON Preview</title>
+    <title>yAI Preview</title>
     <script src="https://cdn.tailwindcss.com"></script>
   </head>
   <body>
@@ -621,7 +621,7 @@ export const ${baseName} = () => null;
             <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
               {stubbedList.length > 0 && (
                 <div style={{ padding: '8px 16px', background: '#3a2a00', color: '#fbbf24', fontFamily: 'monospace', fontSize: 13, borderBottom: '1px solid #5a4200' }}>
-                  ⚠ AiON auto-generated {stubbedList.length} placeholder file(s) the Coder agent missed: {stubbedList.map(s => s.split('/').pop()).join(', ')} — app will run but this functionality is incomplete.
+                  ⚠ yAI auto-generated {stubbedList.length} placeholder file(s) the Coder agent missed: {stubbedList.map(s => s.split('/').pop()).join(', ')} — app will run but this functionality is incomplete.
                 </div>
               )}
               <div style={{ flex: 1 }}>
