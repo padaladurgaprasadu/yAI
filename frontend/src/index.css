@@ -208,3 +208,81 @@ html, body {
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
 }
 
+/* =========================================
+   Dashboard Premium Aesthetics
+   ========================================= */
+
+.dashboard-glass-card {
+  background: rgba(30, 35, 45, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 24px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.dashboard-glass-card:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+}
+
+.metric-value-text {
+  font-size: 2.5rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -0.05em;
+  line-height: 1.2;
+}
+
+.metric-value-accent {
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.status-green { color: #10b981; background-color: #10b981; }
+.status-yellow { color: #f59e0b; background-color: #f59e0b; }
+.status-red { color: #ef4444; background-color: #ef4444; }
+
+.dashboard-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 8px;
+}
+
+.dashboard-table th {
+  text-align: left;
+  padding: 0 16px 12px;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.dashboard-table td {
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.dashboard-table tr td:first-child { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
+.dashboard-table tr td:last-child { border-top-right-radius: 8px; border-bottom-right-radius: 8px; }
+
+.dashboard-table tr:hover td {
+  background: rgba(255, 255, 255, 0.04);
+}
+

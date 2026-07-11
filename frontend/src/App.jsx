@@ -9,6 +9,7 @@ import ProgressDashboard from './components/ProgressDashboard'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
+import PlatformDashboards from './components/PlatformDashboards'
 
 const handleMarkdownClick = async (e) => {
   const target = e.target;
@@ -163,6 +164,8 @@ function App() {
   // API_URL resolution (works for localhost and production)
   const API_URL = import.meta.env.VITE_API_URL || window.location.origin;
   const WS_URL = API_URL.replace(/^http/, 'ws');
+  
+  const [activeView, setActiveView] = useState('workspace'); // 'workspace' | 'dashboards'
   
   const [goal, setGoal] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -1066,13 +1069,35 @@ function App() {
           <h1 style={{ margin: 0, fontSize: '1.2rem', letterSpacing: '1px', fontWeight: '600' }}>AiON</h1>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
-          {/* Header right side is now empty, profile moved to sidebar */}
+          <button 
+            onClick={() => setActiveView(activeView === 'workspace' ? 'dashboards' : 'workspace')}
+            style={{ 
+              background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.2))', 
+              border: '1px solid rgba(59, 130, 246, 0.5)', 
+              color: 'var(--accent)', 
+              padding: '6px 12px', 
+              borderRadius: '8px', 
+              cursor: 'pointer', 
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            {activeView === 'workspace' ? '📊 Open Dashboards' : '💻 Back to Workspace'}
+          </button>
         </div>
       </header>
       
       {/* MAIN CONTENT AREA */}
       <div className="main-content-wrapper" style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
         
+        {activeView === 'dashboards' ? (
+           <div style={{ flex: 1, width: '100%', backgroundColor: 'var(--app-bg)' }}>
+              <PlatformDashboards API_URL={API_URL} />
+           </div>
+        ) : (
+           <>
         {/* LEFT NAVIGATION SIDEBAR */}
         {showSidebar && (
         <aside className="sidebar" style={{ display: 'flex', flexDirection: 'column' }}>
@@ -1550,6 +1575,8 @@ function App() {
               )}
             </div>
           </div>
+        )}
+           </>
         )}
         
         {/* SETTINGS MODAL */}
