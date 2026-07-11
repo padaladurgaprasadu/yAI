@@ -1316,6 +1316,73 @@ async def websocket_sandbox_logs(websocket: WebSocket, project_id: str):
     except Exception as e:
         await websocket.send_text(f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n")
 
+# =====================================================================
+# Phase 10: Monitoring & Telemetry
+# =====================================================================
+
+@app.get("/api/telemetry/metrics")
+@limiter.limit("10/minute")
+async def get_metrics(request: Request):
+    """
+    Simulated dashboard metrics for AiON.
+    """
+    return {
+        "active_swarms": 4,
+        "tokens_processed": 1250000,
+        "avg_latency_ms": 450,
+        "error_rate": 0.02,
+        "uptime": "99.99%"
+    }
+
+# =====================================================================
+# Phase 11: Security & Encryption
+# =====================================================================
+
+from cryptography.fernet import Fernet
+
+# In a real setup, this key would be in an env var.
+# For demo purposes, we generate one or use a hardcoded one.
+encryption_key = Fernet.generate_key()
+cipher_suite = Fernet(encryption_key)
+
+@app.post("/api/security/encrypt-key")
+@limiter.limit("5/minute")
+async def encrypt_api_key(request: Request, payload: dict):
+    """
+    Encrypts a provider API key before storing.
+    """
+    raw_key = payload.get("api_key")
+    if not raw_key:
+        raise HTTPException(status_code=400, detail="api_key required")
+    
+    encrypted_text = cipher_suite.encrypt(raw_key.encode('utf-8'))
+    return {"encrypted_key": encrypted_text.decode('utf-8')}
+
+# =====================================================================
+# Phase 12: Enterprise Features (Mock Organization)
+# =====================================================================
+
+@app.get("/api/orgs/workspaces")
+async def get_workspaces(request: Request):
+    """
+    Returns mock collaborative workspaces for enterprise users.
+    """
+    return [
+        {"id": "ws-001", "name": "Frontend Guild", "members": 5},
+        {"id": "ws-002", "name": "Backend Team", "members": 12}
+    ]
+
+@app.post("/api/orgs/team/add")
+@limiter.limit("5/minute")
+async def add_team_member(request: Request, payload: dict):
+    user_email = payload.get("email")
+    role = payload.get("role", "viewer")
+    if not user_email:
+        raise HTTPException(status_code=400, detail="email required")
+    
+    return {"status": "success", "message": f"Added {user_email} as {role}"}
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=10000)

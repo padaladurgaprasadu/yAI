@@ -36,7 +36,6 @@ class ResearchAgent(BaseAgent):
                 continue
             
             try:
-                # Strip data URI prefix if present
                 if "," in b64_content:
                     b64_content = b64_content.split(",")[1]
                 
@@ -51,10 +50,15 @@ class ResearchAgent(BaseAgent):
                     doc = docx.Document(io.BytesIO(file_bytes))
                     for para in doc.paragraphs:
                         parsed_text += para.text + "\n"
+                elif name.lower().endswith(".csv"):
+                    import csv
+                    csv_data = file_bytes.decode("utf-8", errors="ignore")
+                    reader = csv.reader(io.StringIO(csv_data))
+                    for idx, row in enumerate(reader):
+                        parsed_text += f"Row {idx}: {', '.join(row)}\n"
                 elif name.lower().endswith((".png", ".jpg", ".jpeg")):
                     parsed_text += "[Image File Uploaded. Ensure description or OCR is provided if text is needed.]\n"
                 else:
-                    # Fallback to standard utf-8 decoding for text/csv files
                     parsed_text += file_bytes.decode("utf-8", errors="ignore")
                     
             except Exception as e:
@@ -75,6 +79,34 @@ class ResearchAgent(BaseAgent):
         except Exception:
             pass
         return ""
+
+    def _search_web(self, query: str) -> List[Dict[str, str]]:
+        """
+        Performs a web search using DuckDuckGo.
+        Returns a list of search results with titles, snippets, and links.
+        """
+        results = []
+        try:
+            from duckduckgo_search import DDGS
+            with DDGS() as ddgs:
+                ddg_results = list(ddgs.text(query, max_results=5))
+                for r in ddg_results:
+                    results.append({
+                        "title": r.get("title", ""),
+                        "snippet": r.get("body", ""),
+                        "link": r.get("href", "")
+                    })
+        except Exception as e:
+            print(f"[ResearchAgent] DDG search failed: {e}")
+            wiki_summary = self._fetch_wikipedia_summary(query)
+            if wiki_summary:
+                results.append({
+                    "title": f"Wikipedia: {query}",
+                    "snippet": wiki_summary,
+                    "link": f"https://en.wikipedia.org/wiki/{urllib.parse.quote(query)}"
+                })
+        return results
+
     @llm_cache("researcher")
     def run(self, state: AiONState) -> AiONState:
         goal = state.get("goal", "")
@@ -98,14 +130,18 @@ class ResearchAgent(BaseAgent):
         if uploaded_files:
             file_context = self._parse_files(uploaded_files)
         
-        # Quick knowledge graph search to complement
+        # Live web search with citations
         web_context = ""
+        citations = []
         try:
-            # We'll just search the main goal topic or first few words
-            search_query = " ".join(goal.split()[:4])
-            web_context = self._fetch_wikipedia_summary(search_query)
-        except Exception:
-            pass
+            search_query = " ".join(goal.split()[:5])
+            web_results = self._search_web(search_query)
+            for idx, res in enumerate(web_results):
+                cite_num = idx + 1
+                web_context += f"[{cite_num}] Title: {res['title']}\nSnippet: {res['snippet']}\nSource: {res['link']}\n\n"
+                citations.append(f"[{cite_num}] {res['title']} ({res['link']})")
+        except Exception as e:
+            print(f"   -> [ResearchAgent] Web search failed: {e}")
             
         # Formulate request
         prompt_content = f"Goal/Question:\n{goal}\n\n"
@@ -126,20 +162,22 @@ class ResearchAgent(BaseAgent):
             content = res.content
             
             # Parse JSON
-            if "```json" in content:
-                content = content.split("```json")[1].split("```")[0]
-            elif "```" in content:
-                content = content.split("```")[1]
-            
-            research_data = json.loads(content.strip())
+            from backend.utils.json_parser import parse_json_robustly
+            research_data = parse_json_robustly(content)
             
             # Store in state
             state["research_synthesis"] = research_data
             
             # Add to semantic context for downstream agents
-            existing_context = state.get("semantic_context", "")
+            existing_context = state.get("semantic_context", "") or ""
             syn = research_data.get("synthesis", "")
-            new_context = existing_context + "\n\n=== RESEARCH SYNTHESIS ===\n" + syn
+            
+            # Format Citations Bibliography
+            citation_block = ""
+            if citations:
+                citation_block = "\n\n=== CITATIONS & RANKED SOURCES ===\n" + "\n".join(citations)
+                
+            new_context = existing_context + "\n\n=== RESEARCH SYNTHESIS ===\n" + syn + citation_block
             state["semantic_context"] = new_context
             
             if q:
