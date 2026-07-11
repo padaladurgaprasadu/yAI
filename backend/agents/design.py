@@ -24,13 +24,8 @@ class DesignAgent(BaseAgent):
             response = self.invoke_with_retry(self.llm, prompt.format_messages(goal=goal, blueprint=json.dumps(blueprint, indent=2)))
             content = response.content
             
-            # Extract JSON
-            match = re.search(r'\{.*\}', content, re.DOTALL)
-            if match:
-                tokens = json.loads(match.group(0))
-            else:
-                tokens = json.loads(content)
-                
+            from backend.utils.json_parser import parse_json_robustly
+            tokens = parse_json_robustly(content)
             return {"design_tokens": tokens}
         except Exception as e:
             print(f"[DesignAgent] Error: {e}")
