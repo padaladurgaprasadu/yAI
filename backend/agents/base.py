@@ -92,13 +92,28 @@ class BaseAgent:
         self.fast_llm_pool = [self.fast_llm]
 
     def bind_tools(self, tools: List[Any]):
-        """Dynamically binds a list of tools to the active primary LLMs."""
+        """Dynamically binds a list of tools to the active primary LLMs (supporting fallback chains)."""
+        def _bind(llm):
+            if hasattr(llm, "bind_tools"):
+                try:
+                    return llm.bind_tools(tools)
+                except Exception:
+                    pass
+            
+            # Support LangChain RunnableWithFallbacks
+            if hasattr(llm, "runnable") and hasattr(llm, "fallbacks"):
+                bound_runnable = _bind(llm.runnable)
+                bound_fallbacks = [_bind(fb) for fb in llm.fallbacks]
+                return bound_runnable.with_fallbacks(bound_fallbacks)
+                
+            if hasattr(llm, "bind"):
+                return llm.bind(tools=tools)
+            return llm
+
         for i in range(len(self.llm_pool)):
-            if hasattr(self.llm_pool[i], "bind_tools"):
-                self.llm_pool[i] = self.llm_pool[i].bind_tools(tools)
+            self.llm_pool[i] = _bind(self.llm_pool[i])
         for i in range(len(self.fast_llm_pool)):
-            if hasattr(self.fast_llm_pool[i], "bind_tools"):
-                self.fast_llm_pool[i] = self.fast_llm_pool[i].bind_tools(tools)
+            self.fast_llm_pool[i] = _bind(self.fast_llm_pool[i])
         
         # Update active pointers
         self.llm = self.llm_pool[0]

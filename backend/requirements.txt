@@ -15,7 +15,6 @@ duckduckgo-search
 tenacity
 wikipedia
 PyJWT
-pysqlite3-binary
 cryptography
 psycopg2-binary
 langchain_anthropic

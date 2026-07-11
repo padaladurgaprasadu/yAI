@@ -18,21 +18,71 @@ class ModelRouter:
     @staticmethod
     def get_optimal_llm(task_role: str, complexity: str = "fast"):
         """
-        Routes the task based on role and required speed.
-        If the optimal provider's API key is missing, falls back to the default (OpenAI).
+        Routes the task based on role, complexity, and availability.
+        Prioritizes NVIDIA NIM models if NVIDIA_API_KEY is configured,
+        implementing Phase 4 Model Routing with transparent failover.
         """
+        role = task_role.lower()
+        nvidia_key = os.getenv("NVIDIA_API_KEY")
+
+        if nvidia_key:
+            logger.info(f"[NVIDIA Routing] Mapping role '{task_role}' with complexity '{complexity}'")
+            # 1. Map to target model pool (Primary -> Fallback 1 -> Fallback 2)
+            if "router" in role or "planner" in role or "intent" in role:
+                models = ["meta/llama-3.1-8b-instruct", "meta/llama-3.2-3b-instruct", "meta/llama-3.1-70b-instruct"]
+            elif "architect" in role or "system" in role:
+                models = ["meta/llama-3.1-70b-instruct", "nvidia/llama-3.1-nemotron-51b-instruct", "meta/llama-3.1-8b-instruct"]
+            elif "coder" in role or "generator" in role or "programmer" in role:
+                models = ["meta/llama-3.1-70b-instruct", "meta/llama-3.1-8b-instruct", "nvidia/llama-3.1-nemotron-51b-instruct"]
+            elif "design" in role or "ui" in role or "css" in role:
+                models = ["meta/llama-3.1-70b-instruct", "meta/llama-3.1-8b-instruct", "meta/llama-3.2-3b-instruct"]
+            elif "reviewer" in role or "audit" in role or "critique" in role:
+                models = ["meta/llama-3.1-70b-instruct", "nvidia/llama-3.1-nemotron-51b-instruct", "meta/llama-3.1-8b-instruct"]
+            elif "visual" in role or "vision" in role:
+                models = ["meta/llama-3.2-11b-vision-instruct", "meta/llama-3.1-70b-instruct", "meta/llama-3.1-8b-instruct"]
+            elif "devops" in role or "deployment" in role:
+                models = ["meta/llama-3.1-70b-instruct", "meta/llama-3.1-8b-instruct", "meta/llama-3.2-3b-instruct"]
+            elif "executor" in role:
+                models = ["meta/llama-3.1-8b-instruct", "meta/llama-3.1-70b-instruct", "meta/llama-3.2-3b-instruct"]
+            elif "memory" in role:
+                models = ["meta/llama-3.1-8b-instruct", "meta/llama-3.2-3b-instruct", "meta/llama-3.1-70b-instruct"]
+            else:
+                if complexity == "fast":
+                    models = ["meta/llama-3.1-8b-instruct", "meta/llama-3.2-3b-instruct", "meta/llama-3.1-70b-instruct"]
+                else:
+                    models = ["meta/llama-3.1-70b-instruct", "nvidia/llama-3.1-nemotron-51b-instruct", "meta/llama-3.1-8b-instruct"]
+
+            # 2. Build the fallback chain
+            llm_instances = []
+            for model_name in models:
+                llm_instances.append(ChatOpenAI(
+                    base_url="https://integrate.api.nvidia.com/v1",
+                    api_key=nvidia_key,
+                    model=model_name,
+                    temperature=0.1,
+                    request_timeout=90,
+                    max_retries=1,
+                    streaming=True
+                ))
+            
+            # Wrap in LangChain's fallback mechanism
+            primary_llm = llm_instances[0]
+            fallback_llms = llm_instances[1:]
+            return primary_llm.with_fallbacks(fallback_llms)
+
+        # Standard Multi-Provider routing if NVIDIA key is not set
         # Determine optimal provider based on role
-        if "UI" in task_role or "React" in task_role or "CSS" in task_role:
-            provider = "anthropic" # Claude 3.5 Sonnet is unmatched for UI/Frontend
+        if "ui" in role or "react" in role or "css" in role:
+            provider = "anthropic"
             model_name = "claude-3-5-sonnet-20240620"
-        elif "Database" in task_role or "Schema" in task_role:
-            provider = "groq" # Groq is blazing fast for JSON/Schema generation
+        elif "database" in role or "schema" in role:
+            provider = "groq"
             model_name = "llama3-70b-8192"
-        elif "Security" in task_role or "Audit" in task_role or "Architect" in task_role:
-            provider = "openai" # GPT-4o for complex reasoning / logic / vision
+        elif "security" in role or "audit" in role or "architect" in role:
+            provider = "openai"
             model_name = "gpt-4o"
-        elif "Research" in task_role:
-            provider = "google" # Gemini 1.5 Pro for massive context window research
+        elif "research" in role:
+            provider = "google"
             model_name = "gemini-1.5-pro"
         else:
             provider = "openai"
@@ -41,38 +91,49 @@ class ModelRouter:
         # Try to instantiate the optimal model
         try:
             if provider == "anthropic" and os.getenv("ANTHROPIC_API_KEY"):
-                return ChatAnthropic(model=model_name, temperature=0.1, timeout=90, max_retries=2, streaming=True)
+                primary = ChatAnthropic(model=model_name, temperature=0.1, timeout=90, max_retries=1, streaming=True)
+                fallback = ChatAnthropic(model="claude-3-5-haiku-20241022", temperature=0.1, timeout=90, max_retries=1, streaming=True)
+                return primary.with_fallbacks([fallback])
             elif provider == "groq" and os.getenv("GROQ_API_KEY"):
-                return ChatGroq(model_name=model_name, temperature=0.1, timeout=90, max_retries=2, streaming=True)
+                primary = ChatGroq(model_name=model_name, temperature=0.1, timeout=90, max_retries=1, streaming=True)
+                fallback = ChatGroq(model_name="llama3-8b-8192", temperature=0.1, timeout=90, max_retries=1, streaming=True)
+                return primary.with_fallbacks([fallback])
             elif provider == "google" and os.getenv("GOOGLE_API_KEY"):
-                return ChatGoogleGenerativeAI(model=model_name, temperature=0.1, timeout=90, max_retries=2, streaming=True)
+                primary = ChatGoogleGenerativeAI(model=model_name, temperature=0.1, timeout=90, max_retries=1, streaming=True)
+                fallback = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.1, timeout=90, max_retries=1, streaming=True)
+                return primary.with_fallbacks([fallback])
             elif provider == "openai" and os.getenv("OPENAI_API_KEY"):
-                return ChatOpenAI(model=model_name, temperature=0.1, request_timeout=90, max_retries=2, streaming=True)
+                primary = ChatOpenAI(model=model_name, temperature=0.1, request_timeout=90, max_retries=1, streaming=True)
+                fallback = ChatOpenAI(model="gpt-4o-mini", temperature=0.1, request_timeout=90, max_retries=1, streaming=True)
+                return primary.with_fallbacks([fallback])
         except Exception as e:
             logger.warning(f"[LiquidRouting] Failed to initialize {provider} {model_name}: {e}")
-            
+
         # Fallback to whatever is available
         if os.getenv("OPENAI_API_KEY"):
-            return ChatOpenAI(model="gpt-4o-mini" if complexity == "fast" else "gpt-4o", temperature=0.1, streaming=True)
+            primary = ChatOpenAI(model="gpt-4o" if complexity == "smart" else "gpt-4o-mini", temperature=0.1, streaming=True)
+            fallback = ChatOpenAI(model="gpt-3.5-turbo", temperature=0.1, streaming=True)
+            return primary.with_fallbacks([fallback])
         elif os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY"):
-            return ChatGoogleGenerativeAI(model="gemini-1.5-flash" if complexity == "fast" else "gemini-1.5-pro", temperature=0.1, streaming=True)
-        elif os.getenv("NVIDIA_API_KEY"):
-            return ChatOpenAI(
-                base_url="https://integrate.api.nvidia.com/v1",
-                api_key=os.getenv("NVIDIA_API_KEY"),
-                model="meta/llama-3.1-8b-instruct" if complexity == "fast" else "meta/llama-3.1-70b-instruct",
-                temperature=0.1,
-                streaming=True
-            )
+            primary = ChatGoogleGenerativeAI(model="gemini-1.5-pro" if complexity == "smart" else "gemini-1.5-flash", temperature=0.1, streaming=True)
+            return primary
         elif os.getenv("OPENROUTER_API_KEY"):
-            return ChatOpenAI(
+            primary = ChatOpenAI(
                 base_url="https://openrouter.ai/api/v1",
                 api_key=os.getenv("OPENROUTER_API_KEY"),
-                model="anthropic/claude-3.5-haiku" if complexity == "fast" else "anthropic/claude-3.5-sonnet",
+                model="anthropic/claude-3.5-sonnet" if complexity == "smart" else "anthropic/claude-3.5-haiku",
                 temperature=0.1,
                 streaming=True
             )
-        
+            fallback = ChatOpenAI(
+                base_url="https://openrouter.ai/api/v1",
+                api_key=os.getenv("OPENROUTER_API_KEY"),
+                model="google/gemini-flash-1.5",
+                temperature=0.1,
+                streaming=True
+            )
+            return primary.with_fallbacks([fallback])
+
         raise Exception("Missing credentials: No API keys configured for Liquid Routing.")
 
 class OmniIntelligenceEngine:

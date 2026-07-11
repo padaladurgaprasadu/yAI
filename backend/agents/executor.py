@@ -14,6 +14,7 @@ class ExecutorAgent(BaseAgent):
     def __init__(self):
         super().__init__()
         from backend.agents.orchestration_prompts import EXECUTOR_PROMPT
+        from backend.agents.base import GLOBAL_AGENT_RULES
         self.prompt = ChatPromptTemplate.from_messages([
             ("system", GLOBAL_AGENT_RULES + "\\n\\n" + EXECUTOR_PROMPT),
             ("human", "Blueprint: {blueprint}\n\nFiles:\n{code_files}")
