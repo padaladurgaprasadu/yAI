@@ -79,7 +79,7 @@ const AIWorkspaceTabs = ({
         )}
         
         {activeTab === 'architecture' && (
-          <ArchitectureViewer blueprint={blueprintJson} />
+          <ArchitectureViewer architectureJson={blueprintJson} />
         )}
         
         {activeTab === 'preview' && (

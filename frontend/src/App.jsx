@@ -116,7 +116,10 @@ const renderMessageContent = (content, onOpenArchitecture) => {
   return parts.map((part, i) => {
       if (part.startsWith('<architecture>')) {
           if (part.endsWith('</architecture>')) {
-              const jsonStr = part.replace('<architecture>', '').replace('</architecture>', '').replace(/```json/g, '').replace(/```/g, '').trim();
+              let jsonStr = part.replace('<architecture>', '').replace('</architecture>', '').replace(/```json/g, '').replace(/```/g, '').trim();
+              const startIdx = jsonStr.indexOf('{');
+              const endIdx = jsonStr.lastIndexOf('}');
+              if (startIdx !== -1 && endIdx !== -1) jsonStr = jsonStr.substring(startIdx, endIdx + 1);
               return (
                 <div key={i} style={{ margin: '16px 0' }}>
                   <button 
@@ -1467,7 +1470,7 @@ function App() {
                     activeTab={activeWorkspaceTab}
                     setActiveTab={setActiveWorkspaceTab}
                     codeFiles={codeFiles}
-                    blueprintJson={activeArchitecture ? JSON.stringify(activeArchitecture) : blueprintJson}
+                    blueprintJson={activeArchitecture ? activeArchitecture : blueprintJson}
                     executionLogs={executionLogs}
                     previewUrl={previewUrl}
                     previewError={previewError}
