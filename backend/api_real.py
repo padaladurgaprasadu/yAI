@@ -123,7 +123,7 @@ def verify_token(authorization: str = Header(None)):
     if not jwt_secret and not supabase_url:
         if len(token) < 10:
             raise HTTPException(status_code=401, detail="Unauthorized: Invalid Token.")
-        return {"sub": "local", "role": "authenticated"}
+        return {"sub": "local", "role": "authenticated", "email": "local_dev@aion.ai"}
         
     try:
         # If we have a jwt_secret, try HS256 first
@@ -917,8 +917,9 @@ IMPORTANT RULES:
             
             async def get_memory():
                 try:
-                    if global_chroma_client:
-                        return await asyncio.to_thread(global_chroma_client.retrieve_memory, "default_user", sanitized_message)
+                    client = globals().get('global_chroma_client')
+                    if client:
+                        return await asyncio.to_thread(client.retrieve_memory, "default_user", sanitized_message)
                     else:
                         from backend.memory.chroma_client import ChromaClient
                         return await asyncio.to_thread(ChromaClient().retrieve_memory, "default_user", sanitized_message)
@@ -1079,8 +1080,9 @@ IMPORTANT RULES:
             # === SEMANTIC CACHE HIT CHECK ===
             if len(request_data.history) == 0 and not request_data.image:
                 try:
-                    if global_chroma_client:
-                        cached_response, distance = global_chroma_client.get_cache(sanitized_message)
+                    client = globals().get('global_chroma_client')
+                    if client:
+                        cached_response, distance = client.get_cache(sanitized_message)
                     else:
                         from backend.memory.chroma_client import ChromaClient
                         cached_response, distance = ChromaClient().get_cache(sanitized_message)
@@ -1118,9 +1120,14 @@ IMPORTANT RULES:
             queue_task = asyncio.create_task(visual_queue.get()) if visual_queue else None
             
             while True:
-                tasks = [text_task]
+                tasks = []
+                if text_task:
+                    tasks.append(text_task)
                 if queue_task:
                     tasks.append(queue_task)
+                    
+                if not tasks:
+                    break
                     
                 done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
                 
@@ -1132,17 +1139,19 @@ IMPORTANT RULES:
                     else:
                         queue_task = None # EOF marker reached
                         
-                if text_task in done:
+                if text_task and text_task in done:
                     try:
                         text_chunk = text_task.result()
                     except Exception as llm_err:
                         api_logger.error(f"LLM Stream Error: {llm_err}")
                         err_str = f"\n\n⚠️ **AI Connection Error:** `{str(llm_err)}`\n"
                         yield f"data: {json.dumps({'type': 'chat', 'token': err_str})}\n\n"
-                        break
+                        text_task = None
+                        continue
                         
                     if text_chunk is None:
-                        break # End of text stream
+                        text_task = None # End of text stream
+                        continue
                         
                     draft_text += text_chunk
                     buffer = draft_text
