@@ -44,7 +44,8 @@ class MemoryAgent(BaseAgent):
                 content = content[:-3]
             content = content.strip()
             
-            memory_data = json.loads(content, strict=False)
+            from backend.utils.json_parser import parse_json_robustly
+            memory_data = parse_json_robustly(content)
             state["memory_persisted"] = memory_data
             logger.info("[Memory] Persisted decisions to state.")
             

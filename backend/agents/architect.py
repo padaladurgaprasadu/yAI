@@ -81,7 +81,8 @@ class ArchitectAgent(BaseAgent):
             
         try:
             # Parse the JSON response
-            blueprint = json.loads(content.strip().strip('`').replace('json\n', ''))
+            from backend.utils.json_parser import parse_json_robustly
+            blueprint = parse_json_robustly(content)
             print(f"   -> Tech Stack Selected: {blueprint.get('tech_stack', [])}")
             state["blueprint"] = blueprint
             state["semantic_context"] = context

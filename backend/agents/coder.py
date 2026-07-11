@@ -64,11 +64,8 @@ TARGET FILE: {{target_file}}
                 import re
                 
                 # Extract JSON
-                match = re.search(r'\{.*\}', content, re.DOTALL)
-                if match:
-                    data = json.loads(match.group(0))
-                else:
-                    data = json.loads(content)
+                from backend.utils.json_parser import parse_json_robustly
+                data = parse_json_robustly(content)
                     
                 code = data.get("content", "")
                 print(f"   -> [Success] Generated {target_file}")

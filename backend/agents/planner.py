@@ -68,9 +68,9 @@ class PlannerAgent(BaseAgent):
             content = content[:-3]
         content = content.strip()
         
-        import json
+        from backend.utils.json_parser import parse_json_robustly
         try:
-            dag_data = json.loads(content)
+            dag_data = parse_json_robustly(content)
             dag_tasks = dag_data.get("tasks", [])
             # Extract just the names for the legacy 'modules' field so Architect still works
             modules_list = [task.get("name", task.get("id")) for task in dag_tasks]

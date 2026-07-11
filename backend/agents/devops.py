@@ -65,7 +65,8 @@ class DevOpsAgent(BaseAgent):
         
         try:
             # strict=False allows literal \n and \t in strings (fixing the Invalid control character error)
-            devops_files = json.loads(content, strict=False)
+            from backend.utils.json_parser import parse_json_robustly
+            devops_files = parse_json_robustly(content)
             
             current_files = state.get("code_files", {})
             infra_files = devops_files.get("files", [])

@@ -2,10 +2,10 @@ import json
 import re
 
 def parse_json_robustly(content: str) -> dict:
-    \"\"\"
+    """
     Tries multiple strategies to robustly parse JSON from an LLM response,
     including markdown stripping, nested bracket balancing, and greedy substring extraction.
-    \"\"\"
+    """
     content_str = content.strip()
     
     # Strategy 1: Direct JSON parsing
