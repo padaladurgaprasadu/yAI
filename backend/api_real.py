@@ -1088,6 +1088,14 @@ IMPORTANT RULES:
                         ttft = (time.time() - start_time) * 1000
                         api_logger.info(f"[CACHE HIT] Distance: {distance:.4f} | TTFT: {ttft:.2f}ms")
                         yield f"data: {json.dumps({'type': 'chat', 'token': cached_response})}\n\n"
+                        
+                        # Drain visual queue if it exists so cached responses still get visuals
+                        if visual_task:
+                            while True:
+                                vis = await visual_queue.get()
+                                if vis is None:
+                                    break
+                                yield f"data: {json.dumps(vis)}\n\n"
                         return
                 except Exception:
                     pass
