@@ -1,6 +1,7 @@
 from langgraph.graph import StateGraph, END
 from backend.orchestrator.state import AiONState
 from backend.agents.planner import PlannerAgent
+from backend.agents.template_intelligence import TemplateAgent
 from backend.agents.architect import ArchitectAgent
 from backend.agents.design import DesignAgent
 from backend.agents.coder import CoderAgent
@@ -56,6 +57,7 @@ def build_orchestrator_graph():
     
     # 1. Initialize nodes
     planner = PlannerAgent()
+    template = TemplateAgent()
     architect = ArchitectAgent()
     design = DesignAgent()
     coder = CoderAgent()
@@ -67,6 +69,7 @@ def build_orchestrator_graph():
     
     # 2. Add nodes
     workflow.add_node("planner", planner.run)
+    workflow.add_node("template", template.run)
     workflow.add_node("architect", architect.run)
     workflow.add_node("design", design.run)
     workflow.add_node("coder", coder.run)
@@ -78,7 +81,8 @@ def build_orchestrator_graph():
     
     # 3. Add edges (The Core Loop)
     workflow.set_entry_point("planner")
-    workflow.add_edge("planner", "architect")
+    workflow.add_edge("planner", "template")
+    workflow.add_edge("template", "architect")
     workflow.add_edge("architect", "design")
     workflow.add_edge("design", "coder")
     workflow.add_edge("coder", "reviewer")

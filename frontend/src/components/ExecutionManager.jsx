@@ -181,3 +181,5 @@ export const ExecutionManager = ({ files, dynamicDependencies, activeTab, isBack
     </div>
   );
 };
+
+export default ExecutionManager;

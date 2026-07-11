@@ -14,14 +14,19 @@ class DesignAgent(BaseAgent):
     def run(self, state: AiONState) -> dict:
         blueprint = state.get("blueprint", {})
         goal = state.get("goal", "")
+        template_roster = state.get("template_roster", [])
         
         prompt = ChatPromptTemplate.from_messages([
             ("system", self.system_prompt),
-            ("human", "Goal: {goal}\nBlueprint: {blueprint}")
+            ("human", "Goal: {goal}\nBlueprint: {blueprint}\nTemplate Roster: {template_roster}")
         ])
         
         try:
-            response = self.invoke_with_retry(self.llm, prompt.format_messages(goal=goal, blueprint=json.dumps(blueprint, indent=2)))
+            response = self.invoke_with_retry(self.llm, prompt.format_messages(
+                goal=goal, 
+                blueprint=json.dumps(blueprint, indent=2),
+                template_roster=json.dumps(template_roster, indent=2)
+            ))
             content = response.content
             
             from backend.utils.json_parser import parse_json_robustly

@@ -10,6 +10,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
 import PlatformDashboards from './components/PlatformDashboards'
+import AIWorkspaceTabs from './components/AIWorkspaceTabs'
 
 const handleMarkdownClick = async (e) => {
   const target = e.target;
@@ -242,6 +243,7 @@ function App() {
   const [feedbackState, setFeedbackState] = useState({})
   const [isRecording, setIsRecording] = useState(false)
   const [selectedNode, setSelectedNode] = useState(null)
+  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState('preview') // New: OS Workspace State
 
   const chatEndRef = useRef(null)
 
@@ -1224,7 +1226,7 @@ function App() {
                       </div>
                     )}
                     {console.log("RENDERING MSG CONTENT:", msg.content)}
-                    {renderMessageContent(msg.content + (idx === chatMessages.length - 1 && isChatLoading && msg.role === 'ai' ? ' ▋' : ''), (jsonStr) => { setActiveArchitecture(jsonStr); setStep(4); })}
+                    {renderMessageContent(msg.content + (idx === chatMessages.length - 1 && isChatLoading && msg.role === 'ai' ? ' ▋' : ''), (jsonStr) => { setActiveArchitecture(jsonStr); setStep(4); setActiveWorkspaceTab('architecture'); })}
                     {msg.role === 'ai' && (
                       <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
                         <button 
@@ -1448,79 +1450,25 @@ function App() {
                 </div>
               )}
 
-              {/* STEP 4: ARCHITECTURE STUDIO */}
-              {step === 4 && activeArchitecture && (() => {
-                const archData = typeof activeArchitecture === 'string' ? JSON.parse(activeArchitecture) : activeArchitecture;
-                const review = archData.review;
-                
-                return (
-                  <div style={{ animation: 'fadeIn 0.5s ease-out', width: '100%', height: 'calc(100dvh - 60px)', display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                      <h2 style={{ margin: 0, fontWeight: '500' }}>yAI Architect Studio</h2>
-                      {review && review.score && (
-                        <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid #10b981', color: '#10b981', padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span>🏆 Architecture Score:</span> {review.score}/100
-                        </div>
-                      )}
-                    </div>
-                    <div style={{ flex: 1, display: 'flex', gap: '20px', overflow: 'hidden' }}>
-                      <div style={{ flex: 1, backgroundColor: '#0a0a0a', borderRadius: '12px', border: '1px solid var(--border-color)', overflow: 'hidden' }} onClick={() => setSelectedNode(null)}>
-                        <ArchitectureViewer architectureJson={activeArchitecture} onNodeSelect={setSelectedNode} />
-                      </div>
-                      
-                    </div>
-                  </div>
-                );
-              })()}
-
-      {/* STEP 1: WELCOME SCREEN */}
-      {step === 1 && !isLoading && (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--text-secondary)' }}>
-          <div style={{ fontSize: '4rem', marginBottom: '20px' }}>🤖</div>
-          <h2>Welcome to the Omni-Chat Builder</h2>
-          <p>Talk to yAI Advisor on the left.</p>
-          <p>Ask questions, or ask it to "build a new project" and watch the magic happen!</p>
-        </div>
-      )}
-
-      {/* STEP 2: REVIEW BLUEPRINT */}
-      {step === 2 && !isLoading && (
-        <div className="results-section">
-          <div className="glass-panel result-card">
-            <h3>Architect's Blueprint</h3>
-            {error && (
-                <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.2)', border: '1px solid #ef4444', color: '#fca5a5', padding: '12px', borderRadius: '8px', marginBottom: '15px', fontWeight: 'bold' }}>
-                    {error}
+              {/* STEP 1: WELCOME SCREEN */}
+              {step === 1 && !isLoading && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--text-secondary)' }}>
+                  <div style={{ fontSize: '4rem', marginBottom: '20px' }}>🤖</div>
+                  <h2>Welcome to the Omni-Chat Builder</h2>
+                  <p>Talk to yAI Advisor on the left.</p>
+                  <p>Ask questions, or ask it to "build a new project" and watch the magic happen!</p>
                 </div>
-            )}
-            <p style={{marginBottom: '10px', color: 'var(--text-secondary)'}}>
-                You can edit this JSON to change the Tech Stack or add custom notes before generating!
-            </p>
-            <textarea 
-                style={{width: '100%', minHeight: '300px', backgroundColor: '#1e1e1e', color: 'var(--text-primary)', padding: '15px', fontFamily: 'monospace', borderRadius: '8px', border: '1px solid var(--border-color)'}}
-                value={blueprintJson}
-                onChange={(e) => setBlueprintJson(e.target.value)}
-                disabled={isLoading}
-            />
-            <div style={{display: 'flex', gap: '10px', marginTop: '15px'}}>
-                <button className="build-btn" style={{backgroundColor: 'var(--border-color)'}} onClick={() => setStep(1)} disabled={isLoading || isPlanning}>
-                    ⬅️ Go Back
-                </button>
-                <button className="build-btn" onClick={handleGenerate} disabled={isLoading || isPlanning}>
-                    {isPlanning ? 'Architect is typing...' : (isLoading ? 'Generating Code & Installing...' : '✅ Approve & Generate Code')}
-                </button>
-            </div>
-          </div>
-        </div>
-      )}
+              )}
 
-              {/* STEP 3: ARTIFACT VIEWER (CODE + PREVIEW) */}
-              {step === 3 && (
-                <div style={{ height: 'calc(100dvh - 60px)', animation: 'fadeIn 0.5s ease-out' }}>
-                  <ArtifactViewer 
-                    codeFiles={codeFiles} 
-                    setCodeFiles={setCodeFiles}
-                    onClose={() => setStep(0)} 
+              {/* UNIFIED OS WORKSPACE (Combines Code, Preview, Logs, Architecture) */}
+              {(step === 3 || step === 4) && (
+                <div style={{ height: 'calc(100dvh - 60px)', animation: 'fadeIn 0.5s ease-out', margin: '-30px' }}>
+                  <AIWorkspaceTabs 
+                    activeTab={activeWorkspaceTab}
+                    setActiveTab={setActiveWorkspaceTab}
+                    codeFiles={codeFiles}
+                    blueprintJson={activeArchitecture ? JSON.stringify(activeArchitecture) : blueprintJson}
+                    executionLogs={executionLogs}
                     previewUrl={previewUrl}
                     previewError={previewError}
                     isBackend={isBackend}
@@ -1528,7 +1476,7 @@ function App() {
                     isPreviewRunning={isPreviewRunning}
                     previewPort={previewPort}
                     API_URL={API_URL}
-                    executionLogs={executionLogs}
+                    timeline={agentState.timeline}
                   />
                 </div>
               )}

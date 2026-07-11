@@ -34,6 +34,7 @@ class AiONState(TypedDict):
     federation_peer_id: Optional[str] # ID for cross-machine federation
     
     # Advanced Multi-Agent State
+    template_roster: Optional[List[Dict[str, Any]]] # New: Template Intelligence Layer components
     design_tokens: Optional[Dict[str, Any]]
     visual_critique_feedback: Optional[str]
     visual_revision_count: int

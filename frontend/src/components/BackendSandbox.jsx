@@ -77,3 +77,5 @@ export const BackendSandbox = ({ activeTab, previewUrl, previewError, projectId 
     </div>
   );
 };
+
+export default BackendSandbox;
