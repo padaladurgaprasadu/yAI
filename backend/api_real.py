@@ -958,18 +958,17 @@ IMPORTANT RULES:
                 async def fetch_visuals():
                     from backend.utils.visuals import get_generative_image, get_real_world_image, get_pencil_sketch_image
                     try:
-                        v_type = "generative"
-                        v_count = 1
+                        v_count = 3
                         img_urls = []
-                        if v_type == "sketch":
-                            url = await asyncio.to_thread(get_pencil_sketch_image, visual_query_val)
-                            if url: img_urls.append(url)
-                        elif v_type == "generative":
+                        
+                        # Try real world first (highest quality for places, people, objects)
+                        res = await asyncio.to_thread(get_real_world_image, visual_query_val, v_count)
+                        img_urls = res if isinstance(res, list) else ([res] if res else [])
+                        
+                        # Fallback to generative for abstract concepts or if real-world fails
+                        if not img_urls:
                             url = await asyncio.to_thread(get_generative_image, visual_query_val)
                             if url: img_urls.append(url)
-                        else:
-                            res = await asyncio.to_thread(get_real_world_image, visual_query_val, v_count)
-                            img_urls = res if isinstance(res, list) else ([res] if res else [])
                         
                         for img_url in img_urls:
                             await visual_queue.put({
