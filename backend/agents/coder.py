@@ -188,6 +188,7 @@ ROLE: Coder (Dispatcher Sub-Agent)
 GOAL: Write the FULL production-grade content for the requested file: {{target_file}}.
 
 IMPORTANT RULES:
+- TDD COMPLIANCE: A TDD Test Suite is provided in the prompt. You MUST ensure that the code you generate strictly satisfies the requirements and contracts defined in this test suite.
 - You must use only dependencies already declared in the Architect's tech_stack. If a new dependency is needed, add it to 'dependency_requests'.
 {framework_rules}
 - ADVANCED CODE RULE: Write highly efficient, robust code. Strict error handling (try/catch), edge-case fallbacks, input validation.
@@ -206,7 +207,7 @@ OUTPUT SCHEMA:
 
             prompt = ChatPromptTemplate.from_messages([
                 ("system", system_prompt),
-                ("human", "Blueprint: {blueprint}\nDesign Tokens: {design_tokens}\nSemantic Context: {context}\nTarget File: {target_file}\nReview Feedback: {review_feedback}\nRuntime Error: {runtime_error}")
+                ("human", "Blueprint: {blueprint}\nDesign Tokens: {design_tokens}\nSemantic Context: {context}\nTarget File: {target_file}\nReview Feedback: {review_feedback}\nRuntime Error: {runtime_error}\nTDD Test Suite: {test_suite}")
             ])
             
             import time
@@ -220,12 +221,17 @@ OUTPUT SCHEMA:
                         target_file=target_file,
                         review_feedback=feedback,
                         runtime_error=runtime_error,
-                        design_tokens=json.dumps(state.get("design_tokens", {}), indent=2)
+                        design_tokens=json.dumps(state.get("design_tokens", {}), indent=2),
+                        test_suite=state.get("test_suite", "No specific tests provided.")
                     )
                     
                     response_text = ""
                     buffer = ""
-                    for chunk in self.fast_llm.stream(messages):
+                    
+                    from backend.agents.router import ModelRouter
+                    file_specific_llm = ModelRouter.route_by_file_type(target_file)
+                    
+                    for chunk in file_specific_llm.stream(messages):
                         if chunk.content:
                             buffer += chunk.content
                             response_text += chunk.content
@@ -302,6 +308,7 @@ OUTPUT SCHEMA:
         # Clear errors if generation succeeded
         state["error"] = None
         state["review_feedback"] = None
+        state["runtime_error"] = None
         
         if q:
             q.put({"type": "timeline_update", "status": "done"})

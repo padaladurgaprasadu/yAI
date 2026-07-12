@@ -10,17 +10,30 @@ from backend.agents.visual_critique import VisualCritiqueAgent
 from backend.agents.devops import DevOpsAgent
 from backend.agents.executor import ExecutorAgent
 from backend.agents.memory import MemoryAgent
+from backend.agents.tester import TesterAgent
+from backend.agents.adversary import AdversaryAgent
 from langgraph.checkpoint.memory import MemorySaver
 
 def should_continue_review(state: AiONState):
     feedback = state.get("review_feedback", "")
     rev_count = state.get("revision_count", 0)
     if feedback == "APPROVED":
-        return "visual_critique"
+        return "adversary"
     if rev_count >= 3:
-        print("   -> [Graph] Max code revisions reached. Proceeding to visual critique.")
-        return "visual_critique"
+        print("   -> [Graph] Max code revisions reached. Proceeding to adversary.")
+        return "adversary"
     print(f"   -> [Graph] Review failed (Attempt {rev_count}/3). Routing back to Coder.")
+    return "coder"
+
+def should_continue_adversary(state: AiONState):
+    feedback = state.get("review_feedback", "")
+    rev_count = state.get("revision_count", 0)
+    if "ADVERSARY ATTACK FAILED" not in feedback:
+        return "visual_critique"
+    if rev_count >= 4:
+        print("   -> [Graph] Max code revisions reached (Adversary). Proceeding to visual critique.")
+        return "visual_critique"
+    print(f"   -> [Graph] Adversary attack succeeded. Routing back to Coder.")
     return "coder"
 
 def should_continue_visual(state: AiONState):
@@ -59,9 +72,11 @@ def build_orchestrator_graph():
     planner = PlannerAgent()
     template = TemplateAgent()
     architect = ArchitectAgent()
+    tester = TesterAgent()
     design = DesignAgent()
     coder = CoderAgent()
     reviewer = ReviewerAgent()
+    adversary = AdversaryAgent()
     visual_critique = VisualCritiqueAgent()
     devops = DevOpsAgent()
     executor = ExecutorAgent()
@@ -71,9 +86,11 @@ def build_orchestrator_graph():
     workflow.add_node("planner", planner.run)
     workflow.add_node("template", template.run)
     workflow.add_node("architect", architect.run)
+    workflow.add_node("tester", tester.run)
     workflow.add_node("design", design.run)
     workflow.add_node("coder", coder.run)
     workflow.add_node("reviewer", reviewer.run)
+    workflow.add_node("adversary", adversary.run)
     workflow.add_node("visual_critique", visual_critique.run)
     workflow.add_node("devops", devops.run)
     workflow.add_node("executor", executor.run)
@@ -83,11 +100,13 @@ def build_orchestrator_graph():
     workflow.set_entry_point("planner")
     workflow.add_edge("planner", "template")
     workflow.add_edge("template", "architect")
-    workflow.add_edge("architect", "design")
+    workflow.add_edge("architect", "tester")
+    workflow.add_edge("tester", "design")
     workflow.add_edge("design", "coder")
     workflow.add_edge("coder", "reviewer")
     
-    workflow.add_conditional_edges("reviewer", should_continue_review, {"coder": "coder", "visual_critique": "visual_critique"})
+    workflow.add_conditional_edges("reviewer", should_continue_review, {"coder": "coder", "adversary": "adversary"})
+    workflow.add_conditional_edges("adversary", should_continue_adversary, {"coder": "coder", "visual_critique": "visual_critique"})
     workflow.add_conditional_edges("visual_critique", should_continue_visual, {"coder": "coder", "devops": "devops"})
     
     workflow.add_edge("devops", "executor")

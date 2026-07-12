@@ -17,6 +17,25 @@ class PlannerAgent(BaseAgent):
         agent_role = state.get("agent_role", "Fullstack Web Developer")
         logger.info(f"[Planner] Breaking down goal for role: {agent_role}...")
         
+        # Extract past knowledge from Phase 4 Graph
+        project_id = state.get("project_id", "default_project")
+        try:
+            from backend.memory.kg_store import KnowledgeGraphStore
+            kg = KnowledgeGraphStore()
+            past_knowledge = kg.get_knowledge(project_id)
+            if past_knowledge:
+                logger.info(f"[Planner] Loaded Knowledge Graph context for {project_id}")
+                kg_context = "PAST ENTERPRISE KNOWLEDGE:\n"
+                import json
+                for key, val in past_knowledge.items():
+                    kg_context += f"[{key}]: {json.dumps(val)}\n"
+                state["semantic_context"] = state.get("semantic_context", "") + "\n\n" + kg_context
+                
+                if q:
+                    q.put({"type": "progress", "message": "🧠 Loaded past project knowledge graph context!"})
+        except Exception as e:
+            logger.warning(f"[Planner] Failed to query Knowledge Graph: {e}")
+            
         from backend.agents.base import GLOBAL_AGENT_RULES
         from backend.agents.orchestration_prompts import PLANNER_PROMPT
         sys_prompt = GLOBAL_AGENT_RULES + "\n\n" + PLANNER_PROMPT

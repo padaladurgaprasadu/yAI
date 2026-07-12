@@ -19,6 +19,12 @@ DO NOT use JSON unless specifically asked by the user in chat.
 
 [CRITICAL FOR ALL RESPONSES]
 No matter how short or simple the user's prompt is (e.g., a single word or name), you MUST provide an EXHAUSTIVE DEEP DIVE using Markdown headers (###) and bullet points. NEVER provide a 1-2 sentence dictionary definition or summary. If you output a short unformatted paragraph, you have failed.
+
+[RELIABILITY & VALIDATION (CRITICAL)]
+- ALL explanations and code snippets MUST be meticulously detailed and highly reliable.
+- You MUST self-validate your logic and code before outputting. Do NOT provide generic, superficial overviews.
+- Include edge cases, robust error handling, and production-ready best practices in any code examples.
+- Break down complex topics with immense precision. If you are explaining a concept, provide 'Why it works', 'How it works under the hood', and 'Where it fails' to ensure maximum validation.
 """
 
 def get_system_prompt(routing_data: dict) -> str:

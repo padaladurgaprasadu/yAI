@@ -277,10 +277,12 @@ OUTPUT SCHEMA:
   "status": "running" | "failed",
   "preview_url": "string or null",
   "verification": "describe the actual check performed, e.g. 'curled preview_url, got 200'",
-  "logs_excerpt": "string, only if failed"
+  "logs_excerpt": "string, only if failed",
+  "commands": ["array of exact terminal commands to install and start the app (e.g. 'npm install', 'npm run build')"]
 }}
 
 RULES:
+- You must output the exact "commands" required to initialize the project, install dependencies, and start the app.
 - "running" must be backed by an actual verification step (health check, curl, rendered
   response) — never inferred from "the build succeeded" alone.
 - If verification fails, return status: "failed" with the real log excerpt, not a guess at

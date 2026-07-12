@@ -42,8 +42,6 @@ class ReviewerAgent(BaseAgent):
         logger.info("[Reviewer] Analyzing generated code autonomously...")
         
         rev_count = state.get("revision_count", 0)
-        state["revision_count"] = rev_count + 1
-        
         if not state.get("code_files"):
             state["review_feedback"] = "No code files were generated. Please generate the files."
             return state

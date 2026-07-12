@@ -5,12 +5,9 @@ from backend.orchestrator.state import AiONState
 
 class TemplateAgent:
     def __init__(self):
-        # We use a smart model for reasoning about component compatibility
-        self.llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash",
-            temperature=0.2,
-            max_output_tokens=2048,
-        )
+        # We use a fast model for reasoning about component compatibility
+        from backend.agents.router import ModelRouter
+        self.llm = ModelRouter.get_optimal_llm("TemplateAgent", complexity="fast")
         
         # Hardcoded component metadata index (simulating a Vector DB/Registry)
         self.component_registry = """

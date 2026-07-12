@@ -638,6 +638,16 @@ function App() {
                         setGoal(data.data.goal);
                         // Trigger fast generation directly
                         handleFastGenerate(data.data.goal, data.data.agent_role);
+                    } else if (data.type === 'mission_started') {
+                        setChatMessages(prev => {
+                            const newMsgs = [...prev];
+                            newMsgs[newMsgs.length - 1].content = `🚀 Launching Autonomous Mission...\nRole: ${data.agent_role}\nGoal: ${data.data.goal}`;
+                            return newMsgs;
+                        });
+                        setGoal(data.data.goal);
+                        setAgentRole(data.agent_role);
+                        setProjectId(data.project_id);
+                        handleAutonomousGenerate(data.data.goal, data.agent_role, data.project_id);
                     } else if (data.type === 'build') {
                         // It's a build command, remove the empty AI message and trigger build
                         setChatMessages(prev => {
@@ -798,6 +808,90 @@ function App() {
       setIsPlanning(false)
     }
   }
+
+  const handleAutonomousGenerate = async (missionGoal, role, generatedProjectId) => {
+    setIsLoading(true);
+    setError(null);
+    setLiveUpdates([]);
+    setAgentState({ activeAgent: 'planner', timeline: [] });
+    setAwaitingApproval(false);
+    setStep(2); // Move to execution view
+    
+    try {
+      const ws = new WebSocket(`${WS_URL}/api/ws/generate`)
+      
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ 
+            project_id: generatedProjectId,
+            goal: missionGoal,
+            blueprint: { tech_stack: [], file_structure: [], blueprint_notes: "" },
+            agent_role: role,
+            execution_mode: "autonomous",
+            code_files: codeFiles 
+        }))
+      }
+      
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data)
+        if (data.type === 'token') {
+          // ignore
+        } else if (data.type === 'agent_state') {
+          setAgentState(prev => ({ ...prev, activeAgent: data.agent }))
+        } else if (data.type === 'timeline') {
+          setAgentState(prev => ({
+            ...prev,
+            timeline: [...prev.timeline, data]
+          }))
+        } else if (data.type === 'timeline_update') {
+          setAgentState(prev => {
+            const newTimeline = [...prev.timeline]
+            if (newTimeline.length > 0) {
+              newTimeline[newTimeline.length - 1].status = data.status
+            }
+            return { ...prev, timeline: newTimeline }
+          })
+        } else if (data.type === 'progress') {
+          setLiveUpdates(prev => [...prev, data.message])
+        } else if (data.type === 'file_start') {
+          setActiveFile(data.file)
+          if (!codeFiles[data.file]) {
+            setCodeFiles(prev => ({ ...prev, [data.file]: '' }))
+          }
+        } else if (data.type === 'code_token') {
+          if (activeFile) {
+            setCodeFiles(prev => ({
+              ...prev,
+              [activeFile]: prev[activeFile] + data.token
+            }))
+          }
+        } else if (data.type === 'INTERRUPT') {
+          setAwaitingApproval(true)
+        } else if (data.type === 'code_complete') {
+          setCodeFiles(data.code_files)
+        } else if (data.type === 'done') {
+          setIsLoading(false)
+          setBlueprintJson(JSON.stringify(data.blueprint, null, 2))
+          setChatMessages(prev => [...prev, {
+            role: 'ai',
+            content: `MISSION COMPLETE! The autonomous factory successfully generated and debugged your project. You can now preview the result.`
+          }])
+          setStep(3) // Move to the Artifact Viewer so the user can preview the built project
+        } else if (data.type === 'error') {
+          setError(data.message)
+          setIsLoading(false)
+        }
+      }
+      
+      ws.onclose = () => {
+        setIsLoading(false)
+      }
+      
+    } catch (err) {
+      setError(err.message)
+      setIsLoading(false)
+    }
+  }
+
 
   const handleFastGenerate = async (fastGoal, role) => {
     setIsLoading(true);

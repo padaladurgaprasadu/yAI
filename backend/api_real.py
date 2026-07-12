@@ -950,11 +950,12 @@ IMPORTANT RULES:
                 return
 
             # --- NON-BLOCKING VISUAL ENGINE ---
-            visual_queue = asyncio.Queue()
+            visual_queue = None
             visual_task = None
             entity_det = intent_data.get("entity_detection", {})
             visual_query_val = entity_det.get("search_query", "")
             if entity_det.get("requires_visuals") and visual_query_val and visual_query_val.lower() not in ["null", "none"]:
+                visual_queue = asyncio.Queue()
                 yield f"data: {json.dumps({'type': 'status', 'message': '📸 Fetching Visuals (Background)...'})}\n\n"
                 async def fetch_visuals():
                     from backend.utils.visuals import get_generative_image, get_real_world_image, get_pencil_sketch_image
@@ -1177,14 +1178,13 @@ IMPORTANT RULES:
                     
                     if mode == "autonomous":
                         import uuid
-                        import asyncio
                         project_id = f"proj-{str(uuid.uuid4())[:8]}"
                         
-                        from backend.agents.mission_planner import MissionPlanner
-                        planner = MissionPlanner(project_id, parsed, agent_role=intent_data.get("agent_role", "Fullstack Web Developer"))
-                        asyncio.create_task(planner.execute_mission())
-                        
-                        yield f"data: {json.dumps({'type': 'mission_started', 'data': parsed, 'project_id': project_id})}\n\n"
+                        # We no longer launch a detached background task here.
+                        # Instead, we yield 'mission_started' which signals the frontend 
+                        # to connect via the websocket and drive the autonomous loop so the user sees the logs.
+                        yield f"data: {json.dumps({'type': 'mission_started', 'data': parsed, 'project_id': project_id, 'agent_role': intent_data.get('agent_role', 'Fullstack Web Developer')})}\n\n"
+
                     elif mode in ["lightning", "fast"]:
                         yield f"data: {json.dumps({'type': 'fast_build', 'data': parsed})}\n\n"
                     else:

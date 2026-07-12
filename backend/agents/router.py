@@ -24,6 +24,25 @@ class ModelRouter:
         from backend.utils.model_registry import AIModelRegistry
         capability = AIModelRegistry.resolve_capability(task_role, complexity)
         return AIModelRegistry.get_llm_chain(capability)
+        
+    @staticmethod
+    def route_by_file_type(file_path: str):
+        """
+        AST-Level Liquid Routing: Dynamically instantiate the best LLM based on file extension.
+        """
+        ext = file_path.split('.')[-1].lower() if '.' in file_path else ''
+        
+        # UI / Styling -> Vision/Design capable model
+        if ext in ['css', 'scss', 'html', 'jsx', 'tsx', 'vue', 'svelte']:
+            return ModelRouter.get_optimal_llm("DesignAgent", complexity="smart")
+        
+        # Heavy Logic / Backend -> Reasoning model
+        elif ext in ['py', 'java', 'go', 'rs', 'sql', 'c', 'cpp']:
+            return ModelRouter.get_optimal_llm("ArchitectAgent", complexity="smart")
+            
+        # Default / Config -> Fast model
+        else:
+            return ModelRouter.get_optimal_llm("CoderAgent", complexity="fast")
 
 class OmniIntelligenceEngine:
     def __init__(self, llm):

@@ -282,28 +282,36 @@ class ExecutorAgent(BaseAgent):
             print(f"      - Running: {cmd}")
             execution_logs.append(f"> {cmd}")
             try:
-                # Execute the command synchronously
-                # Using shell=True is powerful but dangerous in prod. Safe here for local testing.
-                result = subprocess.run(
+                # [Phase 5: Production Telemetry & Live Sync] Stream stdout directly to SSE
+                process = subprocess.Popen(
                     cmd, 
                     shell=True, 
                     cwd=target_dir, 
-                    capture_output=True, 
-                    text=True, 
-                    timeout=300 # Strict 300s timeout for security (npm install is slow)
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True
                 )
                 
-                if result.stdout:
-                    execution_logs.append(result.stdout)
-                if result.stderr:
-                    execution_logs.append(f"STDERR: {result.stderr}")
-                    
-                if result.returncode == 0:
+                output_lines = []
+                for line in iter(process.stdout.readline, ''):
+                    line_clean = line.strip()
+                    if line_clean:
+                        output_lines.append(line_clean)
+                        # Push to frontend telemetry queue
+                        if q:
+                            q.put({"type": "progress", "message": f"[Telemetry] {line_clean}"})
+                            
+                process.stdout.close()
+                returncode = process.wait(timeout=300)
+                
+                execution_logs.extend(output_lines)
+                
+                if returncode == 0:
                     print(f"        Success.")
                 else:
-                    print(f"        Failed with code {result.returncode}.")
+                    print(f"        Failed with code {returncode}.")
                     # AUTO-HEAL LOOP TRIGGERS HERE
-                    state["runtime_error"] = f"Command '{cmd}' failed with code {result.returncode}.\nSTDERR: {result.stderr}\nSTDOUT: {result.stdout}"
+                    state["runtime_error"] = f"Command '{cmd}' failed with code {returncode}.\nOutput:\n" + "\n".join(output_lines)
                     state["execution_logs"] = execution_logs
                     state["execution_retries"] = state.get("execution_retries", 0) + 1
                     return state

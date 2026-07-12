@@ -71,6 +71,16 @@ class MemoryAgent(BaseAgent):
             except Exception as ge:
                 logger.warning(f"[Memory] Failed to sync to Neo4j graph database: {ge}")
                 
+            # 3. Store in Local SQLite Enterprise Knowledge Graph (Phase 4)
+            try:
+                from backend.memory.kg_store import KnowledgeGraphStore
+                kg = KnowledgeGraphStore()
+                kg.store_knowledge(project_id, "architecture_decisions", memory_data)
+                kg.store_knowledge(project_id, "user_preferences", state.get("design_tokens", {}))
+                logger.info("[Memory] Successfully persisted to Local SQLite Knowledge Graph.")
+            except Exception as kg_err:
+                logger.warning(f"[Memory] Failed to sync to Local Knowledge Graph: {kg_err}")
+                
             logger.info("[Memory] Persisted decisions to state.")
             
         except Exception as e:

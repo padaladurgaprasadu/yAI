@@ -3,13 +3,15 @@ from backend.agents.base import BaseAgent
 from backend.orchestrator.state import AiONState
 from backend.utils.logger import get_logger, measure_time
 import json
+import re
 
 logger = get_logger(__name__)
 
 class TesterAgent(BaseAgent):
     """
-    The Tester Agent analyzes generated code and writes automated unit tests.
-    It feeds any immediate static analysis errors back into the state for debugging.
+    TDD-AI Tester Agent.
+    Runs BEFORE the Coder Agent. Analyzes the Architect's blueprint and generates
+    exhaustive unit/integration tests that the future code must pass.
     """
     def __init__(self):
         super().__init__()
@@ -24,66 +26,60 @@ class TesterAgent(BaseAgent):
             q = None
 
         if q:
-            q.put({"type": "progress", "message": "🧪 Tester Agent is generating Unit Tests..."})
+            q.put({"type": "progress", "message": "🧪 Tester Agent is generating TDD Suite..."})
             
-        print("[Tester] Generating unit tests...")
+        print("[Tester] Generating Test-Driven Development Suite...")
         
         agent_role = state.get("agent_role", "Fullstack Web Developer")
-        code_files = state.get("code_files", {})
+        blueprint = state.get("blueprint", {})
         
-        logger.info(f"[Tester] Analyzing code and generating test suites...")
-        
-        if not code_files:
-            logger.info("   -> [Tester] No code files found to test.")
-            return state
-
-        # Identify language/framework context
         if "Research" in agent_role:
-            logger.info("   -> [Tester] Research role detected. Skipping code tests.")
+            logger.info("   -> [Tester] Research role detected. Skipping TDD tests.")
             return state
             
-        sys_prompt = """You are a Senior QA Automation Engineer.
-Given a dictionary of generated code files, your job is to write a single, comprehensive unit test file that covers the most critical business logic.
-If the project is Python, write `tests/test_main.py` using pytest.
-If the project is Node.js/React, write `tests/app.test.js` using Jest.
+        sys_prompt = """You are an Elite QA Automation Architect.
+We are practicing strictly Test-Driven Development (TDD).
+Given the Architectural Blueprint for a new project, write an exhaustive test suite (unit and integration tests) BEFORE the application code is written.
 
 IMPORTANT RULES:
-1. Output the test file EXACTLY in this format:
-<file path="tests/test_main.py">
-[YOUR TEST CODE HERE]
-</file>
-2. Do NOT write any other text outside the tags.
+1. If it's a Python backend, write PyTest code. If Node/React, write Jest/React Testing Library code.
+2. Focus on testing the core business logic, API contracts, and edge cases described in the blueprint.
+3. Your output MUST be EXACTLY in this JSON schema and nothing else:
+{{
+  "test_suite_spec": "Raw code string containing the complete test suite"
+}}
+4. Do NOT output markdown or backticks outside the JSON.
 """
 
         prompt = ChatPromptTemplate.from_messages([
             ("system", sys_prompt),
-            ("human", "Code Files:\n{code_files}")
+            ("human", "Blueprint:\n{blueprint}")
         ])
         
-        chain = prompt | self.llm
+        chain = prompt | self.smart_llm
         
         try:
-            # We convert code_files dict to a formatted string to avoid token explosion,
-            # but for MVP we'll just pass the dictionary string representation.
             response = chain.invoke({
-                "code_files": json.dumps(code_files, indent=2)
+                "blueprint": json.dumps(blueprint, indent=2)
             })
             
             content = response.content
             if isinstance(content, list):
                 content = "".join(c.get("text", "") if isinstance(c, dict) else str(c) for c in content)
-                
-            import re
-            match = re.search(r'<file\s+path="([^"]+)">(.*?)</file>', content, re.DOTALL)
-            if match:
-                test_path = match.group(1).strip()
-                test_code = match.group(2).strip()
-                state["code_files"][test_path] = test_code
-                print(f"   -> [Tester] Successfully generated {test_path}")
+            
+            from backend.utils.json_parser import parse_json_robustly
+            data = parse_json_robustly(content)
+            
+            test_suite = data.get("test_suite_spec", "")
+            if test_suite:
+                state["test_suite"] = test_suite
+                print("   -> [Tester] Successfully generated TDD Suite.")
+                if q:
+                    q.put({"type": "progress", "message": "✅ TDD Suite Generated"})
             else:
-                print(f"   -> [Tester] Failed to generate test file format.")
+                print("   -> [Tester] Failed to generate test suite spec.")
                 
         except Exception as e:
-            logger.error(f"   -> [Tester] Error during test generation: {e}")
+            logger.error(f"   -> [Tester] Error during TDD generation: {e}")
             
         return state
