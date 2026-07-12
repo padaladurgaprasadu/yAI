@@ -33,6 +33,7 @@ class BaseAgent:
         try:
             self.smart_llm = ModelRouter.get_optimal_llm(self_role, complexity="smart")
             self.fast_llm = ModelRouter.get_optimal_llm(self_role, complexity="fast")
+            self.omega_llm = ModelRouter.get_optimal_llm(self_role, complexity="omega")
         except Exception as e:
             logger.warning(f"Failed to initialize ModelRouter: {e}")
             
@@ -85,6 +86,10 @@ class BaseAgent:
                 # Provide a dummy fallback so it doesn't crash on boot, but will fail gracefully when invoked
                 self.smart_llm = ChatOpenAI(api_key="dummy", model="gpt-4o", temperature=0.1, streaming=True)
                 self.fast_llm = ChatOpenAI(api_key="dummy", model="gpt-4o-mini", temperature=0.1, streaming=True)
+                
+            if not hasattr(self, 'omega_llm'):
+                from backend.models.omega import OmegaModel
+                self.omega_llm = OmegaModel([self.fast_llm, self.smart_llm], self.smart_llm)
             
         # Backward compatibility for scripts still calling self.llm
         self.llm = self.smart_llm

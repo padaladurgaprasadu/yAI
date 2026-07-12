@@ -22,6 +22,21 @@ class ModelRouter:
         mapping agent roles to capability profiles.
         """
         from backend.utils.model_registry import AIModelRegistry
+        
+        if complexity == "omega":
+            logger.info(f"[ModelRouter] Spinning up Omega Meta-Model (MoA) for {task_role}...")
+            # Grab multiple distinct models for the mixture
+            worker1 = AIModelRegistry.get_llm_chain(AIModelRegistry.resolve_capability(task_role, "fast"))
+            worker2 = AIModelRegistry.get_llm_chain(AIModelRegistry.resolve_capability(task_role, "smart"))
+            
+            # Try to grab a third fallback model for diverse reasoning
+            worker3 = worker2
+            
+            synthesizer = AIModelRegistry.get_llm_chain(AIModelRegistry.resolve_capability("Supervisor", "smart"))
+            
+            from backend.models.omega import OmegaModel
+            return OmegaModel(workers=[worker1, worker2, worker3], synthesizer=synthesizer)
+            
         capability = AIModelRegistry.resolve_capability(task_role, complexity)
         return AIModelRegistry.get_llm_chain(capability)
         
