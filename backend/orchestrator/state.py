@@ -23,6 +23,7 @@ class AiONState(TypedDict):
     execution_logs: Optional[list[str]]
     semantic_context: Optional[str]
     test_suite: Optional[str]
+    is_fast_track: Optional[bool]
     
     # Phase 1: Omni Intelligence Engine
     execution_mode: Optional[str] # Lightning, Fast, Deep, Autonomous

@@ -63,6 +63,12 @@ def should_continue_execution(state: AiONState):
     print(f"   -> [Graph] Execution failed with error: {runtime_error}. Routing back to Coder (Attempt {retries}/3).")
     return "coder"
 
+def should_continue_coder(state: AiONState):
+    if state.get("is_fast_track"):
+        print("   -> [Graph] Fast Track enabled. Bypassing Quality Intelligence and proceeding to Memory.")
+        return "memory"
+    return "tester"
+
 def route_from_supervisor(state: AiONState):
     tasks = state.get("swarm_tasks", [])
     if tasks and len(tasks) > 0:
@@ -135,8 +141,8 @@ def build_orchestrator_graph():
     # Layer 6: Design Intelligence
     workflow.add_edge("design", "coder")
     
-    # Layer 7: Engineering
-    workflow.add_edge("coder", "tester")
+    # Layer 7: Engineering (Fast Track Conditional Exit)
+    workflow.add_conditional_edges("coder", should_continue_coder, {"memory": "memory", "tester": "tester"})
     
     # Layer 8: Quality Intelligence (Tester -> Reviewer -> Adversary -> Visual)
     workflow.add_edge("tester", "reviewer")

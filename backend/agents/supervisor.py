@@ -25,49 +25,32 @@ class SwarmSupervisorAgent(BaseAgent):
             q = None
 
         if q:
-            q.put({"type": "progress", "message": "🧠 Swarm Supervisor is analyzing the optimal workflow..."})
+            q.put({"type": "progress", "message": "🧠 Swarm Supervisor is analyzing intent for optimal workflow..."})
             
-        sys_prompt = """You are the Swarm Supervisor for yAI.
-Analyze the user's goal and decide the next best agent to handle the task.
-Available Agents:
-- planner (Breaks down requirements)
-- mcp_client (Connects to external tools/servers if needed)
-- coder (Directly writes code if requirements are simple)
-
-Return your response in EXACTLY this JSON schema:
-{
-  "next_agent": "planner" | "mcp_client" | "coder",
-  "reasoning": "Why you chose this agent"
-}
-Do not output markdown.
-"""
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", sys_prompt),
-            ("human", "Goal: {goal}")
-        ])
+        goal = state.get("goal", "")
         
-        chain = prompt | self.smart_llm
+        # Instantiate Omni Intelligence Engine for fast intent detection
+        from backend.agents.router import OmniIntelligenceEngine
+        omni = OmniIntelligenceEngine()
+        intent_data = omni.detect_intent(goal)
         
-        try:
-            response = chain.invoke({"goal": state.get("goal", "")})
-            content = response.content
-            if isinstance(content, list):
-                content = "".join(c.get("text", "") if isinstance(c, dict) else str(c) for c in content)
+        intent_category = intent_data.get("specific_intent", "Unknown")
+        complexity = intent_data.get("complexity", "Intermediate")
+        
+        # Fast Track logic: Bypass heavy engineering loop for simple questions
+        if "chat" in intent_category.lower() or complexity.lower() == "fast" or "simple" in complexity.lower():
+            logger.info(f"   -> [Supervisor] Detected Fast Track eligible intent: {intent_category}")
+            state["is_fast_track"] = True
+            next_agent = "coder" # Will execute code generation quickly
+        else:
+            state["is_fast_track"] = False
+            # Heavy pipeline
+            next_agent = "mcp_client"
             
-            from backend.utils.json_parser import parse_json_robustly
-            data = parse_json_robustly(content)
-            
-            next_agent = data.get("next_agent", "planner")
-            if next_agent not in ["planner", "mcp_client", "coder"]:
-                next_agent = "planner"
+        state["swarm_tasks"] = [{"next_agent": next_agent}]
+        state["complexity"] = complexity
+        
+        if q:
+            q.put({"type": "progress", "message": f"🤖 Supervisor delegated task to: {next_agent} (Fast Track: {state['is_fast_track']})"})
                 
-            state["swarm_tasks"] = [{"next_agent": next_agent}] # Store routing decision
-            
-            if q:
-                q.put({"type": "progress", "message": f"🤖 Supervisor delegated task to: {next_agent}"})
-                
-        except Exception as e:
-            logger.error(f"   -> [Supervisor] Error: {e}")
-            state["swarm_tasks"] = [{"next_agent": "planner"}] # Default fallback
-            
         return state
