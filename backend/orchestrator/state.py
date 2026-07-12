@@ -29,6 +29,8 @@ class AiONState(TypedDict):
     execution_mode: Optional[str] # Lightning, Fast, Deep, Autonomous
     complexity: Optional[str]
     compressed_context: Optional[str]
+    repository_context: Optional[str] # New: Repository Intelligence Layer
+
     
     # yAI Swarm Protocol State
     swarm_tasks: Optional[List[Dict[str, Any]]] # Dynamic tasks for sub-agents

@@ -44,6 +44,11 @@ class PlannerAgent(BaseAgent):
         
         from langchain_core.messages import SystemMessage, HumanMessage
         
+        semantic_context = state.get("semantic_context", "")
+        repo_context = state.get("repository_context", "")
+        if repo_context and "No existing repository" not in repo_context:
+            semantic_context += f"\n\nREPOSITORY INTELLIGENCE (Internal Knowledge Graph):\n{repo_context}"
+            
         if image_url:
             sys_prompt += "\n\nCRITICAL UI ARCHITECT RULE: The user has provided an image screenshot of a UI they want to build. You MUST analyze this screenshot visually. In your generated tasks/modules, explicitly include frontend components that match the layout, features, and interactive elements visible in the screenshot (e.g. 'HeroSection', 'SidebarNav', 'ProductGrid')."
             human_content = [{"type": "text", "text": f"Goal: {goal}"}]
@@ -55,11 +60,10 @@ class PlannerAgent(BaseAgent):
             else:
                 human_content.append({"type": "image_url", "image_url": {"url": image_url}})
             
-            semantic_context = state.get("semantic_context", "")
             if semantic_context:
                 human_content.append({"type": "text", "text": f"\n\nInnovation Brief & Research Context:\n{semantic_context}"})
+                
         else:
-            semantic_context = state.get("semantic_context", "")
             if semantic_context:
                 human_content = f"Goal: {goal}\n\nInnovation Brief & Research Context:\n{semantic_context}"
             else:

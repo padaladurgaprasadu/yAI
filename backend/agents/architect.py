@@ -68,6 +68,11 @@ class ArchitectAgent(BaseAgent):
             print(f"   -> [WARNING] Could not connect to Semantic Memory: {e}")
             context = "No past projects found."
         
+        # Inject Repository Intelligence Context if available
+        repo_context = state.get("repository_context", "")
+        if repo_context and "No existing repository" not in repo_context:
+            context += f"\n\n--- EXISTING REPOSITORY KNOWLEDGE GRAPH ---\n{repo_context}"
+            
         # Ask the AI for the blueprint
         response = chain.invoke({
             "goal": state["goal"],

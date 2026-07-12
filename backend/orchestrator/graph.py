@@ -93,6 +93,10 @@ def build_orchestrator_graph():
         from backend.agents.mcp_client import MCPClientAgent
         return MCPClientAgent().run(state)
         
+    def run_repository(state):
+        from backend.agents.repository import RepositoryIntelligenceAgent
+        return RepositoryIntelligenceAgent().run(state)
+        
     def run_template(state):
         from backend.agents.template_intelligence import TemplateAgent
         return TemplateAgent().run(state)
@@ -144,6 +148,7 @@ def build_orchestrator_graph():
     # 2. Add nodes
     workflow.add_node("supervisor", run_supervisor)
     workflow.add_node("mcp_client", run_mcp_client)
+    workflow.add_node("repository", run_repository)
     workflow.add_node("template", run_template)
     workflow.add_node("planner", run_planner)
     workflow.add_node("architect", run_architect)
@@ -168,9 +173,10 @@ def build_orchestrator_graph():
     )
     
     # Layer 2: Repository Intelligence
-    workflow.add_edge("mcp_client", "template")
+    workflow.add_edge("mcp_client", "repository")
     
     # Layer 3: Template Intelligence
+    workflow.add_edge("repository", "template")
     workflow.add_edge("template", "planner")
     
     # Layer 4: Planning Intelligence
