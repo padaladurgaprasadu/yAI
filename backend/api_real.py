@@ -987,6 +987,8 @@ IMPORTANT RULES:
                     experts_str = ", ".join(result["experts"])
                     
                     yield f"data: {json.dumps({'type': 'status', 'message': f'✅ Fused knowledge from: {experts_str}'})}\n\n"
+                    await asyncio.sleep(0.8) # Brief pause so they see the success message
+                    yield f"data: {json.dumps({'type': 'status', 'message': ''})}\n\n"
                     
                     fused = result["fused_response"]
                     chunk_size = 20
@@ -1000,14 +1002,26 @@ IMPORTANT RULES:
                     api_logger.error(f"Domain Orchestrator failed: {e}")
             
             if not is_architecture_req and not is_build_req:
-                yield f"data: {json.dumps({'type': 'status', 'message': '🧠 Fusing Context Intelligence...'})}\n\n"
+                yield f"data: {json.dumps({'type': 'status', 'message': '🧠 Orchestrating Response Pipeline...'})}\n\n"
                 try:
-                    from backend.agents.context_intelligence import ContextIntelligenceEngine
-                    ctx_engine = ContextIntelligenceEngine()
-                    fused_context = await ctx_engine.build_context(sanitized_message, request_data.history, intent_data, USER_MEMORY)
-                    system_prompt = ctx_engine.generate_system_prompt(fused_context)
+                    from backend.agents.response_orchestrator import ResponseOrchestrator
+                    orchestrator = ResponseOrchestrator()
+                    final_response = await orchestrator.execute_pipeline(sanitized_message, USER_MEMORY)
+                    
+                    yield f"data: {json.dumps({'type': 'status', 'message': '✅ Quality Check Passed'})}\n\n"
+                    await asyncio.sleep(0.5) # Brief pause
+                    yield f"data: {json.dumps({'type': 'status', 'message': ''})}\n\n"
+                    
+                    # Stream the final response
+                    chunk_size = 20
+                    for i in range(0, len(final_response), chunk_size):
+                        yield f"data: {json.dumps({'type': 'chat', 'token': final_response[i:i+chunk_size]})}\n\n"
+                        await asyncio.sleep(0.01)
+                    
+                    yield f"data: {json.dumps({'type': 'status', 'message': ''})}\n\n"
+                    return
                 except Exception as e:
-                    api_logger.error(f"Context Intelligence failed: {e}")
+                    api_logger.error(f"Response Orchestrator failed: {e}")
                     base_prompt = get_system_prompt(intent_data)
                     system_prompt = f"{base_prompt}\n\n[USER'S PAST MEMORY]:\n{USER_MEMORY}"
             else:
