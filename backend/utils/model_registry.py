@@ -15,33 +15,56 @@ PROVIDER_CONFIGS = {
         "base_url": "https://integrate.api.nvidia.com/v1",
         "api_key_env": "NVIDIA_API_KEY",
         "capabilities": {
-            "chat": [
-                "meta/llama-3.1-8b-instruct", 
-                "z.ai/glm-5.2", 
+            "intent_router": [
                 "meta/llama-3.2-3b-instruct",
                 "nvidia/nemotron-mini-4b-instruct"
             ],
+            "general_chat": [
+                "mistralai/mistral-small-2402",
+                "google/gemma-2-27b-it",
+                "meta/llama-3.3-70b-instruct"
+            ],
             "coding": [
-                "meta/llama-3.1-70b-instruct", 
-                "z.ai/glm-5.2", 
+                "deepseek-ai/deepseek-coder-6.7b-instruct",
                 "meta/llama-3.1-8b-instruct"
             ],
-            "reasoning": [
-                "meta/llama-3.1-70b-instruct", 
-                "z.ai/glm-5.2", 
-                "nvidia/llama-3.1-nemotron-51b-instruct", 
-                "meta/llama-3.1-8b-instruct"
+            "complex_coding": [
+                "deepseek-ai/deepseek-coder-33b-instruct",
+                "meta/llama-3.1-70b-instruct"
             ],
-            "vision": [
-                "meta/llama-3.2-11b-vision-instruct", 
+            "planning": [
+                "nvidia/nemotron-4-340b-instruct",
+                "meta/llama-3.1-70b-instruct"
+            ],
+            "research": [
+                "z.ai/glm-4-9b-chat",
+                "qwen/qwen2-72b-instruct"
+            ],
+            "mathematics": [
+                "qwen/qwen2-72b-instruct"
+            ],
+            "ui_generation": [
                 "meta/llama-3.1-70b-instruct"
             ],
             "safety": [
-                "nvidia/nemotron-4-340b-instruct", 
-                "meta/llama-3.1-8b-instruct"
+                "nvidia/nemotron-4-340b-instruct"
+            ],
+            "documentation": [
+                "mistralai/mistral-large-2402"
+            ],
+            # Legacy fallbacks for standard graph nodes
+            "chat": [
+                "meta/llama-3.1-8b-instruct", 
+                "meta/llama-3.2-3b-instruct"
+            ],
+            "reasoning": [
+                "nvidia/nemotron-4-340b-instruct",
+                "meta/llama-3.1-70b-instruct"
+            ],
+            "vision": [
+                "meta/llama-3.2-11b-vision-instruct"
             ],
             "memory": [
-                "meta/llama-3.1-8b-instruct", 
                 "meta/llama-3.2-3b-instruct"
             ]
         }
@@ -121,26 +144,40 @@ class AIModelRegistry:
         Maps an agent role/task to a target capability category.
         """
         role_lower = role.lower()
-        if "router" in role_lower or "planner" in role_lower or "intent" in role_lower:
-            return "chat" if complexity == "fast" else "reasoning"
+        
+        # New NVIDIA NIM Intent Router mappings
+        if "router" in role_lower or "intent" in role_lower:
+            return "intent_router"
+        if "research" in role_lower:
+            return "research"
+        if "math" in role_lower:
+            return "mathematics"
+        if "safety" in role_lower or "moderation" in role_lower:
+            return "safety"
+        if "document" in role_lower or "doc" in role_lower:
+            return "documentation"
+        if "ui" in role_lower or "design" in role_lower or "frontend" in role_lower:
+            return "ui_generation"
+            
+        # Standard yAI Agent mappings mapped to new robust categories
+        if "planner" in role_lower:
+            return "planning"
         if "architect" in role_lower or "system" in role_lower:
-            return "reasoning"
+            return "planning" if complexity == "smart" else "reasoning"
         if "coder" in role_lower or "generator" in role_lower or "programmer" in role_lower:
-            return "coding"
-        if "design" in role_lower or "ui" in role_lower or "css" in role_lower:
-            return "coding" if complexity == "smart" else "chat"
+            return "complex_coding" if complexity == "smart" else "coding"
         if "reviewer" in role_lower or "audit" in role_lower or "critique" in role_lower:
-            return "reasoning"
+            return "complex_coding"
         if "visual" in role_lower or "vision" in role_lower:
             return "vision"
         if "devops" in role_lower or "deployment" in role_lower:
             return "coding"
         if "executor" in role_lower:
-            return "chat"
+            return "general_chat"
         if "memory" in role_lower:
             return "memory"
         
-        return "chat" if complexity == "fast" else "reasoning"
+        return "general_chat" if complexity == "fast" else "reasoning"
 
     @staticmethod
     def get_llm_chain(capability: str, temperature: float = 0.1) -> Any:

@@ -60,12 +60,17 @@ class ModelRouter:
             return ModelRouter.get_optimal_llm("CoderAgent", complexity="fast")
 
 class OmniIntelligenceEngine:
-    def __init__(self, llm):
+    def __init__(self, llm=None):
         """
         Omni Intelligence Engine (yAI 3.0)
         Dynamically analyzes tasks to select the optimal Multi-Speed Execution Strategy.
+        Uses the specialized 'intent_router' capability for lightning-fast routing.
         """
-        self.llm = llm
+        if llm is None:
+            from backend.utils.model_registry import AIModelRegistry
+            self.llm = AIModelRegistry.get_llm_chain("intent_router")
+        else:
+            self.llm = llm
         
         from backend.agents.base import GLOBAL_AGENT_RULES
         from backend.agents.orchestration_prompts import ROUTER_PROMPT
