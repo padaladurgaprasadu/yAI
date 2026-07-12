@@ -39,6 +39,17 @@ class MemoryAgent(BaseAgent):
             content = response.content.strip()
             from backend.utils.json_parser import parse_json_robustly
             memory_data = parse_json_robustly(content)
+            
+            # Adaptive Conversational Memory (Ruflo style)
+            # Create a rolling summary of the memory for future workflow injections
+            rolling_summary = memory_data.get("summary", "No summary generated.")
+            existing_context = state.get("semantic_context", "")
+            
+            if existing_context:
+                state["semantic_context"] = f"{existing_context}\n[Memory Summary]: {rolling_summary}"
+            else:
+                state["semantic_context"] = f"[Memory Summary]: {rolling_summary}"
+                
             state["memory_persisted"] = memory_data
             
             # 1. Store in ChromaDB Vector Database for Semantic Cache & RAG

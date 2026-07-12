@@ -11,6 +11,8 @@ from backend.agents.devops import DevOpsAgent
 from backend.agents.executor import ExecutorAgent
 from backend.agents.memory import MemoryAgent
 from backend.agents.tester import TesterAgent
+from backend.agents.supervisor import SwarmSupervisorAgent
+from backend.agents.mcp_client import MCPClientAgent
 from backend.agents.adversary import AdversaryAgent
 from langgraph.checkpoint.memory import MemorySaver
 
@@ -61,6 +63,14 @@ def should_continue_execution(state: AiONState):
     print(f"   -> [Graph] Execution failed with error: {runtime_error}. Routing back to Coder (Attempt {retries}/3).")
     return "coder"
 
+def route_from_supervisor(state: AiONState):
+    tasks = state.get("swarm_tasks", [])
+    if tasks and len(tasks) > 0:
+        next_agent = tasks[0].get("next_agent", "planner")
+        print(f"   -> [Swarm Routing] Supervisor delegating to: {next_agent}")
+        return next_agent
+    return "planner"
+
 def build_orchestrator_graph():
     """
     Builds the unified 12-agent Orchestrator Pipeline as defined in the user prompt set.
@@ -69,6 +79,8 @@ def build_orchestrator_graph():
     workflow = StateGraph(AiONState)
     
     # 1. Initialize nodes
+    supervisor = SwarmSupervisorAgent()
+    mcp_client = MCPClientAgent()
     planner = PlannerAgent()
     template = TemplateAgent()
     architect = ArchitectAgent()
@@ -83,6 +95,8 @@ def build_orchestrator_graph():
     memory = MemoryAgent()
     
     # 2. Add nodes
+    workflow.add_node("supervisor", supervisor.run)
+    workflow.add_node("mcp_client", mcp_client.run)
     workflow.add_node("planner", planner.run)
     workflow.add_node("template", template.run)
     workflow.add_node("architect", architect.run)
@@ -97,7 +111,18 @@ def build_orchestrator_graph():
     workflow.add_node("memory", memory.run)
     
     # 3. Add edges (The Core Loop)
-    workflow.set_entry_point("planner")
+    workflow.set_entry_point("supervisor")
+    
+    # Dynamic routing from Swarm Supervisor
+    workflow.add_conditional_edges(
+        "supervisor", 
+        route_from_supervisor, 
+        {"planner": "planner", "mcp_client": "mcp_client", "coder": "coder"}
+    )
+    
+    # MCP Client merges back into the standard flow
+    workflow.add_edge("mcp_client", "planner")
+    
     workflow.add_edge("planner", "template")
     workflow.add_edge("template", "architect")
     workflow.add_edge("architect", "tester")
