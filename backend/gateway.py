@@ -27,16 +27,24 @@ class AIGateway:
         q.put({"type": "progress", "node": "gateway", "message": "🚦 AI Gateway routing request..."})
         try:
             intent_data = self.router.detect_intent(goal)
-            intent_category = intent_data.get("specific_intent", "Unknown").lower()
-            complexity = intent_data.get("complexity", "Intermediate").lower()
             
+            # The intent_data uses the ROUTER_PROMPT schema
+            router_mode = intent_data.get("mode", "chat").lower()
+            complexity = intent_data.get("complexity", "fast").lower()
+            
+            # Additional heuristic: If the user pastes a massive spec, force builder
+            goal_lower = goal.lower()
+            if len(goal) > 600 or "database schema" in goal_lower or "system components" in goal_lower or "build" in goal_lower:
+                router_mode = "builder"
+                complexity = "smart"
+
             # Determine Execution Mode
-            if "chat" in intent_category or complexity == "fast" or "simple" in complexity:
-                mode = "quick_chat"
-            elif complexity == "intermediate" or "edit" in intent_category or "fix" in intent_category:
-                mode = "specialist"
-            else:
+            if router_mode == "builder":
                 mode = "builder"
+            elif router_mode == "chat" and complexity == "fast":
+                mode = "quick_chat"
+            else:
+                mode = "specialist"
                 
             q.put({"type": "progress", "node": "gateway", "message": f"⚡ Gateway selected mode: {mode.upper()}"})
             
@@ -46,7 +54,7 @@ class AIGateway:
             if mode == "quick_chat":
                 final_st = self._run_quick_chat(initial_state, q)
             elif mode == "specialist":
-                final_st = self._run_specialist(initial_state, q, intent_category)
+                final_st = self._run_specialist(initial_state, q, goal_lower)
             else:
                 final_st = self._run_builder(initial_state, q, project_id)
                 
@@ -86,12 +94,12 @@ class AIGateway:
         })
         return state
 
-    def _run_specialist(self, state: AiONState, q, intent_category: str) -> AiONState:
+    def _run_specialist(self, state: AiONState, q, goal_lower: str) -> AiONState:
         """Mode 2: Single agent execution."""
         from backend.agents.coder import CoderAgent
         from backend.agents.architect import ArchitectAgent
         
-        if "architect" in intent_category or "system" in intent_category:
+        if "architect" in goal_lower or "system" in goal_lower:
             q.put({"type": "progress", "node": "specialist", "message": "🏗️ Invoking Specialist Architect..."})
             agent = ArchitectAgent()
         else:
