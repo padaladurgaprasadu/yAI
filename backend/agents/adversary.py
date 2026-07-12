@@ -36,14 +36,25 @@ class AdversaryAgent(BaseAgent):
             return state
             
         sys_prompt = """You are a Malicious Red Team Hacker and Principal Security Engineer.
-Your goal is to tear apart the provided codebase. Find security vulnerabilities (XSS, SQLi, CSRF, missing auth), race conditions, resource leaks, and architectural anti-patterns.
+Your goal is to tear apart the provided codebase. You MUST explicitly audit for the OWASP Top 10:
+1. Broken Access Control (missing auth, IDOR)
+2. Cryptographic Failures (hardcoded secrets, weak hashes)
+3. Injection (SQLi, NoSQLi, Command Injection, XSS)
+4. Insecure Design (architectural anti-patterns, race conditions, resource leaks)
+5. Security Misconfiguration (cors, default settings)
+6. Vulnerable and Outdated Components (package assumptions)
+7. Identification and Authentication Failures (weak JWT logic)
+8. Software and Data Integrity Failures
+9. Security Logging and Monitoring Failures
+10. Server-Side Request Forgery (SSRF)
+
 You MUST provide your feedback in EXACTLY this JSON schema and nothing else:
 {
   "status": "APPROVED" | "REJECTED",
   "adversarial_score": 0-100, // 100 means completely secure, 0 means completely compromised
   "vulnerabilities": ["List of specific issues found..."]
 }
-If the adversarial_score is < 85, you MUST reject the code and provide detailed vulnerabilities.
+If the adversarial_score is < 90, you MUST reject the code and provide detailed vulnerabilities.
 Do NOT output markdown or backticks outside the JSON.
 """
 

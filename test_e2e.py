@@ -6,10 +6,13 @@ import uuid
 async def test_workflow():
     uri = "ws://localhost:8000/api/ws/generate"
     project_id = f"test-{uuid.uuid4().hex[:8]}"
-    log_file = open("test_e2e_output.txt", "w")
+    log_file = open("test_e2e_output.txt", "w", encoding="utf-8")
     
     def log(msg):
-        print(msg, flush=True)
+        try:
+            print(msg, flush=True)
+        except Exception:
+            pass
         log_file.write(msg + "\n")
         log_file.flush()
         

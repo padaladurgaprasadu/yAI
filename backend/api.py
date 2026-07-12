@@ -1,5 +1,9 @@
 import os
 import sys
+
+# Add the project root to sys.path so that 'from backend...' works
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import traceback
 from fastapi import FastAPI
 from fastapi.responses import PlainTextResponse
@@ -59,3 +63,8 @@ except Exception as e:
     @app.api_route("/{path_name:path}", methods=["GET", "POST", "OPTIONS", "PUT", "DELETE"])
     async def catch_all(path_name: str):
         return PlainTextResponse(f"API is down due to startup error: {startup_error}", status_code=500)
+
+if __name__ == "__main__":
+    import uvicorn
+    # Make sure to run it exactly like api_real.py does (port 10000 or 8000)
+    uvicorn.run("backend.api:app", host="0.0.0.0", port=8000, reload=True)

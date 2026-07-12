@@ -32,6 +32,25 @@ def measure_time(logger=None):
                 end_time = time.perf_counter()
                 elapsed = end_time - start_time
                 log.info(f"[METRIC] '{func.__name__}' completed successfully in {elapsed:.2f} seconds.")
+                
+                # Attempt to extract AiONState to push telemetry to the frontend
+                state = None
+                if len(args) > 1 and isinstance(args[1], dict) and "project_id" in args[1]:
+                    state = args[1]
+                elif "state" in kwargs and isinstance(kwargs["state"], dict) and "project_id" in kwargs["state"]:
+                    state = kwargs["state"]
+                    
+                if state:
+                    project_id = state.get("project_id")
+                    try:
+                        from backend.api_real import stream_queues
+                        q = stream_queues.get(project_id)
+                        if q:
+                            agent_name = args[0].__class__.__name__ if len(args) > 0 else func.__name__
+                            q.put({"type": "progress", "message": f"⏱️ [Telemetry] {agent_name} executed in {elapsed:.2f}s"})
+                    except ImportError:
+                        pass
+                        
                 return result
             except Exception as e:
                 end_time = time.perf_counter()

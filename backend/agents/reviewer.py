@@ -1,5 +1,6 @@
 import os
 import json
+import ast
 from langchain_core.prompts import ChatPromptTemplate
 from backend.agents.base import BaseAgent
 from backend.orchestrator.state import AiONState
@@ -61,8 +62,27 @@ class ReviewerAgent(BaseAgent):
         
         for attempt in range(max_retries):
             try:
-                # Truncate code files output to prevent token limits
-                code_files_summary = {k: v[:500] + "... [TRUNCATED]" if len(v) > 500 else v for k, v in state["code_files"].items()}
+                # AST Pre-check for python files
+                ast_errors = []
+                for k, v in state["code_files"].items():
+                    if k.endswith(".py"):
+                        try:
+                            ast.parse(v)
+                        except SyntaxError as e:
+                            ast_errors.append(f"SyntaxError in {k}: {e.msg} at line {e.lineno}")
+                
+                if ast_errors:
+                    feedback = json.dumps([{"file": "Python Check", "issue": err, "fix": "Fix python syntax"} for err in ast_errors])
+                    logger.warning(f"[Reviewer] AST parsing failed: {feedback}")
+                    break
+
+                # Smart truncation: First 1500 chars and last 500 chars to capture imports and main logic
+                code_files_summary = {}
+                for k, v in state["code_files"].items():
+                    if len(v) > 2000:
+                        code_files_summary[k] = v[:1500] + "\n... [TRUNCATED MIDDLE] ...\n" + v[-500:]
+                    else:
+                        code_files_summary[k] = v
                 
                 response = self.chain.invoke({
                     "workspace": workspace,
