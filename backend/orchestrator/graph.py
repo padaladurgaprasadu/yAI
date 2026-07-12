@@ -84,37 +84,78 @@ def build_orchestrator_graph():
     """
     workflow = StateGraph(AiONState)
     
-    # 1. Initialize nodes
-    supervisor = SwarmSupervisorAgent()
-    mcp_client = MCPClientAgent()
-    template = TemplateAgent()
-    planner = PlannerAgent()
-    architect = ArchitectAgent()
-    design = DesignAgent()
-    coder = CoderAgent()
-    tester = TesterAgent()
-    reviewer = ReviewerAgent()
-    adversary = AdversaryAgent()
-    visual_critique = VisualCritiqueAgent()
-    executor = ExecutorAgent()
-    devops = DevOpsAgent()
-    memory = MemoryAgent()
+    # 1. Initialize lazy-loaded node wrappers
+    def run_supervisor(state):
+        from backend.agents.supervisor import SwarmSupervisorAgent
+        return SwarmSupervisorAgent().run(state)
+        
+    def run_mcp_client(state):
+        from backend.agents.mcp_client import MCPClientAgent
+        return MCPClientAgent().run(state)
+        
+    def run_template(state):
+        from backend.agents.template_intelligence import TemplateAgent
+        return TemplateAgent().run(state)
+        
+    def run_planner(state):
+        from backend.agents.planner import PlannerAgent
+        return PlannerAgent().run(state)
+        
+    def run_architect(state):
+        from backend.agents.architect import ArchitectAgent
+        return ArchitectAgent().run(state)
+        
+    def run_design(state):
+        from backend.agents.design import DesignAgent
+        return DesignAgent().run(state)
+        
+    def run_coder(state):
+        from backend.agents.coder import CoderAgent
+        return CoderAgent().run(state)
+        
+    def run_tester(state):
+        from backend.agents.tester import TesterAgent
+        return TesterAgent().run(state)
+        
+    def run_reviewer(state):
+        from backend.agents.reviewer import ReviewerAgent
+        return ReviewerAgent().run(state)
+        
+    def run_adversary(state):
+        from backend.agents.adversary import AdversaryAgent
+        return AdversaryAgent().run(state)
+        
+    def run_visual_critique(state):
+        from backend.agents.visual_critique import VisualCritiqueAgent
+        return VisualCritiqueAgent().run(state)
+        
+    def run_executor(state):
+        from backend.agents.executor import ExecutorAgent
+        return ExecutorAgent().run(state)
+        
+    def run_devops(state):
+        from backend.agents.devops import DevOpsAgent
+        return DevOpsAgent().run(state)
+        
+    def run_memory(state):
+        from backend.agents.memory import MemoryAgent
+        return MemoryAgent().run(state)
     
     # 2. Add nodes
-    workflow.add_node("supervisor", supervisor.run)
-    workflow.add_node("mcp_client", mcp_client.run)
-    workflow.add_node("template", template.run)
-    workflow.add_node("planner", planner.run)
-    workflow.add_node("architect", architect.run)
-    workflow.add_node("design", design.run)
-    workflow.add_node("coder", coder.run)
-    workflow.add_node("tester", tester.run)
-    workflow.add_node("reviewer", reviewer.run)
-    workflow.add_node("adversary", adversary.run)
-    workflow.add_node("visual_critique", visual_critique.run)
-    workflow.add_node("executor", executor.run)
-    workflow.add_node("devops", devops.run)
-    workflow.add_node("memory", memory.run)
+    workflow.add_node("supervisor", run_supervisor)
+    workflow.add_node("mcp_client", run_mcp_client)
+    workflow.add_node("template", run_template)
+    workflow.add_node("planner", run_planner)
+    workflow.add_node("architect", run_architect)
+    workflow.add_node("design", run_design)
+    workflow.add_node("coder", run_coder)
+    workflow.add_node("tester", run_tester)
+    workflow.add_node("reviewer", run_reviewer)
+    workflow.add_node("adversary", run_adversary)
+    workflow.add_node("visual_critique", run_visual_critique)
+    workflow.add_node("executor", run_executor)
+    workflow.add_node("devops", run_devops)
+    workflow.add_node("memory", run_memory)
     
     # 3. Add edges (The Core Loop)
     workflow.set_entry_point("supervisor")

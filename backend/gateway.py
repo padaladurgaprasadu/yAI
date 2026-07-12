@@ -1,0 +1,133 @@
+import json
+import traceback
+from backend.orchestrator.state import AiONState
+from backend.utils.logger import get_logger
+from backend.agents.router import OmniIntelligenceEngine
+
+logger = get_logger(__name__)
+
+class AIGateway:
+    """
+    Central AI Gateway for yAI.
+    Routes requests into three distinct execution modes:
+    1. Quick Chat (Lightweight, <2s)
+    2. Specialist (Single Agent execution)
+    3. Builder (Full Swarm Orchestration)
+    """
+    def __init__(self):
+        self.router = OmniIntelligenceEngine()
+
+    def run(self, initial_state: AiONState, q, project_id: str):
+        """
+        Executes the user request in the appropriate mode and streams progress/results to the queue.
+        """
+        goal = initial_state.get("goal", "")
+        
+        # Phase 1: Gateway Routing
+        q.put({"type": "progress", "node": "gateway", "message": "🚦 AI Gateway routing request..."})
+        try:
+            intent_data = self.router.detect_intent(goal)
+            intent_category = intent_data.get("specific_intent", "Unknown").lower()
+            complexity = intent_data.get("complexity", "Intermediate").lower()
+            
+            # Determine Execution Mode
+            if "chat" in intent_category or complexity == "fast" or "simple" in complexity:
+                mode = "quick_chat"
+            elif complexity == "intermediate" or "edit" in intent_category or "fix" in intent_category:
+                mode = "specialist"
+            else:
+                mode = "builder"
+                
+            q.put({"type": "progress", "node": "gateway", "message": f"⚡ Gateway selected mode: {mode.upper()}"})
+            
+            final_st = initial_state
+            
+            # Phase 2: Execution Modes
+            if mode == "quick_chat":
+                final_st = self._run_quick_chat(initial_state, q)
+            elif mode == "specialist":
+                final_st = self._run_specialist(initial_state, q, intent_category)
+            else:
+                final_st = self._run_builder(initial_state, q, project_id)
+                
+            # Finish
+            q.put({"type": "GRAPH_DONE", "state": final_st})
+            
+        except Exception as e:
+            trace = traceback.format_exc()
+            logger.error(f"[Gateway Error]: {trace}")
+            q.put({"type": "error", "message": f"Gateway Error: {str(e)}"})
+
+    def _run_quick_chat(self, state: AiONState, q) -> AiONState:
+        """Mode 1: Direct LLM response for chat."""
+        from backend.utils.model_registry import AIModelRegistry
+        from langchain_core.prompts import ChatPromptTemplate
+        
+        q.put({"type": "progress", "node": "quick_chat", "message": "💬 Using Quick Chat model..."})
+        
+        llm = AIModelRegistry.get_llm_chain(capability="chat", temperature=0.7)
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", "You are a helpful AI assistant named yAI. Provide a concise, accurate response."),
+            ("human", "{goal}")
+        ])
+        
+        chain = prompt | llm
+        response = chain.invoke({"goal": state.get("goal")})
+        
+        content = response.content
+        if isinstance(content, list):
+            content = "".join(c.get("text", "") if isinstance(c, dict) else str(c) for c in content)
+            
+        # We simulate a "code_file" so the frontend displays the chat response in the markdown viewer
+        state["code_files"] = {"response.md": content}
+        q.put({
+            "type": "code_complete",
+            "code_files": state["code_files"]
+        })
+        return state
+
+    def _run_specialist(self, state: AiONState, q, intent_category: str) -> AiONState:
+        """Mode 2: Single agent execution."""
+        from backend.agents.coder import CoderAgent
+        from backend.agents.architect import ArchitectAgent
+        
+        if "architect" in intent_category or "system" in intent_category:
+            q.put({"type": "progress", "node": "specialist", "message": "🏗️ Invoking Specialist Architect..."})
+            agent = ArchitectAgent()
+        else:
+            q.put({"type": "progress", "node": "specialist", "message": "💻 Invoking Specialist Coder..."})
+            agent = CoderAgent()
+            
+        state = agent.run(state)
+        
+        if state.get("code_files"):
+            q.put({
+                "type": "code_complete",
+                "code_files": state["code_files"]
+            })
+            
+        return state
+
+    def _run_builder(self, state: AiONState, q, project_id: str) -> AiONState:
+        """Mode 3: Full Swarm."""
+        from backend.orchestrator.graph import build_orchestrator_graph
+        graph = build_orchestrator_graph()
+        thread_config = {"configurable": {"thread_id": project_id}}
+        
+        final_st = state
+        for output in graph.stream(state, config=thread_config):
+            node_name = list(output.keys())[0]
+            final_st = output[node_name]
+            q.put({
+                "type": "progress",
+                "node": node_name,
+                "message": f"{node_name.capitalize()} agent completed its task..."
+            })
+            
+            if node_name == "coder" and final_st and "code_files" in final_st:
+                q.put({
+                    "type": "code_complete",
+                    "code_files": final_st["code_files"]
+                })
+                
+        return final_st

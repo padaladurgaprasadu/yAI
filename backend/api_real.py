@@ -448,65 +448,15 @@ async def websocket_generate(websocket: WebSocket):
             compressed_context=None
         )
         
-        from backend.orchestrator.graph import build_orchestrator_graph
-        graph = build_orchestrator_graph()
+        from backend.gateway import AIGateway
+        gateway = AIGateway()
         
         def run_graph():
-            try:
-                final_st = None
-                thread_config = {"configurable": {"thread_id": project_id}}
-                for output in graph.stream(initial_state, config=thread_config):
-                    node_name = list(output.keys())[0]
-                    final_st = output[node_name]
-                    q.put({
-                        "type": "progress",
-                        "node": node_name,
-                        "message": f"{node_name.capitalize()} agent completed its task..."
-                    })
-                    
-                    # [ZERO-LATENCY ARTIFACTS] Instantly broadcast code to frontend
-                    # This allows the UI to unlock immediately while the Executor runs in the background!
-                    if node_name == "coder" and final_st and "code_files" in final_st:
-                        q.put({
-                            "type": "code_complete",
-                            "code_files": final_st["code_files"]
-                        })
-                
-                # Check if it was interrupted
-                state_snapshot = graph.get_state(thread_config)
-                if state_snapshot.next:
-                    q.put({"type": "INTERRUPT", "message": "Awaiting human approval before DevOps deployment."})
-                else:
-                    final_state_data = final_st or initial_state
-                    
-                    # Phase 1: Persistent Project Memory (Save to PostgreSQL)
-                    try:
-                        from backend.db.database import SessionLocal
-                        from backend.db.models import Project
-                        
-                        db = SessionLocal()
-                        db_project = Project(
-                            id=project_id,
-                            name=f"Project {project_id[:8]}",
-                            goal=final_state_data.get("goal", ""),
-                            blueprint=final_state_data.get("blueprint", {})
-                        )
-                        db.merge(db_project)
-                        db.commit()
-                        db.close()
-                        print(f"✅ [Memory] Project {project_id} permanently saved to PostgreSQL.")
-                    except Exception as db_err:
-                        print(f"❌ [Memory] Failed to save project to PostgreSQL: {db_err}")
-                        
-                    q.put({"type": "GRAPH_DONE", "state": final_state_data})
-            except Exception as e:
-                import traceback
-                trace = traceback.format_exc()
-                print(f"[Error in Graph execution]: {trace}")
-                q.put({"type": "error", "message": f"Graph Error: {str(e)}"})
+            gateway.run(initial_state, q, project_id)
 
-        # Start graph execution in a background thread
+        # Start gateway execution in a background thread
         asyncio.create_task(asyncio.to_thread(run_graph))
+
         
         final_state = initial_state
         
@@ -517,6 +467,26 @@ async def websocket_generate(websocket: WebSocket):
             
             if msg["type"] == "GRAPH_DONE":
                 final_state = msg["state"]
+                
+                # Phase 1: Persistent Project Memory (Save to PostgreSQL)
+                try:
+                    from backend.db.database import SessionLocal
+                    from backend.db.models import Project
+                    
+                    db = SessionLocal()
+                    db_project = Project(
+                        id=project_id,
+                        name=f"Project {project_id[:8]}",
+                        goal=final_state.get("goal", ""),
+                        blueprint=final_state.get("blueprint", {})
+                    )
+                    db.merge(db_project)
+                    db.commit()
+                    db.close()
+                    print(f"✅ [Memory] Project {project_id} permanently saved to PostgreSQL.")
+                except Exception as db_err:
+                    print(f"❌ [Memory] Failed to save project to PostgreSQL: {db_err}")
+                    
                 break
             elif msg["type"] == "error":
                 await websocket.send_json(msg)
