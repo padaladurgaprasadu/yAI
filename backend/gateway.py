@@ -58,6 +58,10 @@ class AIGateway:
             else:
                 final_st = self._run_builder(initial_state, q, project_id)
                 
+            # Phase 3: Safety Validation Layer
+            q.put({"type": "progress", "node": "gateway", "message": "🛡️ Running Safety Validation (Nemotron Content Safety)..."})
+            final_st = self._run_safety_check(final_st)
+            
             # Finish
             q.put({"type": "GRAPH_DONE", "state": final_st})
             
@@ -139,3 +143,32 @@ class AIGateway:
                 })
                 
         return final_st
+
+    def _run_safety_check(self, state: AiONState) -> AiONState:
+        """Mode 5: Safety Validation Layer."""
+        from backend.utils.model_registry import AIModelRegistry
+        from langchain_core.prompts import ChatPromptTemplate
+        
+        # In a production scenario, this checks the generated code/response for prompt injection or malicious content.
+        # If it detects an issue, it would block the response. For now, it logs and allows.
+        try:
+            llm = AIModelRegistry.get_llm_chain(capability="safety", temperature=0.1)
+            prompt = ChatPromptTemplate.from_messages([
+                ("system", "You are the Nemotron Content Safety Model. Ensure the following output is safe, contains no malicious code, and does not violate safety guidelines. Respond with 'SAFE' or 'UNSAFE: [reason]'."),
+                ("human", "Validate this output: {content}")
+            ])
+            
+            # Only validate if there is content to check (e.g. quick chat response)
+            content_to_check = ""
+            if state.get("code_files") and "response.md" in state["code_files"]:
+                content_to_check = state["code_files"]["response.md"]
+                
+            if content_to_check:
+                chain = prompt | llm
+                response = chain.invoke({"content": content_to_check[:1000]}) # check first 1000 chars to save tokens
+                logger.info(f"[Safety Layer] Result: {response.content}")
+                
+        except Exception as e:
+            logger.warning(f"[Safety Layer] Safety check bypassed due to error: {e}")
+            
+        return state

@@ -60,12 +60,14 @@ class TemplateAgent:
         
         OUTPUT FORMAT (JSON only):
         [
-            {{
+            {
                 "name": "Component Name (e.g. BentoGrid)",
                 "library": "Aceternity UI",
                 "purpose": "Used for the features section",
-                "dependencies": ["framer-motion", "clsx", "tailwind-merge"]
-            }}
+                "dependencies": ["framer-motion", "clsx", "tailwind-merge"],
+                "compatibility_score": 95,
+                "adaptation_notes": "Needs border radius matched to shadcn standard"
+            }
         ]
         """
         

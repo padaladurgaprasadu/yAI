@@ -16,16 +16,19 @@ PROVIDER_CONFIGS = {
         "api_key_env": "NVIDIA_API_KEY",
         "capabilities": {
             "chat": [
-                "meta/llama-3.1-8b-instruct"
+                "meta/llama-3.2-3b-instruct"
             ],
             "coding": [
-                "z.ai/glm-4-9b-chat",
+                "deepseek-ai/deepseek-coder-33b-instruct",
                 "meta/llama-3.1-8b-instruct" # Fallback
             ],
             "reasoning": [
                 "meta/llama-3.1-70b-instruct"
             ],
             "architecture": [
+                "z.ai/glm-4-9b-chat"
+            ],
+            "safety": [
                 "nvidia/nemotron-4-340b-instruct"
             ],
             "vision": [
@@ -112,16 +115,18 @@ class AIModelRegistry:
         """
         role_lower = role.lower()
         
-        # New 6-model strict capability mapping
+        # New 5-model strict capability mapping
         if "chat" in role_lower or "router" in role_lower or "intent" in role_lower:
             return "chat"
-        if "architect" in role_lower or "system" in role_lower:
+        if "architect" in role_lower or "research" in role_lower:
             return "architecture"
-        if "plan" in role_lower or "reason" in role_lower or "research" in role_lower or "math" in role_lower:
+        if "plan" in role_lower or "reason" in role_lower or "math" in role_lower or "review" in role_lower:
             return "reasoning"
         if "visual" in role_lower or "vision" in role_lower:
             return "vision"
-        if "coder" in role_lower or "devops" in role_lower or "review" in role_lower or "test" in role_lower:
+        if "safety" in role_lower or "guard" in role_lower:
+            return "safety"
+        if "coder" in role_lower or "devops" in role_lower or "test" in role_lower:
             return "coding"
             
         return "chat"
