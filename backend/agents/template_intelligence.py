@@ -9,30 +9,8 @@ class TemplateAgent:
         from backend.agents.router import ModelRouter
         self.llm = ModelRouter.get_optimal_llm("TemplateAgent", complexity="fast")
         
-        # Hardcoded component metadata index (simulating a Vector DB/Registry)
-        self.component_registry = """
-        AVAILABLE LIBRARIES & COMPONENTS:
-        
-        1. shadcn/ui (Tailwind CSS, Radix UI primitives)
-           - Components: Button, Input, Form, Table, Dialog, DropdownMenu, Card, Avatar, Badge
-           - Best for: Dashboards, SaaS, Forms, Data-heavy interfaces
-           
-        2. ReactBits (Tailwind CSS, React Spring / Framer Motion)
-           - Components: AnimatedHero, SplitText, ParticlesBackground, MagnetButton, ShinyText
-           - Best for: Landing pages, portfolios, eye-catching marketing sections
-           
-        3. Aceternity UI (Tailwind CSS, Framer Motion)
-           - Components: 3DPin, BackgroundBeams, BentoGrid, ContainerScroll, HoverEffect, Sparkles, TracingBeam
-           - Best for: AI startup landing pages, highly interactive premium interfaces
-           
-        4. Magic UI (Tailwind CSS, Framer Motion)
-           - Components: RetroGrid, Meteors, ShineBorder, TextReveal, Marquee, BentoGrid
-           - Best for: AI chat interfaces, modern SaaS landing pages
-           
-        5. yAI Internal Library (Tailwind CSS, Glassmorphism)
-           - Components: WorkspaceTabs, GlassPanel, AIChatWidget, TerminalView, CodeEditor
-           - Best for: AI Engineering OS, IDE-like interfaces
-        """
+        self.templates_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "templates")
+        self.catalog_path = os.path.join(self.templates_dir, "catalog.json")
 
     def run(self, state: AiONState) -> AiONState:
         print("\n--- Template Intelligence Layer: Searching for Components ---")
@@ -44,30 +22,33 @@ class TemplateAgent:
             print("   -> No modules found. Skipping template intelligence.")
             return state
             
+        try:
+            with open(self.catalog_path, 'r') as f:
+                catalog = json.load(f)
+        except Exception as e:
+            print(f"   -> [Error loading Template Catalog]: {e}")
+            return state
+            
+        catalog_str = json.dumps(catalog.get("templates", []), indent=2)
+            
         system_prompt = f"""
         You are the Template Intelligence Layer of the yAI Engineering OS.
-        Your job is to analyze the user's project goal and proposed modules, then retrieve and compose a roster of premium UI components from trusted libraries.
+        Your job is to analyze the user's project goal and proposed modules, then retrieve and compose a roster of premium UI components from our Template Catalog.
         
         GOAL: {goal}
         MODULES: {json.dumps(modules)}
         
-        {self.component_registry}
+        AVAILABLE TEMPLATE CATALOG:
+        {catalog_str}
         
         RULES:
-        1. Select the absolute best components for the given goal. If it's an AI landing page, favor Aceternity/Magic UI. If it's a SaaS dashboard, favor shadcn/ui.
-        2. Ensure compatibility. Avoid mixing too many different animation libraries (e.g., stick to Framer Motion based ones if possible).
-        3. Output MUST be valid JSON containing a list of selected components.
+        1. Select the absolute best components from the catalog for the given goal. 
+        2. Output MUST be valid JSON containing a list of selected component IDs.
         
         OUTPUT FORMAT (JSON only):
         [
-            {
-                "name": "Component Name (e.g. BentoGrid)",
-                "library": "Aceternity UI",
-                "purpose": "Used for the features section",
-                "dependencies": ["framer-motion", "clsx", "tailwind-merge"],
-                "compatibility_score": 95,
-                "adaptation_notes": "Needs border radius matched to shadcn standard"
-            }
+            "hero_001",
+            "nav_001"
         ]
         """
         
@@ -81,12 +62,35 @@ class TemplateAgent:
             elif raw_text.startswith("```"):
                 raw_text = raw_text.replace("```", "", 1).rstrip("`").strip()
                 
-            roster = json.loads(raw_text)
-            state["template_roster"] = roster
+            selected_ids = json.loads(raw_text)
             
-            print(f"   -> Retrieved {len(roster)} premium components for the UI.")
-            for comp in roster:
-                print(f"      - {comp['name']} from {comp['library']}")
+            # Now retrieve the ACTUAL source code for the selected components
+            retrieved_templates = []
+            
+            templates = catalog.get("templates", [])
+            for comp_id in selected_ids:
+                template_meta = next((t for t in templates if t["id"] == comp_id), None)
+                if template_meta:
+                    # Construct absolute path to the file
+                    file_path = template_meta.get("file_path")
+                    # Make path absolute based on project root
+                    project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+                    abs_path = os.path.join(project_root, file_path.replace("/", os.sep))
+                    
+                    try:
+                        with open(abs_path, 'r', encoding='utf-8') as cf:
+                            source_code = cf.read()
+                            
+                        retrieved_templates.append({
+                            "metadata": template_meta,
+                            "source_code": source_code
+                        })
+                        print(f"   -> Retrieved source code for {template_meta['name']}")
+                    except Exception as fe:
+                        print(f"   -> [Error reading source for {comp_id}]: {fe}")
+            
+            state["template_roster"] = retrieved_templates
+            print(f"   -> Total templates successfully retrieved and injected: {len(retrieved_templates)}")
                 
         except Exception as e:
             print(f"   -> [Error in Template Layer]: {str(e)}")

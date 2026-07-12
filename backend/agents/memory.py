@@ -21,8 +21,29 @@ class MemoryAgent(BaseAgent):
         ])
         self.chain = self.prompt | self.llm
 
-    def run(self, state: AiONState) -> AiONState:
-        logger.info("[Memory] Persisting decisions...")
+    def run_retrieval(self, state: AiONState) -> AiONState:
+        logger.info("[Memory Retrieval] Layer 4: Searching past architectures...")
+        goal = state.get("goal", "")
+        
+        try:
+            from backend.memory.chroma_client import ChromaClient
+            chroma = ChromaClient()
+            results = chroma.search_blueprints(goal)
+            
+            if results and len(results) > 0:
+                logger.info("[Memory Retrieval] Found relevant past architectures.")
+                state["memory_context"] = f"Past Architectural References:\n{json.dumps(results[:2])}"
+            else:
+                logger.info("[Memory Retrieval] No relevant past architectures found.")
+                state["memory_context"] = "No past architectural references found."
+        except Exception as e:
+            logger.warning(f"[Memory Retrieval] Failed to retrieve from ChromaDB: {e}")
+            state["memory_context"] = "Memory retrieval failed."
+            
+        return state
+
+    def run_storage(self, state: AiONState) -> AiONState:
+        logger.info("[Memory Storage] Layer 15: Persisting decisions...")
         
         goal = state.get("goal", "")
         project_id = state.get("project_id", "default_project")

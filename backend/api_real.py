@@ -428,6 +428,11 @@ async def websocket_generate(websocket: WebSocket):
         q = queue.Queue()
         stream_queues[project_id] = q
 
+        from backend.agents.router import OmniIntelligenceEngine
+        router = OmniIntelligenceEngine()
+        router_analysis = await router.adetect_intent(goal, [])
+        await websocket.send_json({"type": "timeline", "title": "⚡ Router Engine", "reason": f"Routing Workflow: {router_analysis.get('primary_intent')}", "status": "done"})
+
         initial_state = AiONState(
             goal=goal,
             project_id=project_id,
@@ -436,6 +441,7 @@ async def websocket_generate(websocket: WebSocket):
             dag_tasks=[],
             blueprint=blueprint,
             code_files=code_files,
+            router_analysis=router_analysis,
             error=None,
             runtime_error=None,
             review_feedback=None,
@@ -930,7 +936,7 @@ IMPORTANT RULES:
                 async def fetch_visuals():
                     from backend.utils.visuals import get_generative_image, get_real_world_image, get_pencil_sketch_image
                     try:
-                        v_count = 3
+                        v_count = 1
                         img_urls = []
                         
                         # Try real world first (highest quality for places, people, objects)
@@ -956,9 +962,57 @@ IMPORTANT RULES:
                 
                 visual_task = asyncio.create_task(fetch_visuals())
 
-            base_prompt = get_system_prompt(intent_data)
-
-            system_prompt = f"""{base_prompt}
+            msg_lower = sanitized_message.lower()
+            primary_intent = str(intent_data.get("primary_intent", "General Chat"))
+            complexity = str(intent_data.get("complexity", "Medium"))
+            
+            is_architecture_req = any(word in msg_lower for word in ["diagram", "architecture", "flowchart", "workflow"]) or primary_intent == "Architecture"
+            
+            build_intents = ["Website Development", "Mobile App Development", "API Development", "Database Design", "Coding"]
+            explicit_build = any(word in msg_lower for word in ["build a", "create a", "develop a", "make a", "generate a", "web app"])
+            is_build_req = (
+                (primary_intent in ["Website Development", "Mobile App Development"]) or 
+                (primary_intent in build_intents and complexity in ["Large", "Enterprise"]) or
+                explicit_build
+            )
+            
+            is_domain_expert_req = (complexity in ["Large", "Enterprise"] and not is_build_req and not is_architecture_req) or primary_intent == "Research"
+            
+            if is_domain_expert_req:
+                yield f"data: {json.dumps({'type': 'status', 'message': '🧠 Spawning Domain Experts...'})}\n\n"
+                try:
+                    from backend.agents.domain_experts import DomainOrchestrator
+                    orchestrator = DomainOrchestrator()
+                    result = await orchestrator.execute_parallel_experts(sanitized_message, USER_MEMORY)
+                    experts_str = ", ".join(result["experts"])
+                    
+                    yield f"data: {json.dumps({'type': 'status', 'message': f'✅ Fused knowledge from: {experts_str}'})}\n\n"
+                    
+                    fused = result["fused_response"]
+                    chunk_size = 20
+                    for i in range(0, len(fused), chunk_size):
+                        yield f"data: {json.dumps({'type': 'chat', 'token': fused[i:i+chunk_size]})}\n\n"
+                        await asyncio.sleep(0.01)
+                    
+                    yield f"data: {json.dumps({'type': 'status', 'message': ''})}\n\n"
+                    return
+                except Exception as e:
+                    api_logger.error(f"Domain Orchestrator failed: {e}")
+            
+            if not is_architecture_req and not is_build_req:
+                yield f"data: {json.dumps({'type': 'status', 'message': '🧠 Fusing Context Intelligence...'})}\n\n"
+                try:
+                    from backend.agents.context_intelligence import ContextIntelligenceEngine
+                    ctx_engine = ContextIntelligenceEngine()
+                    fused_context = await ctx_engine.build_context(sanitized_message, request_data.history, intent_data, USER_MEMORY)
+                    system_prompt = ctx_engine.generate_system_prompt(fused_context)
+                except Exception as e:
+                    api_logger.error(f"Context Intelligence failed: {e}")
+                    base_prompt = get_system_prompt(intent_data)
+                    system_prompt = f"{base_prompt}\n\n[USER'S PAST MEMORY]:\n{USER_MEMORY}"
+            else:
+                base_prompt = get_system_prompt(intent_data)
+                system_prompt = f"""{base_prompt}
 
 [SYSTEM DIRECTIVES]:
 - **yAI Architecture Intelligence Engine v2.0:** If the user asks for a diagram, workflow, flowchart, or system architecture, you MUST behave as a Principal Software Architect. Do NOT generate generic flowcharts. You MUST output a structured JSON block wrapped EXACTLY inside `<architecture>` and `</architecture>` tags. NEVER use Mermaid.
@@ -991,6 +1045,7 @@ IMPORTANT RULES:
 [USER'S PAST MEMORY]:
 {USER_MEMORY}
 """
+
             messages = [SystemMessage(content=system_prompt)]
             for msg in request_data.history:
                 role = msg.get("role")
@@ -1000,14 +1055,6 @@ IMPORTANT RULES:
                 elif role == "ai" and not content.startswith("[BUILD]"):
                     messages.append(AIMessage(content=content))
                     
-            # 🟢 [INSTRUCTION REINFORCEMENT] Append formatting constraints to the final message
-            is_architecture_req = any(word in sanitized_message.lower() for word in ["diagram", "architecture", "flowchart", "workflow"])
-            
-            intent_mode = intent_data.get("mode", "tutor")
-            intent_scope = intent_data.get("scope_estimate", "trivial")
-            
-            is_build_req = (intent_mode == "builder" and intent_scope != "trivial") or "Project Development" in str(intent_data.get("primary_intent", ""))
-            
             if is_architecture_req:
                 formatting_reminder = "\n\n[CRITICAL REMINDER]: You MUST output EXACTLY the `<architecture>` JSON block. DO NOT write any markdown text. DO NOT generate ASCII art. ONLY output the `<architecture>` tags containing the JSON payload."
             elif is_build_req:
@@ -1031,12 +1078,9 @@ IMPORTANT RULES:
             base_agent = BaseAgent()
             
             # 🟢 MULTI-SPEED LATENCY TIERING 🟢
-            # - Normal text / small questions: 0.2-0.5s (fast_llm)
-            # - Reasoning / Coding: 1-5s (smart_llm)
-            is_speed_mode = "complexity" not in intent_data
-            complexity = str(intent_data.get("complexity", "")).lower()
+            model_tier = str(intent_data.get("model_tier", "Fast"))
             
-            if is_speed_mode or complexity in ["trivial", "low", "fast"]:
+            if model_tier == "Fast" or complexity == "Simple":
                 active_llm = base_agent.fast_llm
                 api_logger.info("Using Tier 1 (Fast LLM) for sub-second latency.")
             else:
@@ -1142,6 +1186,10 @@ IMPORTANT RULES:
             if is_build:
                 try:
                     json_str = draft_text.split("[BUILD]")[1].strip()
+                    if json_str.startswith("```json"): json_str = json_str[7:]
+                    elif json_str.startswith("```"): json_str = json_str[3:]
+                    if json_str.endswith("```"): json_str = json_str[:-3]
+                    json_str = json_str.strip()
                     parsed = json.loads(json_str, strict=False)
                     
                     mode = str(intent_data.get("execution_mode", "Deep")).lower()

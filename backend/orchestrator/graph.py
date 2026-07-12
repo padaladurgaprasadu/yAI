@@ -77,6 +77,24 @@ def route_from_supervisor(state: AiONState):
         return next_agent
     return "mcp_client"
 
+def route_from_memory(state: AiONState):
+    router = state.get("router_analysis", {})
+    if router.get("requires_web_search", False): return "researcher"
+    if router.get("requires_image_search", False): return "image_intelligence"
+    if router.get("requires_templates", False): return "template"
+    return "planner"
+
+def route_from_researcher(state: AiONState):
+    router = state.get("router_analysis", {})
+    if router.get("requires_image_search", False): return "image_intelligence"
+    if router.get("requires_templates", False): return "template"
+    return "planner"
+
+def route_from_image(state: AiONState):
+    router = state.get("router_analysis", {})
+    if router.get("requires_templates", False): return "template"
+    return "planner"
+
 def build_orchestrator_graph():
     """
     Builds the unified 11-Layer Orchestrator Pipeline as defined in the yAI End-to-End Workflow.
@@ -96,6 +114,18 @@ def build_orchestrator_graph():
     def run_repository(state):
         from backend.agents.repository import RepositoryIntelligenceAgent
         return RepositoryIntelligenceAgent().run(state)
+        
+    def run_memory_retrieval(state):
+        from backend.agents.memory import MemoryAgent
+        return MemoryAgent().run_retrieval(state)
+        
+    def run_researcher(state):
+        from backend.agents.researcher import ResearchAgent
+        return ResearchAgent().run(state)
+        
+    def run_image_intelligence(state):
+        from backend.agents.image_search import ImageSearchAgent
+        return ImageSearchAgent().run(state)
         
     def run_template(state):
         from backend.agents.template_intelligence import TemplateAgent
@@ -141,14 +171,17 @@ def build_orchestrator_graph():
         from backend.agents.devops import DevOpsAgent
         return DevOpsAgent().run(state)
         
-    def run_memory(state):
+    def run_memory_storage(state):
         from backend.agents.memory import MemoryAgent
-        return MemoryAgent().run(state)
+        return MemoryAgent().run_storage(state)
     
     # 2. Add nodes
     workflow.add_node("supervisor", run_supervisor)
     workflow.add_node("mcp_client", run_mcp_client)
     workflow.add_node("repository", run_repository)
+    workflow.add_node("memory_retrieval", run_memory_retrieval)
+    workflow.add_node("researcher", run_researcher)
+    workflow.add_node("image_intelligence", run_image_intelligence)
     workflow.add_node("template", run_template)
     workflow.add_node("planner", run_planner)
     workflow.add_node("architect", run_architect)
@@ -160,51 +193,72 @@ def build_orchestrator_graph():
     workflow.add_node("visual_critique", run_visual_critique)
     workflow.add_node("executor", run_executor)
     workflow.add_node("devops", run_devops)
-    workflow.add_node("memory", run_memory)
+    workflow.add_node("memory_storage", run_memory_storage)
     
-    # 3. Add edges (The Core Loop)
+    # 3. Add edges (The Core 15-Layer Loop)
     workflow.set_entry_point("supervisor")
     
-    # Layer 1: Intent Intelligence
+    # Layer 1 & 2: Intent & Model Selection (Handled by Router in API before Graph, Supervisor manages fast track routing)
     workflow.add_conditional_edges(
         "supervisor", 
         route_from_supervisor, 
-        {"mcp_client": "mcp_client", "template": "template", "coder": "coder"}
+        {"mcp_client": "mcp_client", "coder": "coder"}
     )
     
-    # Layer 2: Repository Intelligence
+    # Layer 3: Repository Intelligence
     workflow.add_edge("mcp_client", "repository")
     
-    # Layer 3: Template Intelligence
-    workflow.add_edge("repository", "template")
+    # Layer 4: Memory Intelligence
+    workflow.add_edge("repository", "memory_retrieval")
+    
+    # Layer 5: Web & Research Intelligence (Conditional)
+    workflow.add_conditional_edges("memory_retrieval", route_from_memory, {
+        "researcher": "researcher",
+        "image_intelligence": "image_intelligence",
+        "template": "template",
+        "planner": "planner"
+    })
+    
+    # Layer 6: Image Intelligence (Conditional)
+    workflow.add_conditional_edges("researcher", route_from_researcher, {
+        "image_intelligence": "image_intelligence",
+        "template": "template",
+        "planner": "planner"
+    })
+    
+    # Layer 7: Template Intelligence (Conditional)
+    workflow.add_conditional_edges("image_intelligence", route_from_image, {
+        "template": "template",
+        "planner": "planner"
+    })
+    
+    # Layer 8: Planning Intelligence
     workflow.add_edge("template", "planner")
     
-    # Layer 4: Planning Intelligence
+    # Layer 9: Architecture Intelligence
     workflow.add_edge("planner", "architect")
     
-    # Layer 5: Architecture Intelligence
+    # Layer 10: Design Intelligence
     workflow.add_edge("architect", "design")
     
-    # Layer 6: Design Intelligence
+    # Layer 11: Multi-Agent Engineering
     workflow.add_edge("design", "coder")
     
-    # Layer 7: Engineering (Fast Track Conditional Exit)
-    workflow.add_conditional_edges("coder", should_continue_coder, {"memory": "memory", "tester": "tester"})
-    
-    # Layer 8: Quality Intelligence (Tester -> Reviewer -> Adversary -> Visual)
+    # Layer 12: Quality Intelligence (Tester -> Reviewer -> Adversary -> Visual)
+    workflow.add_conditional_edges("coder", should_continue_coder, {"memory_storage": "memory_storage", "tester": "tester"})
     workflow.add_edge("tester", "reviewer")
     workflow.add_conditional_edges("reviewer", should_continue_review, {"coder": "coder", "adversary": "adversary"})
     workflow.add_conditional_edges("adversary", should_continue_adversary, {"coder": "coder", "visual_critique": "visual_critique"})
     workflow.add_conditional_edges("visual_critique", should_continue_visual, {"coder": "coder", "executor": "executor"})
     
-    # Layer 9: Execution Intelligence
+    # Layer 13: Execution Intelligence
     workflow.add_conditional_edges("executor", should_continue_execution, {"coder": "coder", "devops": "devops"})
     
-    # Layer 10: Deployment Intelligence
-    workflow.add_edge("devops", "memory")
+    # Layer 14: Deployment Intelligence
+    workflow.add_edge("devops", "memory_storage")
     
-    # Layer 11: Memory Intelligence
-    workflow.add_edge("memory", END)
+    # Layer 15: Memory & Learning
+    workflow.add_edge("memory_storage", END)
     
     # Compile with memory saver (for human-in-the-loop persistence if needed)
     workflow_memory = MemorySaver()

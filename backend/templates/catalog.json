@@ -1,0 +1,60 @@
+{
+  "templates": [
+    {
+      "id": "hero_001",
+      "name": "Animated SaaS Hero",
+      "library": "ReactBits",
+      "category": "Hero",
+      "framework": "React",
+      "styling": "Tailwind CSS",
+      "dependencies": ["framer-motion"],
+      "responsive": true,
+      "darkMode": true,
+      "tags": ["saas", "startup", "landing", "animation", "hero"],
+      "file_path": "backend/templates/components/hero_001.tsx",
+      "capability": "Provides a high-conversion hero section with animated text and a call-to-action button."
+    },
+    {
+      "id": "nav_001",
+      "name": "Glassmorphism Navbar",
+      "library": "shadcn/ui",
+      "category": "Navigation",
+      "framework": "React",
+      "styling": "Tailwind CSS",
+      "dependencies": ["lucide-react"],
+      "responsive": true,
+      "darkMode": true,
+      "tags": ["navbar", "navigation", "glass", "modern"],
+      "file_path": "backend/templates/components/nav_001.tsx",
+      "capability": "A sticky navigation bar with a blurred glass effect, responsive mobile menu, and user avatar."
+    },
+    {
+      "id": "table_001",
+      "name": "Data Table with Sorting",
+      "library": "shadcn/ui",
+      "category": "Data Display",
+      "framework": "React",
+      "styling": "Tailwind CSS",
+      "dependencies": ["lucide-react"],
+      "responsive": true,
+      "darkMode": true,
+      "tags": ["table", "data", "dashboard", "admin"],
+      "file_path": "backend/templates/components/table_001.tsx",
+      "capability": "A responsive data table for dashboards, supporting sorting, pagination, and action menus."
+    },
+    {
+      "id": "pricing_001",
+      "name": "Tiered Pricing Cards",
+      "library": "Magic UI",
+      "category": "Pricing",
+      "framework": "React",
+      "styling": "Tailwind CSS",
+      "dependencies": ["framer-motion", "lucide-react"],
+      "responsive": true,
+      "darkMode": true,
+      "tags": ["pricing", "saas", "cards", "tiers"],
+      "file_path": "backend/templates/components/pricing_001.tsx",
+      "capability": "Three-tier pricing cards with a prominent highlighted 'Pro' tier and feature checkmarks."
+    }
+  ]
+}

@@ -7,6 +7,7 @@ import {
   useSandpack,
   SandpackConsole
 } from "@codesandbox/sandpack-react";
+import BuildStatus from './BuildStatus';
 
 const ExecutionLifecycle = ({ activeTab, onCrash }) => {
   const { sandpack, listen } = useSandpack();
@@ -124,8 +125,10 @@ const ExecutionLifecycle = ({ activeTab, onCrash }) => {
   );
 };
 
-export const ExecutionManager = ({ files, dynamicDependencies, activeTab, isBackend, previewUrl, previewError, projectId, hasFrontendFiles }) => {
+export const ExecutionManager = ({ files, dynamicDependencies, activeTab, isBackend, previewUrl, previewError, projectId, hasFrontendFiles, executionLogs = [] }) => {
   const [restartKey, setRestartKey] = useState(0);
+  
+  const isExecuting = executionLogs && executionLogs.length > 0 && !previewUrl && !previewError;
 
   const handleCrash = () => {
      // A hard key update forces React to unmount the SandpackProvider entirely and remount a fresh iframe
@@ -157,6 +160,11 @@ export const ExecutionManager = ({ files, dynamicDependencies, activeTab, isBack
       )}
 
       <div style={{ flex: 1, position: 'relative' }}>
+          {isExecuting && activeTab === 'preview' && (
+             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10, backgroundColor: 'rgba(21,21,21,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <BuildStatus executionLogs={executionLogs} isRunning={true} hasError={false} />
+             </div>
+          )}
           <SandpackProvider
             key={`sp-reboot-${restartKey}`}
             template="vite-react"

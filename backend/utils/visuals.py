@@ -53,7 +53,9 @@ def get_real_world_image(query: str, count: int = 1):
                 continue
                 
             if 'thumbnail' in page:
-                image_urls.append(page['thumbnail']['source'])
+                src = page['thumbnail']['source']
+                if src not in image_urls:
+                    image_urls.append(src)
                 if len(image_urls) >= count:
                     break
     except Exception as e:
@@ -95,7 +97,9 @@ def get_real_world_image(query: str, count: int = 1):
             if pages:
                 page_id = list(pages.keys())[0]
                 if 'imageinfo' in pages[page_id]:
-                    image_urls.append(pages[page_id]['imageinfo'][0]['url'])
+                    src = pages[page_id]['imageinfo'][0]['url']
+                    if src not in image_urls:
+                        image_urls.append(src)
                     if len(image_urls) >= count:
                         break
         

@@ -208,6 +208,7 @@ class ResearchAgent(BaseAgent):
                 
             new_context = existing_context + "\n\n=== RESEARCH SYNTHESIS ===\n" + syn + citation_block
             state["semantic_context"] = new_context
+            state["web_context"] = web_context
             
             if q:
                 q.put({"type": "timeline_update", "status": "done"})

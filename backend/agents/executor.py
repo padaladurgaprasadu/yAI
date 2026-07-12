@@ -1,6 +1,11 @@
 import re
 import os
 import subprocess
+import json
+import socket
+import threading
+import requests
+import time
 from langchain_core.prompts import ChatPromptTemplate
 from backend.agents.base import BaseAgent
 from backend.orchestrator.state import AiONState
@@ -292,6 +297,43 @@ class ExecutorAgent(BaseAgent):
                     text=True
                 )
                 
+                is_server_cmd = any(s in cmd.strip() for s in ["node server.js", "npm run dev", "python app.py", "python server.py", "uvicorn", "streamlit run", "npm start"])
+                
+                verified = False
+                verification_error = None
+
+                def poll_server():
+                    nonlocal verified, verification_error
+                    start_time = time.time()
+                    while time.time() - start_time < 30: # 30s timeout for verification
+                        if process.poll() is not None:
+                            verification_error = f"Process crashed with code {process.returncode}"
+                            break
+                        for port in [3000, 5000, 8000]:
+                            try:
+                                # First check TCP
+                                with socket.create_connection(('localhost', port), timeout=0.5):
+                                    try:
+                                        # Then check HTTP (200 OK or 404 Not Found are both valid signs the server is running)
+                                        resp = requests.get(f"http://localhost:{port}", timeout=1)
+                                        if resp.status_code < 500:
+                                            verified = True
+                                            return
+                                        else:
+                                            verification_error = f"Server returned HTTP {resp.status_code}"
+                                    except:
+                                        # TCP opened but HTTP failed, give it a bit more time
+                                        pass
+                            except:
+                                pass
+                        time.sleep(1)
+
+                if is_server_cmd:
+                    execution_logs.append(f"> [Verification Engine] Polling local server ports (3000, 5000, 8000)...")
+                    if q: q.put({"type": "progress", "message": f"[Telemetry] [Verification Engine] Polling server ports..."})
+                    poll_thread = threading.Thread(target=poll_server, daemon=True)
+                    poll_thread.start()
+
                 output_lines = []
                 for line in iter(process.stdout.readline, ''):
                     line_clean = line.strip()
@@ -300,9 +342,16 @@ class ExecutorAgent(BaseAgent):
                         # Push to frontend telemetry queue
                         if q:
                             q.put({"type": "progress", "message": f"[Telemetry] {line_clean}"})
-                            
+                    if is_server_cmd and verified:
+                        execution_logs.append(f"> [Verification Engine] SUCCESS: Server responded to HTTP request!")
+                        if q: q.put({"type": "progress", "message": f"[Telemetry] [Verification Engine] VERIFIED SUCCESS!"})
+                        process.terminate() # Kill the verification server so the graph can continue
+                        break
+                    if is_server_cmd and verification_error:
+                        break # Stop reading, process crashed or failed HTTP
+
                 process.stdout.close()
-                returncode = process.wait(timeout=300)
+                returncode = process.wait(timeout=300) if not is_server_cmd else (0 if verified else process.poll() or 1)
                 
                 execution_logs.extend(output_lines)
                 
@@ -311,7 +360,8 @@ class ExecutorAgent(BaseAgent):
                 else:
                     print(f"        Failed with code {returncode}.")
                     # AUTO-HEAL LOOP TRIGGERS HERE
-                    state["runtime_error"] = f"Command '{cmd}' failed with code {returncode}.\nOutput:\n" + "\n".join(output_lines)
+                    error_msg = verification_error if (is_server_cmd and verification_error) else f"Command '{cmd}' failed with code {returncode}."
+                    state["runtime_error"] = f"{error_msg}\nOutput:\n" + "\n".join(output_lines)
                     state["execution_logs"] = execution_logs
                     state["execution_retries"] = state.get("execution_retries", 0) + 1
                     return state

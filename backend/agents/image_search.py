@@ -53,6 +53,7 @@ class ImageSearchAgent(BaseAgent):
             # Update the state image field so it can be streamed or used downstream
             existing_images = state.get("image") or []
             state["image"] = existing_images + images
+            state["visual_context"] = f"Retrieved Visuals: {', '.join(images)}"
             
             # Stream directly to UI
             if q:

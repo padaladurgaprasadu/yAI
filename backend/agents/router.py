@@ -108,20 +108,40 @@ class OmniIntelligenceEngine:
             response = await self.llm.ainvoke(messages)
             content = response.content.strip()
             
-            if content.startswith("```json"):
-                content = content[7:-3].strip()
-            elif content.startswith("```"):
-                content = content[3:-3].strip()
-                
+            # Robustly extract the first top-level JSON object
+            start = content.find('{')
+            if start != -1:
+                depth = 0
+                for i in range(start, len(content)):
+                    if content[i] == '{': depth += 1
+                    elif content[i] == '}': depth -= 1
+                    if depth == 0:
+                        content = content[start:i+1]
+                        break
+            
+            # Clean up double braces caused by prompt format
+            content = content.replace("{{", "{").replace("}}", "}")
+            
             data = json.loads(content)
             logger.info(f"[ROUTER] Detected Intent: {data}")
             return data
             
         except Exception as e:
-            logger.warning(f"[ROUTER] Intent detection failed, falling back to GENERAL. Error: {e}")
+            logger.warning(f"[ROUTER] Intent detection failed, falling back smartly. Error: {e}")
+            msg_lower = message.lower()
+            is_build = any(word in msg_lower for word in ["build", "create", "develop", "make a", "generate a", "web app", "website", "system", "app"])
+            
             return {
-                "domain": "General",
-                "specific_intent": "General Chat",
-                "complexity": "Intermediate",
-                "style": "Clear and concise"
+                "primary_intent": "Website Development" if is_build else "General Chat",
+                "complexity": "Large" if is_build else "Medium",
+                "requires_web_search": False,
+                "requires_repository_analysis": False,
+                "requires_templates": True if is_build else False,
+                "requires_image_search": False,
+                "entity_detection": {
+                    "requires_visuals": False,
+                    "search_query": None
+                },
+                "recommended_agents": ["Planner", "Architect"] if is_build else [],
+                "model_tier": "Reasoning" if is_build else "Fast"
             }

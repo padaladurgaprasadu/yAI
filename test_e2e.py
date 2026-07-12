@@ -4,7 +4,7 @@ import json
 import uuid
 
 async def test_workflow():
-    uri = "ws://localhost:8000/api/ws/generate"
+    uri = "ws://localhost:10000/api/ws/generate"
     project_id = f"test-{uuid.uuid4().hex[:8]}"
     log_file = open("test_e2e_output.txt", "w", encoding="utf-8")
     
@@ -23,7 +23,7 @@ async def test_workflow():
             log("Connected! Sending generate request...")
             req = {
                 "project_id": project_id,
-                "goal": "Build a very simple hello world python app.",
+                "goal": "Build a library management system.",
                 "agent_role": "Python Developer",
                 "execution_mode": "Lightning",
                 "blueprint": {"tech_stack": ["Python"], "file_structure": ["app.py"]},

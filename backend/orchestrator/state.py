@@ -29,8 +29,11 @@ class AiONState(TypedDict):
     execution_mode: Optional[str] # Lightning, Fast, Deep, Autonomous
     complexity: Optional[str]
     compressed_context: Optional[str]
-    repository_context: Optional[str] # New: Repository Intelligence Layer
-
+    router_analysis: Optional[Dict[str, Any]] # Output from OmniIntelligenceEngine
+    repository_context: Optional[str] # Layer 3: Repository Intelligence
+    memory_context: Optional[str]     # Layer 4: Memory Intelligence (Retrieval)
+    web_context: Optional[str]        # Layer 5: Web & Research Intelligence
+    visual_context: Optional[str]     # Layer 6: Image Intelligence
     
     # yAI Swarm Protocol State
     swarm_tasks: Optional[List[Dict[str, Any]]] # Dynamic tasks for sub-agents

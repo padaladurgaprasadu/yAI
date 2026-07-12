@@ -29,11 +29,50 @@ class CoderAgent(BaseAgent):
 
         from backend.agents.base import GLOBAL_AGENT_RULES
         from backend.agents.orchestration_prompts import CODER_DISPATCHER_PROMPT
+        
+        import os
+        from backend.utils.workspace import get_workspace_root
+        workspace = get_workspace_root() if hasattr(get_workspace_root, '__call__') else "."
+        target_path = os.path.join(workspace, target_file) if not os.path.isabs(target_file) else target_file
+        
+        # 1. Advanced Context Engine Integration
+        try:
+            from backend.agents.context_engine import ContextEngine
+            ctx_engine = ContextEngine(workspace)
+            dependency_context = ctx_engine.build_dependency_context(target_path)
+            if dependency_context and dependency_context != "No local dependencies found.":
+                semantic_context += f"\n\n[Advanced IDE Context - Dependencies for {target_file}]\n{dependency_context}"
+        except Exception as e:
+            logger.warning(f"[Coder] Context Engine failed: {e}")
+            
+        file_exists = os.path.exists(target_path)
+        current_code = ""
+        if file_exists:
+            try:
+                with open(target_path, "r", encoding="utf-8") as f:
+                    current_code = f.read()
+            except: pass
+
+        # 2. Semantic Diff Engine Integration (Only if file is reasonably large to warrant a diff)
+        if file_exists and len(current_code.split('\n')) > 30 and feedback:
+            logger.info(f"   -> [Coder] Using Semantic Diff Engine for {target_file}...")
+            try:
+                from backend.agents.diff_engine import SemanticDiffEngine
+                diff_engine = SemanticDiffEngine()
+                instruction = f"Blueprint: {blueprint_str}\nFeedback/Error: {feedback} {runtime_error}\nContext: {semantic_context}"
+                diffs = diff_engine.generate_diff(target_file, current_code, instruction)
+                if diffs:
+                    new_code = diff_engine.apply_diff(current_code, diffs)
+                    return (target_file, new_code)
+            except Exception as e:
+                logger.warning(f"[Coder] Diff Engine failed, falling back to full generation: {e}")
+
+        # Fallback to full generation
         system_prompt = GLOBAL_AGENT_RULES + "\\n\\n" + CODER_DISPATCHER_PROMPT + f"""
         
 ADDITIONAL INSTRUCTIONS:
-TARGET FILE: {{target_file}}
-{{framework_rules}}
+TARGET FILE: {target_file}
+{framework_rules}
 - ADVANCED CODE RULE: Write highly efficient, robust code. Strict error handling (try/catch), edge-case fallbacks, input validation.
 """
 
@@ -205,9 +244,20 @@ OUTPUT SCHEMA:
 }}
 """
 
+            template_roster = state.get("template_roster", [])
+            template_context = ""
+            if template_roster:
+                template_context = "\n=== TEMPLATE INTELLIGENCE ROSTER ===\nThe following premium components have been retrieved for you. You MUST use this exact source code as the foundation for your UI, adapting only the colors/fonts to match the design tokens, and injecting the missing business logic to fulfill the goal.\n"
+                for idx, t in enumerate(template_roster):
+                    meta = t.get("metadata", {})
+                    t_code = t.get("source_code", "")
+                    template_context += f"\n--- TEMPLATE {idx+1}: {meta.get('name', 'Unknown')} ---\n"
+                    template_context += f"Capability: {meta.get('capability', '')}\n"
+                    template_context += f"Source Code:\n```tsx\n{t_code}\n```\n"
+
             prompt = ChatPromptTemplate.from_messages([
                 ("system", system_prompt),
-                ("human", "Blueprint: {blueprint}\nDesign Tokens: {design_tokens}\nSemantic Context: {context}\nTarget File: {target_file}\nReview Feedback: {review_feedback}\nRuntime Error: {runtime_error}\nTDD Test Suite: {test_suite}")
+                ("human", "Blueprint: {blueprint}\nDesign Tokens: {design_tokens}\nSemantic Context: {context}\nTarget File: {target_file}\nReview Feedback: {review_feedback}\nRuntime Error: {runtime_error}\nTDD Test Suite: {test_suite}\n{template_context}")
             ])
             
             import time
@@ -222,7 +272,8 @@ OUTPUT SCHEMA:
                         review_feedback=feedback,
                         runtime_error=runtime_error,
                         design_tokens=json.dumps(state.get("design_tokens", {}), indent=2),
-                        test_suite=state.get("test_suite", "No specific tests provided.")
+                        test_suite=state.get("test_suite", "No specific tests provided."),
+                        template_context=template_context
                     )
                     
                     response_text = ""

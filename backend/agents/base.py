@@ -39,19 +39,19 @@ class BaseAgent:
             
             # Safe instantiation that doesn't crash pydantic if keys are missing
             if os.getenv("OPENAI_API_KEY"):
-                self.smart_llm = ChatOpenAI(model="gpt-4o", temperature=0.1, request_timeout=90, max_retries=2, streaming=True)
-                self.fast_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.1, request_timeout=90, max_retries=2, streaming=True)
+                self.smart_llm = ChatOpenAI(model="gpt-4o", temperature=0.1, timeout=30, max_retries=0, streaming=True)
+                self.fast_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.1, timeout=30, max_retries=0, streaming=True)
             elif os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY"):
-                self.smart_llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0.1, timeout=90, max_retries=2, streaming=True)
-                self.fast_llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.1, timeout=90, max_retries=2, streaming=True)
+                self.smart_llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0.1, timeout=30, max_retries=0, streaming=True)
+                self.fast_llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.1, timeout=30, max_retries=0, streaming=True)
             elif os.getenv("NVIDIA_API_KEY"):
                 self.smart_llm = ChatOpenAI(
                     base_url="https://integrate.api.nvidia.com/v1",
                     api_key=os.getenv("NVIDIA_API_KEY"),
                     model="meta/llama-3.1-70b-instruct",
                     temperature=0.1,
-                    request_timeout=90,
-                    max_retries=2,
+                    timeout=30,
+                    max_retries=0,
                     streaming=True
                 )
                 self.fast_llm = ChatOpenAI(
@@ -59,8 +59,8 @@ class BaseAgent:
                     api_key=os.getenv("NVIDIA_API_KEY"),
                     model="meta/llama-3.1-8b-instruct",
                     temperature=0.1,
-                    request_timeout=90,
-                    max_retries=2,
+                    timeout=30,
+                    max_retries=0,
                     streaming=True
                 )
             elif os.getenv("OPENROUTER_API_KEY"):
@@ -69,23 +69,23 @@ class BaseAgent:
                     api_key=os.getenv("OPENROUTER_API_KEY"),
                     model="anthropic/claude-3.5-sonnet",
                     temperature=0.1,
-                    request_timeout=90,
-                    max_retries=2,
+                    timeout=30,
+                    max_retries=0,
                     streaming=True
                 )
                 self.fast_llm = ChatOpenAI(
                     base_url="https://openrouter.ai/api/v1",
                     api_key=os.getenv("OPENROUTER_API_KEY"),
-                    model="anthropic/claude-3.5-haiku",
+                    model="google/gemini-flash-1.5",
                     temperature=0.1,
-                    request_timeout=90,
-                    max_retries=2,
+                    timeout=30,
+                    max_retries=0,
                     streaming=True
                 )
             else:
                 # Provide a dummy fallback so it doesn't crash on boot, but will fail gracefully when invoked
-                self.smart_llm = ChatOpenAI(api_key="dummy", model="gpt-4o", temperature=0.1, streaming=True)
-                self.fast_llm = ChatOpenAI(api_key="dummy", model="gpt-4o-mini", temperature=0.1, streaming=True)
+                self.smart_llm = ChatOpenAI(api_key="dummy", model="gpt-4o", temperature=0.1, timeout=30, max_retries=0, streaming=True)
+                self.fast_llm = ChatOpenAI(api_key="dummy", model="gpt-4o-mini", temperature=0.1, timeout=30, max_retries=0, streaming=True)
                 
             if not hasattr(self, 'omega_llm'):
                 from backend.models.omega import OmegaModel
