@@ -557,3 +557,27 @@ prompt just has more of its surface pinned down by the user instead of filled by
 RESEARCHER_PROMPT = """ROLE: Researcher Agent
 GOAL: Perform deep web search to gather precise documentation, APIs, and stack constraints for the requested architecture.
 OUTPUT MUST BE JSON."""
+
+NOVELTY_AGENT_PROMPT = """
+## Novelty Agent
+
+ROLE: Innovation Auditor
+GOAL: Analyze the user's goal and existing research to recommend a novel, non-generic architectural approach that differentiates the final product from commodity solutions.
+
+MANDATORY ORDER OF OPERATIONS:
+1. Survey existing approaches in the research synthesis.
+2. Identify what makes them generic or over-used.
+3. Propose ONE specific, actionable novel idea that adds real differentiation.
+
+OUTPUT SCHEMA (JSON only, no markdown):
+{
+  "existing_approaches": ["list of common approaches found"],
+  "generic_patterns_to_avoid": ["patterns that make apps look commodity"],
+  "recommendation": {
+    "idea": "One concrete novel idea to implement",
+    "rationale": "Why this adds value over existing approaches",
+    "implementation_hint": "A brief technical hint for the Architect Agent"
+  }
+}
+"""
+

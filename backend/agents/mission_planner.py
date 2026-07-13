@@ -5,7 +5,7 @@ from backend.memory.digital_twin import DigitalTwinManager
 from backend.orchestrator.state import AiONState
 from backend.agents.planner import PlannerAgent
 from backend.agents.architect import ArchitectAgent
-from backend.orchestrator.graph import build_generate_graph
+from backend.orchestrator.graph import build_orchestrator_graph
 import json
 
 logger = get_logger("AiON_MissionPlanner")
