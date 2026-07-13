@@ -119,9 +119,7 @@ class AIModelRegistry:
         # New 5-model strict capability mapping
         if "chat" in role_lower or "router" in role_lower or "intent" in role_lower:
             return "chat"
-        if "architect" in role_lower or "research" in role_lower:
-            return "architecture"
-        if "plan" in role_lower or "reason" in role_lower or "math" in role_lower or "review" in role_lower:
+        if "architect" in role_lower or "research" in role_lower or "plan" in role_lower or "reason" in role_lower or "math" in role_lower or "review" in role_lower:
             return "reasoning"
         if "visual" in role_lower or "vision" in role_lower:
             return "vision"
