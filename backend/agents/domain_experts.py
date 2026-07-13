@@ -4,6 +4,7 @@ from typing import Dict, Any, List
 from langchain_core.messages import HumanMessage, SystemMessage
 from backend.agents.base import BaseAgent
 from backend.utils.logger import get_logger
+from backend.agents.prompts import YAI_ULTIMATE_ENGINEERING_PROMPT
 
 logger = get_logger(__name__)
 
@@ -92,6 +93,8 @@ GLOBAL CONTEXT: {context}
 
 DEPENDENCY INPUTS (Read carefully, you must integrate with this upstream work):
 {dependency_data}
+
+{YAI_ULTIMATE_ENGINEERING_PROMPT}
 
 Provide highly structured, expert-level output that strictly fulfills your assigned task."""
 
