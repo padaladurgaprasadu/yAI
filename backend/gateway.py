@@ -96,7 +96,8 @@ class AIGateway:
         except Exception as e:
             logger.warning(f"Failed to fetch images for quick chat: {e}")
         
-        llm = AIModelRegistry.get_llm_chain(capability="chat", temperature=0.7)
+        # Use the flagship reasoning model instead of the fast chat model for deep, high-quality answers
+        llm = AIModelRegistry.get_llm_chain(capability="reasoning", temperature=0.7)
         prompt = ChatPromptTemplate.from_messages([
             ("system", "You are a highly visual, incredibly knowledgeable, and empathetic AI assistant named yAI. Provide a comprehensive, deeply insightful, and highly engaging response. CRITICAL RULES: 1) Do NOT give brief or shallow answers; explain things thoroughly and provide maximum value to the user. 2) Maintain a warm, polite, and exceptionally helpful tone. 3) FORMATTING: NEVER output a wall of text. You MUST use short paragraphs (max 2-3 sentences), bullet points, bold text for emphasis, and H2/H3 headers to make your response extremely easy to read and scan. If the user asks about a specific place, city, or destination, you MUST structure your response to include these specific sections: 'Best Time to Visit', 'Best Attractions', 'Timings' (if applicable), and 'Things to Do'. If relevant image URLs are provided below, you MUST embed them elegantly into your markdown response using standard syntax: ![alt text](url)"),
             ("human", "User query: {goal}{images_context}")
