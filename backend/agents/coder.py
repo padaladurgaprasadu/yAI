@@ -214,7 +214,7 @@ TARGET FILE: {target_file}
                     q.put({"type": "file_start", "file": target_file})
                     # Immediately yield the file content so the frontend UI streams it instantly
                     q.put({"type": "code_token", "file": target_file, "token": state["code_files"][target_file]})
-                return True
+                return (target_file, state["code_files"][target_file])
             # ---------------------------------------
             
             if q:
