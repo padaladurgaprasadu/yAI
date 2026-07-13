@@ -403,6 +403,13 @@ OUTPUT SCHEMA:
         
         state["code_files"] = code_files
         
+        # ============================================================
+        # 🚀 AUTO-INJECT LAUNCH SCRIPTS — Every project gets them
+        # Detects project type and injects the right startup scripts
+        # so users can download and run with zero configuration
+        # ============================================================
+        self._inject_launch_scripts(code_files, agent_role)
+        
         # Clear errors if generation succeeded
         state["error"] = None
         state["review_feedback"] = None
@@ -422,3 +429,56 @@ OUTPUT SCHEMA:
             pass
             
         return state
+
+    def _inject_launch_scripts(self, code_files: dict, agent_role: str):
+        """
+        Detects project type from generated files and injects
+        platform-specific one-click launch scripts into every project.
+        """
+        file_names = list(code_files.keys())
+        
+        # Detect project type
+        is_node = any(f in file_names for f in ["package.json", "server.js", "index.js"])
+        is_python = any(f.endswith(".py") for f in file_names) or "requirements.txt" in file_names
+        is_streamlit = any("streamlit" in code_files.get(f, "").lower() for f in file_names if f.endswith(".py"))
+        is_fullstack = is_node and is_python
+        has_client = any(f.startswith("client/") for f in file_names)
+
+        if is_node and has_client:
+            # Full-stack Node.js + React
+            start_bat = "@echo off\r\ntitle yAI App Launcher\r\necho ============================================\r\necho    yAI - Starting Your Application\r\necho ============================================\r\necho.\r\necho [1/3] Installing dependencies...\r\ncall npm install\r\ncd client && call npm install && cd ..\r\necho.\r\necho [2/3] Starting application...\r\necho.\r\necho [3/3] Opening browser at http://localhost:3000\r\ntimeout /t 3 /nobreak >nul\r\nstart \"\" \"http://localhost:3000\"\r\ncall npm run dev\r\npause\r\n"
+            start_sh = "#!/bin/bash\necho '=== yAI App Launcher ==='\nnpm install\ncd client && npm install && cd ..\nsleep 2\nopen 'http://localhost:3000' 2>/dev/null || xdg-open 'http://localhost:3000' &\nnpm run dev\n"
+            readme = "# yAI Generated App\n\n## Run on Windows\nDouble-click **START.bat**\n\n## Run on Mac/Linux\n```\nchmod +x start.sh && ./start.sh\n```\n\nApp opens at **http://localhost:3000**\n\n> Requires: Node.js 18+\n"
+
+        elif is_node and not has_client:
+            # Pure Node.js/Express backend
+            start_bat = "@echo off\r\ntitle yAI App Launcher\r\necho Installing dependencies...\r\ncall npm install\r\necho Starting server at http://localhost:5000\r\nstart \"\" \"http://localhost:5000\"\r\ncall npm start\r\npause\r\n"
+            start_sh = "#!/bin/bash\nnpm install\nsleep 1\nopen 'http://localhost:5000' 2>/dev/null || xdg-open 'http://localhost:5000' &\nnpm start\n"
+            readme = "# yAI Generated App\n\n## Run on Windows\nDouble-click **START.bat**\n\n## Run on Mac/Linux\n```\nchmod +x start.sh && ./start.sh\n```\n\n> Requires: Node.js 18+\n"
+
+        elif is_streamlit:
+            # Streamlit Python app
+            start_bat = "@echo off\r\ntitle yAI App Launcher\r\necho Installing Python dependencies...\r\npip install -r requirements.txt\r\necho Starting Streamlit app at http://localhost:8501\r\nstart \"\" \"http://localhost:8501\"\r\nstreamlit run app.py\r\npause\r\n"
+            start_sh = "#!/bin/bash\npip install -r requirements.txt\nsleep 2\nopen 'http://localhost:8501' 2>/dev/null || xdg-open 'http://localhost:8501' &\nstreamlit run app.py\n"
+            readme = "# yAI Generated App\n\n## Run on Windows\nDouble-click **START.bat**\n\n## Run on Mac/Linux\n```\nchmod +x start.sh && ./start.sh\n```\n\n> Requires: Python 3.10+ and pip\n"
+
+        elif is_python:
+            # Generic Python / FastAPI / Flask
+            main_py = next((f for f in file_names if f in ["main.py", "app.py", "server.py", "run.py"]), "main.py")
+            start_bat = f"@echo off\r\ntitle yAI App Launcher\r\necho Installing Python dependencies...\r\npip install -r requirements.txt\r\necho Starting app...\r\npython {main_py}\r\npause\r\n"
+            start_sh = f"#!/bin/bash\npip install -r requirements.txt\npython {main_py}\n"
+            readme = f"# yAI Generated App\n\n## Run on Windows\nDouble-click **START.bat**\n\n## Run on Mac/Linux\n```\nchmod +x start.sh && ./start.sh\n```\n\n> Requires: Python 3.10+ and pip\n"
+
+        else:
+            # Static / Research / Markdown project
+            start_bat = "@echo off\r\ntitle yAI Project\r\necho Opening project...\r\nstart \"\" \"index.html\" 2>nul || explorer .\r\npause\r\n"
+            start_sh = "#!/bin/bash\nopen index.html 2>/dev/null || xdg-open index.html 2>/dev/null || echo 'Open index.html in your browser'\n"
+            readme = "# yAI Generated Project\n\nOpen **index.html** in your browser to view the project.\n"
+
+        # Inject into code_files so they get written to disk
+        code_files["START.bat"] = start_bat
+        code_files["start.sh"] = start_sh
+        code_files["README.md"] = code_files.get("README.md", readme)
+        code_files[".env"] = code_files.get(".env", "PORT=5000\nDATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres\nNODE_ENV=development\n")
+        
+        logger.info(f"[Coder] ✅ Launch scripts injected (Node:{is_node}, Python:{is_python}, Streamlit:{is_streamlit})")
