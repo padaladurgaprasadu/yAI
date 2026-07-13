@@ -247,6 +247,7 @@ function App() {
   const [copiedIndex, setCopiedIndex] = useState(null)
   const [feedbackState, setFeedbackState] = useState({})
   const [isRecording, setIsRecording] = useState(false)
+  const [isWebSearchEnabled, setIsWebSearchEnabled] = useState(false) // New: Web Search Toggle
   const [selectedNode, setSelectedNode] = useState(null)
   const [activeWorkspaceTab, setActiveWorkspaceTab] = useState('preview') // New: OS Workspace State
 
@@ -549,7 +550,8 @@ function App() {
       const payload = { 
         message: userMessage, 
         history: chatMessages, 
-        image: imagePayload 
+        image: imagePayload,
+        web_search: isWebSearchEnabled
       };
       
       // If we are in ArtifactViewer (Step 3), pass the projectId so backend knows to Refine
@@ -1201,53 +1203,94 @@ function App() {
            <>
         {/* LEFT NAVIGATION SIDEBAR */}
         {showSidebar && (
-        <aside className="sidebar" style={{ display: 'flex', flexDirection: 'column' }}>
+        <aside className="sidebar">
+          {/* Header */}
+          <div className="sidebar-header" style={{ justifyContent: 'flex-end' }}>
+            <div className="sidebar-header-icon" onClick={() => setShowSidebar(false)} title="Close sidebar">
+              <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" height="18" width="18" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+            </div>
+          </div>
+
+          {/* New Chat Button */}
           <button className="sidebar-new-chat-btn" onClick={handleNewChat}>
-            <span style={{ fontSize: '1.2rem' }}>➕</span> New Chat
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div className="sidebar-header-icon" style={{ width: '24px', height: '24px', background: 'white', color: 'black', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" height="14" width="14" xmlns="http://www.w3.org/2000/svg"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+              </div>
+              <span>New chat</span>
+            </div>
+            <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" height="16" width="16" xmlns="http://www.w3.org/2000/svg"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
           </button>
+
+          {/* Navigation Group */}
+          <div className="sidebar-nav-group">
+            <a href="#" className="sidebar-nav-item" onClick={(e) => { e.preventDefault(); alert("Coming soon!"); }}>
+              <div className="sidebar-nav-icon">🔍</div>
+              <span>Search chats</span>
+            </a>
+
+          </div>
           
-          <div className="sidebar-history-title">Recent Chats</div>
-          <div className="sidebar-history-list" style={{ flex: 1, overflowY: 'auto' }}>
+          {/* History */}
+          <div className="sidebar-history-title">Recents</div>
+          <div className="sidebar-history-list">
             {chatHistoryList.map(chat => (
               <div 
                 key={chat.id} 
                 className={`sidebar-history-item ${currentChatId === chat.id ? 'active' : ''}`}
                 onClick={() => handleLoadChat(chat.id)}
                 title={chat.title}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px' }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
-                    💬 <span className="history-item-text" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{chat.title}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', flex: 1 }}>
+                    <span className="history-item-text">{chat.title}</span>
                 </div>
                 <div className="history-actions" style={{ display: 'flex', gap: '6px' }}>
-                    <button onClick={(e) => handleRenameChat(chat.id, e)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0.7, fontSize: '0.8rem' }} title="Rename">✏️</button>
-                    <button onClick={(e) => handleDeleteChat(chat.id, e)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0.7, fontSize: '0.8rem' }} title="Delete">🗑️</button>
+                    <button onClick={(e) => handleRenameChat(chat.id, e)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0.7, color: '#fff' }} title="Rename">✏️</button>
+                    <button onClick={(e) => handleDeleteChat(chat.id, e)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0.7, color: '#fff' }} title="Delete">🗑️</button>
                 </div>
               </div>
             ))}
           </div>
           
-          <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '0 10px', marginBottom: '10px' }}>
-              <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--border-color)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '14px', textTransform: 'uppercase' }}>
-                {session?.user?.email?.[0] || 'U'}
+          {/* Footer User Profile & Actions */}
+          <div className="sidebar-footer" style={{ marginTop: 'auto', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.05)', borderRadius: 0, padding: '12px 0 0 0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px', borderRadius: '8px', width: '100%' }} >
+              <div className="sidebar-user-info" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div className="sidebar-avatar" style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#3b82f6', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: '600' }}>
+                  {session?.user?.email?.[0]?.toUpperCase() || 'U'}
+                </div>
+                <div className="sidebar-user-details" style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span className="sidebar-user-name" style={{ color: '#ececec', fontSize: '0.9rem', fontWeight: '500' }}>{session?.user?.email?.split('@')[0] || 'Guest'}</span>
+                  <span className="sidebar-user-plan" style={{ color: '#60a5fa', fontSize: '0.75rem', fontWeight: '600', letterSpacing: '0.5px' }}>yAI 2.0</span>
+                </div>
               </div>
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {session?.user?.email || 'User'}
+              
+              <div style={{ display: 'flex', gap: '4px' }}>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setShowSettingsModal(true); }} 
+                  className="sidebar-action-btn"
+                  title="Settings"
+                >
+                  <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" height="16" width="16" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                </button>
+                {session ? (
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); supabase.auth.signOut(); }} 
+                    className="sidebar-action-btn"
+                    title="Sign Out"
+                  >
+                    <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" height="16" width="16" xmlns="http://www.w3.org/2000/svg"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                  </button>
+                ) : (
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); alert("Sign in from main view"); }} 
+                    className="sidebar-action-btn"
+                    title="Sign In"
+                  >
+                    <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" height="16" width="16" xmlns="http://www.w3.org/2000/svg"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
+                  </button>
+                )}
               </div>
-            </div>
-            
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => setShowSettingsModal(true)} style={{ flex: 1, padding: '8px 0', fontSize: '0.8rem', backgroundColor: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', cursor: 'pointer', transition: 'background 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }} onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--border-color)'} onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}>
-                ⚙️ Settings
-              </button>
-              <button onClick={() => supabase.auth.signOut()} style={{ flex: 1, padding: '8px 0', fontSize: '0.8rem', backgroundColor: 'var(--border-color)', color: 'var(--text-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', cursor: 'pointer', transition: 'background 0.2s' }} onMouseEnter={(e) => e.target.style.backgroundColor = '#3a3a3a'} onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--border-color)'}>
-                Sign Out
-              </button>
-            </div>
-            
-            <div style={{ fontSize: '0.75rem', color: '#94a3b8', textAlign: 'center', marginTop: '10px' }}>
-              yAI 2.0
             </div>
           </div>
         </aside>
@@ -1496,6 +1539,33 @@ function App() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(59, 130, 246, 0.1)', padding: '6px 12px', borderRadius: '20px', border: '1px solid rgba(59, 130, 246, 0.3)', transition: 'all 0.3s', boxShadow: '0 0 10px rgba(59, 130, 246, 0.1)' }} onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(59, 130, 246, 0.2)'; e.currentTarget.style.boxShadow = '0 0 15px rgba(59, 130, 246, 0.3)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)'; e.currentTarget.style.boxShadow = '0 0 10px rgba(59, 130, 246, 0.1)'; }}>
                         <span style={{ fontSize: '1rem' }}>✨</span>
                         <span style={{ fontSize: '0.8rem', fontWeight: '600', color: '#60a5fa', letterSpacing: '0.5px' }}>Voice AI</span>
+                    </div>
+                )}
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => setIsWebSearchEnabled(!isWebSearchEnabled)}
+                style={{
+                  background: 'none', 
+                  border: 'none', 
+                  color: isWebSearchEnabled ? '#10b981' : '#888',
+                  cursor: 'pointer', 
+                  padding: '0 10px', 
+                  transition: 'all 0.2s',
+                  transform: isWebSearchEnabled ? 'scale(1.05)' : 'scale(1)'
+                }}
+                title={isWebSearchEnabled ? "Web Search Enabled" : "Web Search"}
+              >
+                {isWebSearchEnabled ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(16, 185, 129, 0.1)', padding: '6px 12px', borderRadius: '20px', border: '1px solid rgba(16, 185, 129, 0.3)', boxShadow: '0 0 10px rgba(16, 185, 129, 0.1)' }}>
+                        <span style={{ fontSize: '1rem' }}>🌐</span>
+                        <span style={{ fontSize: '0.8rem', fontWeight: '600', color: '#10b981', letterSpacing: '0.5px' }}>Search ON</span>
+                    </div>
+                ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(136, 136, 136, 0.1)', padding: '6px 12px', borderRadius: '20px', border: '1px solid rgba(136, 136, 136, 0.3)', transition: 'all 0.3s' }} onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(136, 136, 136, 0.2)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(136, 136, 136, 0.1)'; }}>
+                        <span style={{ fontSize: '1rem', opacity: 0.7 }}>🌐</span>
+                        <span style={{ fontSize: '0.8rem', fontWeight: '600', color: '#888', letterSpacing: '0.5px' }}>Search</span>
                     </div>
                 )}
               </button>

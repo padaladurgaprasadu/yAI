@@ -57,10 +57,17 @@ Rules:
             ])
             content = response.content.strip()
             
-            # Clean formatting
-            if content.startswith("```json"): content = content[7:]
-            elif content.startswith("```"): content = content[3:]
-            if content.endswith("```"): content = content[:-3]
+            # Clean formatting using regex to extract JSON
+            import re
+            match = re.search(r'```(?:json)?\s*(.*?)\s*```', content, re.DOTALL)
+            if match:
+                content = match.group(1)
+            else:
+                # Attempt to find first { and last }
+                start_idx = content.find('{')
+                end_idx = content.rfind('}')
+                if start_idx != -1 and end_idx != -1:
+                    content = content[start_idx:end_idx+1]
                 
             plan = json.loads(content.strip())
             return plan
@@ -127,9 +134,16 @@ Review the Agent's Output and respond with valid JSON:
                 HumanMessage(content=f"Agent Output:\n{output}")
             ])
             content = response.content.strip()
-            if content.startswith("```json"): content = content[7:]
-            elif content.startswith("```"): content = content[3:]
-            if content.endswith("```"): content = content[:-3]
+            import re
+            match = re.search(r'```(?:json)?\s*(.*?)\s*```', content, re.DOTALL)
+            if match:
+                content = match.group(1)
+            else:
+                start_idx = content.find('{')
+                end_idx = content.rfind('}')
+                if start_idx != -1 and end_idx != -1:
+                    content = content[start_idx:end_idx+1]
+                    
             return json.loads(content.strip())
         except Exception as e:
             logger.warning(f"[QuantumOrchestrator] Overseer failed: {e}. Defaulting to verified.")

@@ -801,6 +801,7 @@ class ChatRequest(BaseModel):
     image: typing.Optional[typing.Union[str, typing.List[str]]] = None
     memory: typing.Optional[str] = None
     projectId: typing.Optional[str] = None
+    web_search: bool = False
 
 @app.post("/api/chat")
 @limiter.limit("50/minute")
@@ -966,6 +967,10 @@ IMPORTANT RULES:
             primary_intent = str(intent_data.get("primary_intent", "General Chat"))
             complexity = str(intent_data.get("complexity", "Medium"))
             
+            if request_data.web_search:
+                primary_intent = "Research"
+                complexity = "Enterprise"
+            
             is_architecture_req = any(word in msg_lower for word in ["diagram", "architecture", "flowchart", "workflow"]) or primary_intent == "Architecture"
             
             build_intents = ["Website Development", "Mobile App Development", "API Development", "Database Design", "Coding"]
@@ -1076,7 +1081,7 @@ IMPORTANT RULES:
             elif is_build_req:
                 formatting_reminder = "\n\n[CRITICAL REMINDER]: The user wants to build a project. You MUST return EXACTLY the `[BUILD] {\"goal\": \"...\", \"agent_role\": \"...\"}` format and nothing else. DO NOT generate markdown lists or conversational text. Output ONLY the [BUILD] tag."
             else:
-                formatting_reminder = "\n\n[CRITICAL REMINDER]: You MUST strictly follow the requested formatting. Use H3 (###) headers, bold text, bullet points, and NEVER write paragraphs longer than 2 sentences. You MUST put headers and bullet points on their own separate lines."
+                formatting_reminder = ""
                         
             if request_data.image:
                 human_content = [{"type": "text", "text": sanitized_message + formatting_reminder}]
