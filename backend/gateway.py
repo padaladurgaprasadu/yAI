@@ -74,17 +74,36 @@ class AIGateway:
         """Mode 1: Direct LLM response for chat."""
         from backend.utils.model_registry import AIModelRegistry
         from langchain_core.prompts import ChatPromptTemplate
+        from duckduckgo_search import DDGS
         
         q.put({"type": "progress", "node": "quick_chat", "message": "💬 Using Quick Chat model..."})
         
+        goal = state.get("goal", "")
+        images_context = ""
+        
+        # Try to fetch images to enrich the chat
+        try:
+            with DDGS() as ddgs:
+                # Use only the first 50 chars of the goal for a safer image query
+                search_query = goal[:50]
+                results = list(ddgs.images(search_query, max_results=3))
+                if results:
+                    images_context = "\n\nRelevant image URLs you can include in your response:\n"
+                    for r in results:
+                        img_url = r.get("image")
+                        if img_url:
+                            images_context += f"- {img_url}\n"
+        except Exception as e:
+            logger.warning(f"Failed to fetch images for quick chat: {e}")
+        
         llm = AIModelRegistry.get_llm_chain(capability="chat", temperature=0.7)
         prompt = ChatPromptTemplate.from_messages([
-            ("system", "You are a helpful AI assistant named yAI. Provide a concise, accurate response."),
-            ("human", "{goal}")
+            ("system", "You are a highly visual AI assistant named yAI. Provide a concise, accurate, and beautifully formatted markdown response. If relevant image URLs are provided below, you MUST embed them elegantly into your markdown response using standard syntax: ![alt text](url)"),
+            ("human", "User query: {goal}{images_context}")
         ])
         
         chain = prompt | llm
-        response = chain.invoke({"goal": state.get("goal")})
+        response = chain.invoke({"goal": goal, "images_context": images_context})
         
         content = response.content
         if isinstance(content, list):

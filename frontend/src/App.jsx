@@ -1172,23 +1172,7 @@ function App() {
           <h1 style={{ margin: 0, fontSize: '1.2rem', letterSpacing: '1px', fontWeight: '600' }}>yAI</h1>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
-          <button 
-            onClick={() => setActiveView(activeView === 'workspace' ? 'dashboards' : 'workspace')}
-            style={{ 
-              background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.2))', 
-              border: '1px solid rgba(59, 130, 246, 0.5)', 
-              color: 'var(--accent)', 
-              padding: '6px 12px', 
-              borderRadius: '8px', 
-              cursor: 'pointer', 
-              fontWeight: '600',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
-            {activeView === 'workspace' ? '📊 Open Dashboards' : '💻 Back to Workspace'}
-          </button>
+          {/* Dashboard toggle removed per user request */}
         </div>
       </header>
       
