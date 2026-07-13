@@ -206,15 +206,44 @@ TARGET FILE: {target_file}
         import concurrent.futures
         
         def generate_file(target_file):
-            # --- ZERO-SHOT ASSEMBLY OPTIMIZATION ---
+            # --- AUTONOMOUS SELF-HEALING / ZERO-SHOT ASSEMBLY ---
+            has_error_or_feedback = bool(feedback or runtime_error or audit_feedback)
             if target_file in state.get("code_files", {}):
-                print(f"[Coder] ⚡ Zero-Shot Assembly: Skipping LLM generation for {target_file} as it was pre-injected.")
-                if q:
-                    q.put({"type": "progress", "message": f"⚡ Zero-Shot Assembly: Assembled {target_file} instantly without LLM..."})
-                    q.put({"type": "file_start", "file": target_file})
-                    # Immediately yield the file content so the frontend UI streams it instantly
-                    q.put({"type": "code_token", "file": target_file, "token": state["code_files"][target_file]})
-                return (target_file, state["code_files"][target_file])
+                current_code = state["code_files"][target_file]
+                if has_error_or_feedback:
+                    print(f"[Coder] 🔧 Auto-Healing Triggered for {target_file}! Engaging Semantic Diff Engine...")
+                    if q:
+                        q.put({"type": "progress", "message": f"🔧 Auto-Healing {target_file} via Semantic Diff Engine..."})
+                        q.put({"type": "file_start", "file": target_file})
+                    
+                    try:
+                        from backend.agents.diff_engine import SemanticDiffEngine
+                        diff_engine = SemanticDiffEngine()
+                        instruction = "Fix the following issues:\n"
+                        if runtime_error: instruction += f"Runtime Error: {runtime_error}\n"
+                        if feedback: instruction += f"Review Feedback: {feedback}\n"
+                        if audit_feedback: instruction += f"Audit Feedback: {audit_feedback}\n"
+                        
+                        diffs = diff_engine.generate_diff(target_file, current_code, instruction)
+                        
+                        if diffs:
+                            patched_code = diff_engine.apply_diff(current_code, diffs)
+                            if q:
+                                q.put({"type": "code_token", "file": target_file, "token": patched_code})
+                            print(f"[Coder] 🟢 Diff applied successfully to {target_file}.")
+                            return (target_file, patched_code)
+                        else:
+                            print(f"[Coder] ⚠️ Diff Engine returned empty patch for {target_file}. Falling back to full generation.")
+                    except Exception as e:
+                        print(f"[Coder] ❌ Diff Engine failed for {target_file}: {e}. Falling back to full generation.")
+                else:
+                    print(f"[Coder] ⚡ Zero-Shot Assembly: Skipping LLM generation for {target_file} as it was pre-injected.")
+                    if q:
+                        q.put({"type": "progress", "message": f"⚡ Zero-Shot Assembly: Assembled {target_file} instantly without LLM..."})
+                        q.put({"type": "file_start", "file": target_file})
+                        # Immediately yield the file content so the frontend UI streams it instantly
+                        q.put({"type": "code_token", "file": target_file, "token": current_code})
+                    return (target_file, current_code)
             # ---------------------------------------
             
             if q:
