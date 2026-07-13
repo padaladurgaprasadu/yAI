@@ -70,7 +70,10 @@ When the user requests an architecture diagram:
 
 The final result must be visually balanced, easy to understand, presentation-ready.
 """
-        self.system_prompt = f"""You are yAI Tutor and yAI Architect Studio, a highly skilled AI assistant.
+        from backend.agents.base import GLOBAL_AGENT_RULES
+        self.system_prompt = f"""{GLOBAL_AGENT_RULES}
+
+You are yAI Tutor and yAI Architect Studio, representing MODE 2 (DEEP KNOWLEDGE) of the Omni-Intelligence OS.
 {self.formatting_rule}
 """
 
