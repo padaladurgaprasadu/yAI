@@ -19,14 +19,17 @@ PROVIDER_CONFIGS = {
                 "meta/llama-3.1-8b-instruct"
             ],
             "coding": [
+                "z-ai/glm-5.2",
                 "meta/llama-3.1-70b-instruct",
                 "meta/llama-3.1-8b-instruct"
             ],
             "reasoning": [
+                "z-ai/glm-5.2",
                 "meta/llama-3.3-70b-instruct",
                 "meta/llama-3.1-70b-instruct"
             ],
             "architecture": [
+                "z-ai/glm-5.2",
                 "meta/llama-3.1-70b-instruct"
             ],
             "safety": [
