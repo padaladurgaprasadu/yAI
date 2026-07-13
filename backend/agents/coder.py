@@ -389,7 +389,7 @@ OUTPUT SCHEMA:
             return (target_file, f"// Error: yAI failed to generate {target_file}. Exception: {last_error if 'last_error' in locals() else 'Unknown'}")
 
         # Execute parallel generation for speed
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=15) as executor:
             future_to_file = {executor.submit(generate_file, f): f for f in files_to_generate}
             try:
                 # Add a hard timeout to prevent the pipeline from hanging forever

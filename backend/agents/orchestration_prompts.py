@@ -80,7 +80,7 @@ OUTPUT SCHEMA:
 RULES:
 1. `primary_intent`: Choose the best matching category from the list above.
 2. `complexity`: "Simple" (Greetings, definitions), "Medium" (Coding help, explanations), "Large" (Full apps), "Enterprise" (Massive architectures).
-3. `requires_web_search`: True if the user asks about latest news, APIs, docs, pricing, people, or modern frameworks (e.g. NextJS 14).
+3. `requires_web_search`: True ONLY if the user explicitly asks for "latest news", "pricing", or explicitly says "research this". DO NOT use web search for standard apps, websites, or general coding questions. The LLMs already know how to build a React E-Commerce site.
 4. `requires_repository_analysis`: True if the user implies fixing or editing an existing project they uploaded.
 5. `requires_templates`: True for Website or App development where UI components (ReactBits, shadcn) would speed up the process.
 6. `requires_image_search`: True if visual context (people, places, hardware like GPUs) would improve the answer.

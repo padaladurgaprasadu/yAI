@@ -20,25 +20,18 @@ PROVIDER_CONFIGS = {
             ],
             "coding": [
                 "z-ai/glm-5.2",
-                "deepseek-ai/deepseek-v4-flash",
                 "mistralai/mistral-medium-3.5-128b",
-                "minimax/minimax-m2.7",
-                "google/gemma-2-27b-it",
                 "meta/llama-3.1-70b-instruct"
             ],
             "reasoning": [
                 "z-ai/glm-5.2",
-                "deepseek-ai/deepseek-v4",
                 "mistralai/mistral-medium-3.5-128b",
-                "minimax/minimax-m2.7",
-                "google/gemma-2-27b-it",
                 "meta/llama-3.3-70b-instruct"
             ],
             "architecture": [
                 "z-ai/glm-5.2",
-                "deepseek-ai/deepseek-v4",
                 "mistralai/mistral-medium-3.5-128b",
-                "minimax/minimax-m2.7"
+                "meta/llama-3.1-70b-instruct"
             ],
             "safety": [
                 "meta/llama-3.1-8b-instruct"
