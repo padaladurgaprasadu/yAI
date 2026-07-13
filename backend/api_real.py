@@ -276,23 +276,39 @@ async def plan_project(request_data: PlanRequest, request: Request, auth: dict =
         yield f"data: {json.dumps({'type': 'metadata', 'project_id': project_id})}\n\n"
         
         try:
-            msg1 = json.dumps({'type': 'token', 'token': '### 🔍 Phase 1: Researching & Gathering Context...\n'})
-            yield f"data: {msg1}\n\n"
-            from backend.agents.researcher import ResearchAgent
-            researcher = ResearchAgent()
             initial_state = AiONState(goal=goal, project_id=project_id, agent_role=request_data.agent_role, modules=[])
             if request_data.image:
                 initial_state["image"] = request_data.image
-                
-            researched_state = await asyncio.to_thread(researcher.run, initial_state)
-            semantic_context = researched_state.get("semantic_context", "")
 
-            msg2 = json.dumps({'type': 'token', 'token': '✅ Context gathered.\n\n### 🧠 Phase 2: Defining Core Modules...\n'})
+            # ⚡ SMART RESEARCH SKIP — Only research when explicitly needed
+            # Standard builds (e-commerce, dashboard, etc.) skip this entirely
+            # saving 25-40 seconds per build
+            RESEARCH_KEYWORDS = ["latest", "news", "pricing", "research", "current", "2024", "2025", "2026", "api docs", "documentation for"]
+            needs_research = any(kw in goal.lower() for kw in RESEARCH_KEYWORDS)
+
+            if needs_research:
+                msg1 = json.dumps({'type': 'token', 'token': '### 🔍 Phase 1: Researching & Gathering Context...\n'})
+                yield f"data: {msg1}\n\n"
+                from backend.agents.researcher import ResearchAgent
+                researcher = ResearchAgent()
+                researched_state = await asyncio.to_thread(researcher.run, initial_state)
+                semantic_context = researched_state.get("semantic_context", "")
+                msg_done = json.dumps({'type': 'token', 'token': '✅ Context gathered.\n\n'})
+                yield f"data: {msg_done}\n\n"
+            else:
+                # Fast path — skip research, go straight to planning
+                msg1 = json.dumps({'type': 'token', 'token': '### ⚡ Fast Track: Skipping research (LLMs already know this domain)\n'})
+                yield f"data: {msg1}\n\n"
+                researched_state = initial_state
+                semantic_context = ""
+
+            msg2 = json.dumps({'type': 'token', 'token': '### 🧠 Defining Core Modules...\n'})
             yield f"data: {msg2}\n\n"
             from backend.agents.planner import PlannerAgent
             planner = PlannerAgent()
             planned_state = await asyncio.to_thread(planner.run, researched_state)
             modules = planned_state.get("modules", [])
+
 
             msg3 = json.dumps({'type': 'token', 'token': '✅ Modules defined.\n\n### 🏗️ Phase 3: Drafting System Blueprint...\n\n'})
             yield f"data: {msg3}\n\n"
