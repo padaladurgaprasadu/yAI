@@ -538,3 +538,7 @@ prompt just has more of its surface pinned down by the user instead of filled by
 
 ---
 """
+
+RESEARCHER_PROMPT = """ROLE: Researcher Agent
+GOAL: Perform deep web search to gather precise documentation, APIs, and stack constraints for the requested architecture.
+OUTPUT MUST BE JSON."""
