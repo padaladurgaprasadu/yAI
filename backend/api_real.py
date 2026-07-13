@@ -976,9 +976,12 @@ IMPORTANT RULES:
                 explicit_build
             )
             
-            is_domain_expert_req = (complexity in ["Large", "Enterprise"] and not is_build_req and not is_architecture_req) or primary_intent == "Research"
+            is_domain_expert_req = (complexity in ["Large", "Enterprise"] and not is_build_req and not is_architecture_req) or primary_intent in ["Research", "Security"]
             
             if is_domain_expert_req:
+                if primary_intent == "Security":
+                    USER_MEMORY += "\n\n[DEFENSIVE SECURITY SWARM DIRECTIVE]: Build an enterprise defensive cybersecurity assistant for authorized environments only. The system must never perform network reconnaissance, exploitation, or scanning against external targets. Instead, it should analyze user-provided artifacts (source code, logs, SBOMs, vulnerability scan reports, cloud configurations, IaC files, and compliance documents), explain findings, prioritize risks, recommend remediations, generate reports, and orchestrate approved defensive workflows. Any interaction with live systems must require explicit user approval and target only assets the user owns or is authorized to test."
+                    
                 yield f"data: {json.dumps({'type': 'status', 'message': '🧠 Synthesizing Quantum Micro-Agents...'})}\n\n"
                 try:
                     from backend.agents.domain_experts import DomainOrchestrator

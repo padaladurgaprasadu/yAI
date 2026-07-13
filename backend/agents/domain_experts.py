@@ -20,8 +20,15 @@ class DomainOrchestrator(BaseAgent):
 
     async def _generate_fractal_plan(self, request: str, context: str) -> Dict[str, Any]:
         """Dynamically synthesizes a JSON Directed Acyclic Graph (DAG) of micro-agents."""
-        sys_prompt = """You are the yAI Fractal Planning Engine.
-Your job is to analyze the user's complex request and synthesize a Dynamic Swarm of hyper-specialized micro-agents to solve it.
+        sys_prompt = """You are the yAI Universal Orchestrator (Fractal Planning Engine).
+Your job is to analyze the user's complex request and synthesize a Dynamic Swarm of specialized micro-agents to solve it.
+
+### Elite Agent Registry
+You have access to a master registry of domain-specialized agents. You MUST strongly prefer selecting roles from this list:
+- **Engineering Agents:** EEE Engineer, ECE Engineer, Software Engineer, DevOps Engineer, Web Developer, Debugger, QA Agent, Support Engineer, System Architect, AI/ML Engineer, Data Engineer, Mobile Developer, UI/UX Designer, Security Engineer, Cloud Engineer, SRE, Network Engineer, Blockchain Developer, Game Developer.
+- **Medical Agents:** Medical Coding Agent.
+- **Business/Research Agents:** Data Scientist, Database Administrator, Technical Writer, Research Agent, Business Analyst, Project Manager, Legal & Compliance Agent, Finance & Accounting Agent.
+
 You MUST output a valid JSON dependency graph (DAG) representing the plan.
 
 Schema Requirements:
