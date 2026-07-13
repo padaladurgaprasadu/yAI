@@ -1622,7 +1622,7 @@ function App() {
 
               {/* UNIFIED OS WORKSPACE (Combines Code, Preview, Logs, Architecture) */}
               {(step === 3 || step === 4) && (
-                <div style={{ height: 'calc(100dvh - 60px)', animation: 'fadeIn 0.5s ease-out', margin: '-30px' }}>
+                <div style={{ height: 'calc(100dvh - 60px)', animation: 'fadeIn 0.5s ease-out', margin: '-30px', position: 'relative' }}>
                   <AIWorkspaceTabs 
                     activeTab={activeWorkspaceTab}
                     setActiveTab={setActiveWorkspaceTab}
@@ -1638,8 +1638,40 @@ function App() {
                     API_URL={API_URL}
                     timeline={agentState.timeline}
                   />
+                  {/* 🚀 ONE-CLICK DOWNLOAD BUTTON */}
+                  {projectId && (
+                    <a
+                      href={`${API_URL}/api/download/${projectId}`}
+                      download
+                      style={{
+                        position: 'absolute',
+                        bottom: '24px',
+                        right: '24px',
+                        zIndex: 100,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '12px 22px',
+                        background: 'linear-gradient(135deg, #10b981, #059669)',
+                        color: '#fff',
+                        borderRadius: '50px',
+                        fontWeight: '700',
+                        fontSize: '0.95rem',
+                        textDecoration: 'none',
+                        boxShadow: '0 4px 20px rgba(16,185,129,0.45)',
+                        transition: 'all 0.2s',
+                        letterSpacing: '0.3px'
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.05)'; e.currentTarget.style.boxShadow = '0 6px 28px rgba(16,185,129,0.6)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(16,185,129,0.45)'; }}
+                    >
+                      <span style={{ fontSize: '1.2rem' }}>⬇️</span>
+                      Download &amp; Run
+                    </a>
+                  )}
                 </div>
               )}
+
               
               {/* LIVE PROGRESS DASHBOARD OVERLAY for Workspace */}
               {isLoading && step === 2 && (
