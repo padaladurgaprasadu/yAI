@@ -805,6 +805,11 @@ function App() {
           return newMsgs;
       });
 
+      // ⚡ AUTONOMOUS MODE: Auto-approve blueprint, no human click needed
+      setTimeout(() => {
+        handleGenerate();
+      }, 500);
+
     } catch (err) {
       setError(err.message)
       setStep(1)
@@ -870,6 +875,8 @@ function App() {
           }
         } else if (data.type === 'INTERRUPT') {
           setAwaitingApproval(true)
+          // ⚡ AUTONOMOUS MODE: Auto-approve mid-pipeline pauses
+          setTimeout(() => handleResume('approve'), 800);
         } else if (data.type === 'code_complete') {
           setCodeFiles(data.code_files)
         } else if (data.type === 'done') {
