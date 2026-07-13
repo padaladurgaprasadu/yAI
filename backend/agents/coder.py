@@ -358,12 +358,13 @@ OUTPUT SCHEMA:
                         
                     if code:
                         
-                        # CODE VALIDATION GATE
+                        # CODE VALIDATION GATE — reject and retry if syntax is broken
                         if target_file.endswith(".py"):
                             try:
                                 ast.parse(code)
-                            except SyntaxError:
-                                pass
+                            except SyntaxError as syn_err:
+                                logger.warning(f"   -> [Validator] Python syntax error in {target_file}: {syn_err}. Retrying...")
+                                continue  # retry the loop with error context
                             
                         logger.info(f"   -> [Success] Generated {target_file}")
                         if q:

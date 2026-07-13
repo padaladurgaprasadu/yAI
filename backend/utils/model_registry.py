@@ -51,6 +51,7 @@ PROVIDER_CONFIGS = {
             "chat": ["gpt-4o-mini", "gpt-3.5-turbo"],
             "coding": ["gpt-4o", "gpt-4o-mini"],
             "reasoning": ["gpt-4o", "gpt-4o-mini"],
+            "architecture": ["gpt-4o", "gpt-4o-mini"],
             "vision": ["gpt-4o", "gpt-4o-mini"],
             "safety": ["gpt-4o-mini"],
             "memory": ["gpt-4o-mini"]
@@ -63,6 +64,7 @@ PROVIDER_CONFIGS = {
             "chat": ["llama-3.1-8b-instant", "gemma2-9b-it"],
             "coding": ["llama3-70b-8192", "llama-3.1-8b-instant"],
             "reasoning": ["llama3-70b-8192", "llama-3.1-8b-instant"],
+            "architecture": ["llama3-70b-8192", "llama-3.1-8b-instant"],
             "vision": ["llama-3.2-11b-vision-preview"],
             "safety": ["llama-3.1-8b-instant"],
             "memory": ["llama-3.1-8b-instant"]
@@ -75,6 +77,7 @@ PROVIDER_CONFIGS = {
             "chat": ["gemini-1.5-flash"],
             "coding": ["gemini-1.5-pro", "gemini-1.5-flash"],
             "reasoning": ["gemini-1.5-pro", "gemini-1.5-flash"],
+            "architecture": ["gemini-1.5-pro", "gemini-1.5-flash"],
             "vision": ["gemini-1.5-flash"],
             "safety": ["gemini-1.5-flash"],
             "memory": ["gemini-1.5-flash"]
@@ -87,6 +90,7 @@ PROVIDER_CONFIGS = {
             "chat": ["anthropic/claude-3.5-haiku", "google/gemini-flash-1.5"],
             "coding": ["anthropic/claude-3.5-sonnet", "anthropic/claude-3.5-haiku"],
             "reasoning": ["anthropic/claude-3.5-sonnet", "google/gemini-pro-1.5"],
+            "architecture": ["anthropic/claude-3.5-sonnet", "anthropic/claude-3.5-haiku"],
             "vision": ["anthropic/claude-3.5-sonnet"],
             "safety": ["google/gemini-flash-1.5"],
             "memory": ["anthropic/claude-3.5-haiku"]

@@ -109,9 +109,17 @@ class ArchitectAgent(BaseAgent):
         proposals = []
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
             futures = [executor.submit(get_proposal, model, i) for i, model in enumerate(board)]
-            for f in concurrent.futures.as_completed(futures):
-                res = f.result()
-                if res: proposals.append(res)
+            # Hard 45-second timeout — never hangs the pipeline
+            try:
+                for f in concurrent.futures.as_completed(futures, timeout=45):
+                    res = f.result()
+                    if res: proposals.append(res)
+            except concurrent.futures.TimeoutError:
+                print("[Architect] Board of Directors timed out. Using whatever proposals arrived.")
+                for f in futures:
+                    if f.done() and not f.exception():
+                        res = f.result()
+                        if res: proposals.append(res)
                 
         if not proposals:
             raise Exception("All Architect models failed to generate a blueprint.")
@@ -169,8 +177,8 @@ class ArchitectAgent(BaseAgent):
             except Exception as e:
                 print(f"   -> [WARNING] Could not save to neo4j memory: {e}")
                 
-        except json.JSONDecodeError:
-            print("   -> [WARNING] Failed to parse Architect's JSON. Using raw response.")
-            state["blueprint"] = {"raw_response": response.content}
+        except Exception as parse_err:
+            print(f"   -> [WARNING] Failed to parse Architect JSON: {parse_err}. Using raw response.")
+            state["blueprint"] = {"raw_response": content, "tech_stack": [], "file_structure": []}
             
         return state

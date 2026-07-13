@@ -261,17 +261,19 @@ class ExecutorAgent(BaseAgent):
                 with open(full_path, "w", encoding="utf-8") as f:
                     f.write(content)
         # [SECURITY] PRE-EXECUTION SECURITY SCANNER
-        dangerous_keywords = ["rm -rf", "del /s", "format c:", "os.system(", "subprocess.run(", "fs.unlink"]
+        # Only block truly destructive OS-level commands, NOT normal server code patterns
+        dangerous_keywords = ["rm -rf /", "del /s /q c:\\", "format c:", "; rm -rf", "&& rm -rf"]
         if state.get("code_files"):
             for path, content in state["code_files"].items():
                 content_lower = content.lower()
                 for keyword in dangerous_keywords:
                     if keyword in content_lower:
-                        error_msg = f"[SECURITY BREACH] Dangerous keyword '{keyword}' detected in {path}. Execution aborted."
+                        error_msg = f"[SECURITY] Destructive command '{keyword}' detected in {path}. Aborted."
                         print(f"   -> {error_msg}")
                         state["runtime_error"] = error_msg
                         state["execution_logs"] = execution_logs + [f"> {error_msg}"]
                         return state
+
         
         filtered_commands = []
         for cmd in commands:

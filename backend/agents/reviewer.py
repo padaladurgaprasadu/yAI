@@ -23,7 +23,8 @@ class ReviewerAgent(BaseAgent):
             ("human", "Project Workspace: {workspace}\nBlueprint: {blueprint}\nCode Files Generated: {code_files}")
         ])
         
-        self.chain = self.prompt | self.fast_llm
+        # Use smart_llm for deep code analysis — quality gate must use best model
+        self.chain = self.prompt | self.smart_llm
 
     def run(self, state: AiONState) -> AiONState:
         project_id = state.get("project_id", "default")
@@ -76,11 +77,11 @@ class ReviewerAgent(BaseAgent):
                     logger.warning(f"[Reviewer] AST parsing failed: {feedback}")
                     break
 
-                # Smart truncation: First 1500 chars and last 500 chars to capture imports and main logic
+                # Smart truncation: Increased to 5000 chars to capture full logic
                 code_files_summary = {}
                 for k, v in state["code_files"].items():
-                    if len(v) > 2000:
-                        code_files_summary[k] = v[:1500] + "\n... [TRUNCATED MIDDLE] ...\n" + v[-500:]
+                    if len(v) > 5000:
+                        code_files_summary[k] = v[:3500] + "\n... [MIDDLE TRUNCATED] ...\n" + v[-1500:]
                     else:
                         code_files_summary[k] = v
                 
@@ -112,8 +113,9 @@ class ReviewerAgent(BaseAgent):
                     logger.warning(f"   -> [WARNING] Rate limit hit for Reviewer. Retrying in {wait_time}s...")
                     time.sleep(wait_time)
                 else:
-                    logger.error(f"   -> [ERROR] Reviewer encountered an exception: {e}")
-                    feedback = "APPROVED" # Fail open
+                    logger.error(f"   -> [ERROR] Reviewer exception: {e}")
+                    # Do NOT fail-open — log the error as review feedback so Coder can attempt a fix
+                    feedback = json.dumps([{"file": "system", "issue": f"Reviewer error: {e}", "fix": "Retry generation"}])
                     break
         
         if feedback == "APPROVED":
