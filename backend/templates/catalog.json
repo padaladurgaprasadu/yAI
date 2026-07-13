@@ -1,5 +1,5 @@
 {
-  "templates": [
+  "tier_1_ui": [
     {
       "id": "hero_001",
       "name": "Animated SaaS Hero",
@@ -111,6 +111,48 @@
       "tags": ["dashboard", "admin", "sidebar", "layout"],
       "file_path": "backend/templates/components/dashboard_001.tsx",
       "capability": "A full responsive admin dashboard layout with a collapsible sidebar, header, and content area."
+    }
+  ],
+  "tier_2_official": [],
+  "tier_3_internal": [],
+  "tier_4_backend": [
+    {
+      "id": "backend_jwt_001",
+      "name": "JWT Authentication Controller",
+      "library": "yAI Standard Backend",
+      "category": "Authentication",
+      "framework": "Node.js (Express)",
+      "dependencies": ["jsonwebtoken", "bcrypt", "dotenv"],
+      "tags": ["jwt", "auth", "login", "register"],
+      "file_path": "backend/templates/backend/jwt_auth.js",
+      "capability": "Production-ready JWT authentication including login, registration, and token validation middleware.",
+      "target_output_path": "server/controllers/authController.js"
+    }
+  ],
+  "tier_5_database": [
+    {
+      "id": "db_saas_001",
+      "name": "SaaS Platform PostgreSQL Schema",
+      "library": "yAI DB Standards",
+      "category": "Schema",
+      "framework": "PostgreSQL",
+      "tags": ["schema", "sql", "saas", "users", "subscriptions"],
+      "file_path": "backend/templates/db/saas_schema.sql",
+      "capability": "Standard PostgreSQL schema for a SaaS platform with Users, Subscriptions, and Roles.",
+      "target_output_path": "server/db/schema.sql"
+    }
+  ],
+  "tier_6_deployment": [
+    {
+      "id": "deploy_docker_001",
+      "name": "Fullstack Docker Compose",
+      "library": "yAI DevOps",
+      "category": "Containerization",
+      "framework": "Docker",
+      "tags": ["docker", "compose", "deployment", "fullstack"],
+      "file_path": "backend/templates/deployment/docker-compose.yml",
+      "capability": "Docker Compose configuration spinning up an Express backend, React Vite frontend, and a PostgreSQL database container.",
+      "target_output_path": "docker-compose.yml"
     }
   ]
 }

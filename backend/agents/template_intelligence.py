@@ -29,21 +29,26 @@ class TemplateAgent:
             print(f"   -> [Error loading Template Catalog]: {e}")
             return state
             
-        catalog_str = json.dumps(catalog.get("templates", []), indent=2)
+        all_templates = []
+        for tier_key, items in catalog.items():
+            if isinstance(items, list):
+                all_templates.extend(items)
+                
+        catalog_str = json.dumps(catalog, indent=2)
             
         system_prompt = f"""
         You are the Template Intelligence Layer (Component Selection Engine) of the yAI Engineering OS.
-        Your job is to act as an Intelligent Software Assembler. You must analyze the user's project goal and proposed modules, then evaluate, rank, and select the absolute best premium UI components from our Template Catalog.
+        Your job is to act as an Intelligent Software Assembler. You must analyze the user's project goal and proposed modules, then evaluate, rank, and select the absolute best premium components from our 6-Tier Template Registry.
         
         GOAL: {goal}
         MODULES: {json.dumps(modules)}
         
-        AVAILABLE TEMPLATE CATALOG:
+        AVAILABLE 6-TIER TEMPLATE CATALOG:
         {catalog_str}
         
         RULES:
-        1. Evaluate templates across these dimensions: Design Quality, Responsiveness, Reusability, and Compatibility with the goal.
-        2. Never randomly choose the first template. You must select the highest-scoring templates that fit together cohesively.
+        1. Evaluate templates across ALL tiers (UI, Backend, Database, Deployment) and select ALL that apply to this project's requirements.
+        2. Prioritize Tier 3 (Internal), Tier 4 (Backend), and Tier 5 (Database) templates if they match the requested features (e.g., JWT Auth, SaaS Schema).
         3. Output MUST be valid JSON containing an array of selected components, including your rationale.
         
         OUTPUT FORMAT (JSON only):
@@ -75,9 +80,8 @@ class TemplateAgent:
             # Now retrieve the ACTUAL source code for the selected components
             retrieved_templates = []
             
-            templates = catalog.get("templates", [])
             for comp_id in selected_ids:
-                template_meta = next((t for t in templates if t["id"] == comp_id), None)
+                template_meta = next((t for t in all_templates if t["id"] == comp_id), None)
                 if template_meta:
                     # Construct absolute path to the file
                     file_path = template_meta.get("file_path")
@@ -104,11 +108,20 @@ class TemplateAgent:
                 
             for template in retrieved_templates:
                 meta = template["metadata"]
-                base_name = os.path.basename(meta.get("file_path", "")).replace(".tsx", ".jsx")
-                if base_name:
-                    final_path = f"client/src/components/{base_name}"
-                    state["code_files"][final_path] = template["source_code"]
-                    print(f"   -> [Zero-Shot Assembly] Injected {final_path} directly into codebase memory.")
+                base_name = os.path.basename(meta.get("file_path", ""))
+                target_output_path = meta.get("target_output_path")
+                
+                if target_output_path:
+                    final_path = target_output_path
+                else:
+                    base_name = base_name.replace(".tsx", ".jsx")
+                    if base_name:
+                        final_path = f"client/src/components/{base_name}"
+                    else:
+                        continue
+                        
+                state["code_files"][final_path] = template["source_code"]
+                print(f"   -> [Zero-Shot Assembly] Injected {final_path} directly into codebase memory.")
 
             print(f"   -> Total templates successfully retrieved and injected: {len(retrieved_templates)}")
                 
