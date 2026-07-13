@@ -32,8 +32,8 @@ class TemplateAgent:
         catalog_str = json.dumps(catalog.get("templates", []), indent=2)
             
         system_prompt = f"""
-        You are the Template Intelligence Layer of the yAI Engineering OS.
-        Your job is to analyze the user's project goal and proposed modules, then retrieve and compose a roster of premium UI components from our Template Catalog.
+        You are the Template Intelligence Layer (Component Selection Engine) of the yAI Engineering OS.
+        Your job is to act as an Intelligent Software Assembler. You must analyze the user's project goal and proposed modules, then evaluate, rank, and select the absolute best premium UI components from our Template Catalog.
         
         GOAL: {goal}
         MODULES: {json.dumps(modules)}
@@ -42,27 +42,35 @@ class TemplateAgent:
         {catalog_str}
         
         RULES:
-        1. Select the absolute best components from the catalog for the given goal. 
-        2. Output MUST be valid JSON containing a list of selected component IDs.
+        1. Evaluate templates across these dimensions: Design Quality, Responsiveness, Reusability, and Compatibility with the goal.
+        2. Never randomly choose the first template. You must select the highest-scoring templates that fit together cohesively.
+        3. Output MUST be valid JSON containing an array of selected components, including your rationale.
         
         OUTPUT FORMAT (JSON only):
-        [
-            "hero_001",
-            "nav_001"
-        ]
+        {{
+            "selected_templates": [
+                {{
+                    "id": "hero_001",
+                    "rationale": "High design quality, perfectly matches the SaaS landing page requirement with animated framer-motion elements."
+                }}
+            ]
+        }}
         """
         
         try:
             response = self.llm.invoke(system_prompt)
             raw_text = response.content.strip()
             
-            # Clean markdown formatting if present
             if raw_text.startswith("```json"):
                 raw_text = raw_text.replace("```json", "", 1).rstrip("`").strip()
             elif raw_text.startswith("```"):
                 raw_text = raw_text.replace("```", "", 1).rstrip("`").strip()
                 
-            selected_ids = json.loads(raw_text)
+            parsed_data = json.loads(raw_text)
+            selected_ids = [t["id"] for t in parsed_data.get("selected_templates", [])]
+            
+            for t in parsed_data.get("selected_templates", []):
+                print(f"   -> [Template Engine] Selected {t['id']}: {t.get('rationale', '')}")
             
             # Now retrieve the ACTUAL source code for the selected components
             retrieved_templates = []

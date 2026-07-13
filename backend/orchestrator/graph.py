@@ -174,6 +174,10 @@ def build_orchestrator_graph():
     def run_memory_storage(state):
         from backend.agents.memory import MemoryAgent
         return MemoryAgent().run_storage(state)
+        
+    def run_component_memory(state):
+        from backend.agents.component_memory import ComponentMemoryAgent
+        return ComponentMemoryAgent().run(state)
     
     # 2. Add nodes
     workflow.add_node("supervisor", run_supervisor)
@@ -193,6 +197,7 @@ def build_orchestrator_graph():
     workflow.add_node("visual_critique", run_visual_critique)
     workflow.add_node("executor", run_executor)
     workflow.add_node("devops", run_devops)
+    workflow.add_node("component_memory", run_component_memory)
     workflow.add_node("memory_storage", run_memory_storage)
     
     # 3. Add edges (The Core 15-Layer Loop)
@@ -255,7 +260,10 @@ def build_orchestrator_graph():
     workflow.add_conditional_edges("executor", should_continue_execution, {"coder": "coder", "devops": "devops"})
     
     # Layer 14: Deployment Intelligence
-    workflow.add_edge("devops", "memory_storage")
+    workflow.add_edge("devops", "component_memory")
+    
+    # Layer 14.5: Component Memory
+    workflow.add_edge("component_memory", "memory_storage")
     
     # Layer 15: Memory & Learning
     workflow.add_edge("memory_storage", END)

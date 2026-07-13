@@ -247,7 +247,14 @@ OUTPUT SCHEMA:
             template_roster = state.get("template_roster", [])
             template_context = ""
             if template_roster:
-                template_context = "\n=== TEMPLATE INTELLIGENCE ROSTER ===\nThe following premium components have been retrieved for you. You MUST use this exact source code as the foundation for your UI, adapting only the colors/fonts to match the design tokens, and injecting the missing business logic to fulfill the goal.\n"
+                template_context = "\n=== TEMPLATE INTELLIGENCE ROSTER (ASSEMBLY ENGINE) ===\n"
+                template_context += "You are acting as an Intelligent Software Assembler, NOT just a code generator.\n"
+                template_context += "The following premium components have been evaluated and selected for this exact task. You MUST use this source code as your absolute foundation.\n"
+                template_context += "ASSEMBLY RULES:\n"
+                template_context += "1. NEVER write a component from scratch if a template is provided below for it.\n"
+                template_context += "2. PRESERVE the underlying DOM structure, React hooks, and framer-motion animations of the template.\n"
+                template_context += "3. CUSTOMIZE the text, Tailwind colors, fonts, and icons to perfectly match the user's requested brand and the design tokens.\n"
+                template_context += "4. WEAVE these disparate templates together into a cohesive, single application where they look like they belong to the same design system.\n\n"
                 for idx, t in enumerate(template_roster):
                     meta = t.get("metadata", {})
                     t_code = t.get("source_code", "")
