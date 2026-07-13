@@ -79,16 +79,63 @@ class ArchitectAgent(BaseAgent):
             injected_list = "\n".join(injected_files)
             context += f"\n\n--- PRE-INJECTED TEMPLATES (ZERO-SHOT ASSEMBLY) ---\nThe following premium components have already been injected into the project codebase by the Template Engine. You MUST include these exact file paths in your 'file_structure' array, as they form the UI foundation.\n{injected_list}"
             
-        # Ask the AI for the blueprint
-        response = chain.invoke({
-            "goal": state["goal"],
-            "modules": ", ".join(state["modules"]),
-            "context": context
-        })
+        # --- Board of Directors Protocol (Mixture of Agents) ---
+        from backend.utils.model_registry import AIModelRegistry
+        import concurrent.futures
         
-        content = response.content
-        if isinstance(content, list):
-            content = "".join(c.get("text", "") if isinstance(c, dict) else str(c) for c in content)
+        try:
+            llms = AIModelRegistry.get_all_llms("architecture")
+        except:
+            llms = [self.llm]
+            
+        board = llms[:3]
+        if q and len(board) > 1:
+            q.put({"type": "progress", "message": f"🏛️ Spawning Board of Directors ({len(board)} Models) for Consensus..."})
+            
+        def get_proposal(model, index):
+            try:
+                print(f"[Architect] Requesting proposal from Model {index+1}...")
+                c = prompt | model
+                r = c.invoke({
+                    "goal": state["goal"],
+                    "modules": ", ".join(state["modules"]),
+                    "context": context
+                })
+                return "".join(c.get("text", "") if isinstance(c, dict) else str(c) for c in (r.content if isinstance(r.content, list) else [r.content]))
+            except Exception as e:
+                print(f"[Architect] Model {index+1} failed: {e}")
+                return None
+                
+        proposals = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+            futures = [executor.submit(get_proposal, model, i) for i, model in enumerate(board)]
+            for f in concurrent.futures.as_completed(futures):
+                res = f.result()
+                if res: proposals.append(res)
+                
+        if not proposals:
+            raise Exception("All Architect models failed to generate a blueprint.")
+            
+        if len(proposals) == 1:
+            content = proposals[0]
+            print("[Architect] Single model execution complete.")
+        else:
+            print("[Architect] Synthesizing proposals into final master blueprint...")
+            if q:
+                q.put({"type": "progress", "message": "🧠 Synthesizing architectures from the Board of Directors..."})
+                
+            synth_prompt = ChatPromptTemplate.from_messages([
+                ("system", "You are the Principal Architect. You will be given multiple JSON blueprints proposed by different AI agents. Analyze them, resolve any conflicts or hallucinations, and output a single, flawless, master JSON blueprint that perfectly satisfies the goal. OUTPUT EXACTLY JSON AND NOTHING ELSE. Ensure the output schema matches the original Architect JSON schema exactly."),
+                ("human", "Goal: {goal}\n\nProposals:\n{proposals}")
+            ])
+            synth_chain = synth_prompt | board[0]
+            synth_res = synth_chain.invoke({
+                "goal": state["goal"],
+                "proposals": "\n\n=== PROPOSAL ===\n\n".join(proposals)
+            })
+            content = "".join(c.get("text", "") if isinstance(c, dict) else str(c) for c in (synth_res.content if isinstance(synth_res.content, list) else [synth_res.content]))
+            print("[Architect] Master Blueprint synthesis complete!")
+        # -------------------------------------------------------
             
         try:
             # Parse the JSON response

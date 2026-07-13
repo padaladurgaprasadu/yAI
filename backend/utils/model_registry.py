@@ -20,17 +20,25 @@ PROVIDER_CONFIGS = {
             ],
             "coding": [
                 "z-ai/glm-5.2",
-                "meta/llama-3.1-70b-instruct",
-                "meta/llama-3.1-8b-instruct"
+                "deepseek-ai/deepseek-v4-flash",
+                "mistralai/mistral-medium-3.5-128b",
+                "minimax/minimax-m2.7",
+                "google/gemma-2-27b-it",
+                "meta/llama-3.1-70b-instruct"
             ],
             "reasoning": [
                 "z-ai/glm-5.2",
-                "meta/llama-3.3-70b-instruct",
-                "meta/llama-3.1-70b-instruct"
+                "deepseek-ai/deepseek-v4",
+                "mistralai/mistral-medium-3.5-128b",
+                "minimax/minimax-m2.7",
+                "google/gemma-2-27b-it",
+                "meta/llama-3.3-70b-instruct"
             ],
             "architecture": [
                 "z-ai/glm-5.2",
-                "meta/llama-3.1-70b-instruct"
+                "deepseek-ai/deepseek-v4",
+                "mistralai/mistral-medium-3.5-128b",
+                "minimax/minimax-m2.7"
             ],
             "safety": [
                 "meta/llama-3.1-8b-instruct"
@@ -134,15 +142,16 @@ class AIModelRegistry:
         return "chat"
 
     @staticmethod
-    def get_llm_chain(capability: str, temperature: float = 0.1) -> Any:
+    def get_all_llms(capability: str, temperature: float = 0.1) -> List[Any]:
         """
-        Builds a robust LLM chain with transparent fallbacks based on capability.
+        Returns a list of all resolved LLM instances for a given capability.
+        Used for Swarm Intelligence (Mixture of Agents).
         """
         provider = AIModelRegistry.get_provider()
         
         if provider == "fallback":
             logger.warning("[AIModelRegistry] No API keys configured. Falling back to dummy OpenAI instance.")
-            return ChatOpenAI(api_key="dummy", model="gpt-4o-mini", temperature=temperature, streaming=True)
+            return [ChatOpenAI(api_key="dummy", model="gpt-4o-mini", temperature=temperature, streaming=True)]
 
         config = PROVIDER_CONFIGS.get(provider)
         models = config["capabilities"].get(capability, config["capabilities"]["chat"])
@@ -203,7 +212,16 @@ class AIModelRegistry:
 
         if not llm_instances:
             raise Exception(f"No models could be resolved for capability '{capability}' under provider '{provider}'.")
+            
+        return llm_instances
 
+    @staticmethod
+    def get_llm_chain(capability: str, temperature: float = 0.1) -> Any:
+        """
+        Builds a robust LLM chain with transparent fallbacks based on capability.
+        """
+        llm_instances = AIModelRegistry.get_all_llms(capability, temperature)
+        
         primary = llm_instances[0]
         fallbacks = llm_instances[1:]
         
