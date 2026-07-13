@@ -206,6 +206,17 @@ TARGET FILE: {target_file}
         import concurrent.futures
         
         def generate_file(target_file):
+            # --- ZERO-SHOT ASSEMBLY OPTIMIZATION ---
+            if target_file in state.get("code_files", {}):
+                print(f"[Coder] ⚡ Zero-Shot Assembly: Skipping LLM generation for {target_file} as it was pre-injected.")
+                if q:
+                    q.put({"type": "progress", "message": f"⚡ Zero-Shot Assembly: Assembled {target_file} instantly without LLM..."})
+                    q.put({"type": "file_start", "file": target_file})
+                    # Immediately yield the file content so the frontend UI streams it instantly
+                    q.put({"type": "code_token", "file": target_file, "token": state["code_files"][target_file]})
+                return True
+            # ---------------------------------------
+            
             if q:
                 q.put({"type": "progress", "message": f"⏳ Started generating {target_file}..."})
                 q.put({"type": "file_start", "file": target_file})

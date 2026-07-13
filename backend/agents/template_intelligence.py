@@ -98,6 +98,18 @@ class TemplateAgent:
                         print(f"   -> [Error reading source for {comp_id}]: {fe}")
             
             state["template_roster"] = retrieved_templates
+            
+            if "code_files" not in state or state["code_files"] is None:
+                state["code_files"] = {}
+                
+            for template in retrieved_templates:
+                meta = template["metadata"]
+                base_name = os.path.basename(meta.get("file_path", "")).replace(".tsx", ".jsx")
+                if base_name:
+                    final_path = f"client/src/components/{base_name}"
+                    state["code_files"][final_path] = template["source_code"]
+                    print(f"   -> [Zero-Shot Assembly] Injected {final_path} directly into codebase memory.")
+
             print(f"   -> Total templates successfully retrieved and injected: {len(retrieved_templates)}")
                 
         except Exception as e:

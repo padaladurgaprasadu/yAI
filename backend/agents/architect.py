@@ -73,6 +73,12 @@ class ArchitectAgent(BaseAgent):
         if repo_context and "No existing repository" not in repo_context:
             context += f"\n\n--- EXISTING REPOSITORY KNOWLEDGE GRAPH ---\n{repo_context}"
             
+        # Zero-Shot Template Assembly Context
+        injected_files = state.get("code_files", {}).keys()
+        if injected_files:
+            injected_list = "\n".join(injected_files)
+            context += f"\n\n--- PRE-INJECTED TEMPLATES (ZERO-SHOT ASSEMBLY) ---\nThe following premium components have already been injected into the project codebase by the Template Engine. You MUST include these exact file paths in your 'file_structure' array, as they form the UI foundation.\n{injected_list}"
+            
         # Ask the AI for the blueprint
         response = chain.invoke({
             "goal": state["goal"],
