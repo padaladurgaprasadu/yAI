@@ -67,13 +67,15 @@ const handleMarkdownClick = async (e) => {
   }
 };
 
-const CodeBlock = ({ node, inline, className, children, ...props }) => {
+const CodeBlock = ({ node, className, children, ...props }) => {
   const match = /language-(\w+)/.exec(className || '');
   const language = match ? match[1] : 'text';
   const text = String(children).replace(/\n$/, '');
   
-  if (inline) {
-    return <code className={className} {...props}>{children}</code>;
+  const isInline = !match && !text.includes('\n');
+  
+  if (isInline) {
+    return <code style={{ backgroundColor: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '4px', fontFamily: 'monospace' }} className={className} {...props}>{children}</code>;
   }
   
   const encodedCode = encodeURIComponent(text);

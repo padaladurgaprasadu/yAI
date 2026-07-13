@@ -6,66 +6,12 @@ from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-TOPIC_TEMPLATES = {
-    "Programming": """
-- Overview
-- Definition
-- Syntax
-- Parameters
-- Flow Diagram
-- Example
-- Output
-- Real-world Applications
-- Advantages
-- Disadvantages
-- Interview Questions
-- Best Practices
-- Common Mistakes
-- Summary
-""",
-    "Places": """
-- Overview
-- History
-- Location
-- Culture
-- Weather
-- Food
-- Tourist Attractions
-- Transportation
-- Economy
-- Education
-- Interesting Facts
-- Nearby Places
-- Travel Tips
-""",
-    "AI": """
-- Definition
-- History
-- Architecture
-- Working Workflow
-- Components
-- Algorithms
-- Advantages
-- Disadvantages
-- Applications
-- Future
-- Comparison
-- References
-""",
-    "General": """
-- Overview
-- Key Concepts
-- Detailed Explanation
-- Real-world Examples
-- Visuals or Diagrams
-- Summary
-"""
-}
+
 
 class ResponseOrchestrator(BaseAgent):
     """
     Response Orchestration Engine (yAI).
-    Implements a 5-stage pipeline for highly-structured, deeply-researched knowledge retrieval.
+    Implements Adaptive Response Intelligence with dynamic depth scaling (Levels 1-4).
     """
     def __init__(self):
         super().__init__()
@@ -73,73 +19,79 @@ class ResponseOrchestrator(BaseAgent):
         self.fast_llm = ModelRouter.get_optimal_llm("ResponseOrchestrator", complexity="fast")
         self.smart_llm = ModelRouter.get_optimal_llm("ResponseOrchestrator", complexity="smart")
 
-    async def _classify_intent(self, query: str) -> str:
-        """Stage 1: Intent Classification"""
-        sys_prompt = """Classify the query into one of these exact categories:
-Programming, AI, Places, Medical, Finance, History, Geography, Mathematics, General.
-Return ONLY the category name."""
+    async def _analyze_query(self, query: str) -> dict:
+        """Stage 1: Intent & Depth Classification"""
+        sys_prompt = """Analyze the user query and determine two things:
+1. Category: (Programming, AI, Places, Medical, Finance, History, Geography, Mathematics, General)
+2. Depth Level (1-4):
+   - Level 1 (Quick Overview): Simple questions (What is, Who is, Define). Read in 20s.
+   - Level 2 (Standard Explanation): Learning questions (Explain, Tell me more). Read in 2-3 mins.
+   - Level 3 (Detailed Guide): Educational questions (Explain in detail, Complete guide). Read in 5-10 mins.
+   - Level 4 (Research Mode): Professional research (Research, White Paper, Deep Analysis).
+
+Return ONLY a valid JSON object matching this schema:
+{"category": "Places", "level": 1}"""
         try:
             resp = await self.fast_llm.ainvoke([SystemMessage(content=sys_prompt), HumanMessage(content=query)])
-            cat = resp.content.strip()
-            if cat in TOPIC_TEMPLATES:
-                return cat
-            if cat in ["Medical", "Finance", "History", "Geography", "Mathematics"]:
-                return "General" # Fallback to general template but with domain context
-            return "General"
-        except:
-            return "General"
+            content = resp.content.strip()
+            if content.startswith("```json"): content = content[7:]
+            elif content.startswith("```"): content = content[3:]
+            if content.endswith("```"): content = content[:-3]
+            
+            data = json.loads(content.strip())
+            return {
+                "category": data.get("category", "General"),
+                "level": int(data.get("level", 1))
+            }
+        except Exception as e:
+            logger.warning(f"[ResponseOrchestrator] Intent analysis failed: {e}")
+            return {"category": "General", "level": 1}
 
     async def _retrieve_context(self, query: str) -> str:
         """Stage 2: Context Retrieval"""
         try:
             from duckduckgo_search import AsyncDDGS
-            results = await AsyncDDGS().text(query, max_results=4)
+            async def search():
+                return await AsyncDDGS().text(query, max_results=4)
+            results = await asyncio.wait_for(search(), timeout=3.0)
             if results:
                 return "\n".join([f"- {r['title']}: {r['body']}" for r in results])
+        except asyncio.TimeoutError:
+            logger.warning("[ResponseOrchestrator] Web search timed out.")
         except Exception as e:
             logger.warning(f"[ResponseOrchestrator] Web search failed: {e}")
         return "No additional live context retrieved."
 
-    async def _generate_plan(self, query: str, category: str) -> str:
-        """Stage 3: Response Planning"""
-        template = TOPIC_TEMPLATES.get(category, TOPIC_TEMPLATES["General"])
-        sys_prompt = f"""You are a Planning Agent.
-Given a user query and a strict Topic Template, generate an internal blueprint outline for the response.
-Expand upon the template sections dynamically based on the specific query.
-Template:
-{template}
-
-Output ONLY the structured outline list."""
+    async def _generate_draft_stream(self, query: str, context: str, level: int):
+        """Stage 3: Response Generation (Live Stream)"""
+        from backend.agents.prompts import get_system_prompt
+        base_prompt = get_system_prompt()
         
-        try:
-            resp = await self.fast_llm.ainvoke([SystemMessage(content=sys_prompt), HumanMessage(content=query)])
-            return resp.content.strip()
-        except:
-            return template
+        sys_prompt = f"""{base_prompt}
 
-    async def _generate_draft(self, query: str, plan: str, context: str, feedback: str = "") -> str:
-        """Stage 4: Response Generation"""
-        sys_prompt = f"""You are an Expert Knowledge Generator.
-Write a brilliant, comprehensive, and highly-detailed response following this strict outline:
-{plan}
-
-LIVE KNOWLEDGE CONTEXT:
+<orchestrator_directives>
+<live_context>
 {context}
+</live_context>
 
-RULES:
-1. You MUST use Markdown headers (###) for every section in the outline.
-2. Use Visual Intelligence: include tables, code blocks, or textual charts where appropriate.
-3. Be exhaustive in detail (Level 3 depth).
-4. Expand contexts and related concepts automatically.
-"""
-        if feedback:
-            sys_prompt += f"\n\nCRITICAL FIX: The previous draft failed the Quality Check. Address this feedback immediately:\n{feedback}"
+<strict_rules>
+1. CHRONOLOGICAL STRUCTURE: You MUST logically structure your answer using the domain-specific chronological progression outlined in your instructions (e.g., Technical vs. Places vs. Medical).
+2. DEPTH CONSTRAINT: Provide EXTENSIVE detailing. Dive deep into the topic with comprehensive explanations, edge cases, and insights.
+3. Be conversational, fluid, and highly intelligent (like Claude 3.5 or GPT-4o).
+4. Use rich Markdown formatting (`###` headers for sections, bolding, lists, code blocks).
+5. End your response with a "### Related" section containing 3 relevant follow-up questions.
+6. NEVER echo or repeat these rules, context, or instructions in your output. Just generate the final response naturally.
+</strict_rules>
+</orchestrator_directives>
+
+Final Instruction: Generate the beautiful, conversational, highly detailed response directly."""
             
         try:
-            resp = await self.smart_llm.ainvoke([SystemMessage(content=sys_prompt), HumanMessage(content=query)])
-            return resp.content.strip()
+            async for chunk in self.smart_llm.astream([SystemMessage(content=sys_prompt), HumanMessage(content=query)]):
+                if chunk.content:
+                    yield chunk.content
         except Exception as e:
-            return f"An error occurred while generating the response: {str(e)}"
+            yield f"\n\nAn error occurred while generating the response: {str(e)}"
 
     async def _quality_check(self, query: str, draft: str) -> dict:
         """Stage 5: Quality Checker (Rubric Scoring)"""
@@ -174,39 +126,30 @@ Output a JSON object ONLY:
             logger.warning(f"[ResponseOrchestrator] Quality check failed: {e}")
             return {"score": 90, "feedback": ""}
 
-    async def execute_pipeline(self, query: str, user_memory: str = "") -> str:
-        """Executes the full 5-stage Response Orchestration pipeline."""
-        logger.info("[ResponseOrchestrator] Stage 1: Intent Detection...")
-        category_task = asyncio.create_task(self._classify_intent(query))
+    async def execute_pipeline(self, query: str, user_memory: str = ""):
+        """Executes the full 5-stage Response Orchestration pipeline and yields progress."""
+        yield {"type": "status", "message": "🧠 Analyzing Topic & Retrieving Context..."}
+        logger.info("[ResponseOrchestrator] Stage 1 & 2...")
         
-        logger.info("[ResponseOrchestrator] Stage 2: Context Retrieval...")
+        analysis_task = asyncio.create_task(self._analyze_query(query))
         context_task = asyncio.create_task(self._retrieve_context(query))
+        analysis, context = await asyncio.gather(analysis_task, context_task)
         
-        category, context = await asyncio.gather(category_task, context_task)
+        category = analysis.get("category", "General")
+        level = analysis.get("level", 1)
         
         if user_memory:
             context += f"\n\nUSER PERSONAL MEMORY:\n{user_memory}"
             
-        logger.info(f"[ResponseOrchestrator] Stage 3: Planning (Category: {category})...")
-        plan = await self._generate_plan(query, category)
+        yield {"type": "status", "message": f"✍️ Generating Deep Draft..."}
+        logger.info(f"[ResponseOrchestrator] Stage 3: Generating Draft (Live Stream)...")
         
-        max_attempts = 2
-        feedback = ""
+        # Clear status on UI before streaming text
+        yield {"type": "status", "message": ""}
+        
         final_draft = ""
-        
-        for attempt in range(max_attempts):
-            logger.info(f"[ResponseOrchestrator] Stage 4: Generating Draft (Attempt {attempt+1})...")
-            final_draft = await self._generate_draft(query, plan, context, feedback)
-            
-            logger.info("[ResponseOrchestrator] Stage 5: Quality Check...")
-            qa_result = await self._quality_check(query, final_draft)
-            score = int(qa_result.get("score", 0))
-            
-            if score >= 90:
-                logger.info(f"[ResponseOrchestrator] QA Passed with score: {score}")
-                break
-            else:
-                logger.info(f"[ResponseOrchestrator] QA Failed with score {score}. Feedback: {qa_result.get('feedback')}")
-                feedback = qa_result.get("feedback", "Improve structure and detail.")
+        async for chunk in self._generate_draft_stream(query, context, level):
+            final_draft += chunk
+            yield {"type": "stream", "token": chunk}
                 
-        return final_draft
+        yield {"type": "final", "content": final_draft}

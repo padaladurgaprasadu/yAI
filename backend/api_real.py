@@ -979,14 +979,14 @@ IMPORTANT RULES:
             is_domain_expert_req = (complexity in ["Large", "Enterprise"] and not is_build_req and not is_architecture_req) or primary_intent == "Research"
             
             if is_domain_expert_req:
-                yield f"data: {json.dumps({'type': 'status', 'message': '🧠 Spawning Domain Experts...'})}\n\n"
+                yield f"data: {json.dumps({'type': 'status', 'message': '🧠 Synthesizing Quantum Micro-Agents...'})}\n\n"
                 try:
                     from backend.agents.domain_experts import DomainOrchestrator
                     orchestrator = DomainOrchestrator()
                     result = await orchestrator.execute_parallel_experts(sanitized_message, USER_MEMORY)
                     experts_str = ", ".join(result["experts"])
                     
-                    yield f"data: {json.dumps({'type': 'status', 'message': f'✅ Fused knowledge from: {experts_str}'})}\n\n"
+                    yield f"data: {json.dumps({'type': 'status', 'message': f'✅ Quantum Swarm complete: {experts_str}'})}\n\n"
                     await asyncio.sleep(0.8) # Brief pause so they see the success message
                     yield f"data: {json.dumps({'type': 'status', 'message': ''})}\n\n"
                     
@@ -1001,22 +1001,21 @@ IMPORTANT RULES:
                 except Exception as e:
                     api_logger.error(f"Domain Orchestrator failed: {e}")
             
-            if not is_architecture_req and not is_build_req:
-                yield f"data: {json.dumps({'type': 'status', 'message': '🧠 Orchestrating Response Pipeline...'})}\n\n"
+            use_orchestrator = (not is_architecture_req and not is_build_req and complexity != "Simple")
+            
+            if use_orchestrator:
                 try:
                     from backend.agents.response_orchestrator import ResponseOrchestrator
                     orchestrator = ResponseOrchestrator()
-                    final_response = await orchestrator.execute_pipeline(sanitized_message, USER_MEMORY)
+                    final_response = ""
                     
-                    yield f"data: {json.dumps({'type': 'status', 'message': '✅ Quality Check Passed'})}\n\n"
-                    await asyncio.sleep(0.5) # Brief pause
-                    yield f"data: {json.dumps({'type': 'status', 'message': ''})}\n\n"
-                    
-                    # Stream the final response
-                    chunk_size = 20
-                    for i in range(0, len(final_response), chunk_size):
-                        yield f"data: {json.dumps({'type': 'chat', 'token': final_response[i:i+chunk_size]})}\n\n"
-                        await asyncio.sleep(0.01)
+                    async for update in orchestrator.execute_pipeline(sanitized_message, USER_MEMORY):
+                        if update["type"] == "status":
+                            yield f"data: {json.dumps({'type': 'status', 'message': update['message']})}\n\n"
+                        elif update["type"] == "stream":
+                            yield f"data: {json.dumps({'type': 'chat', 'token': update['token']})}\n\n"
+                        elif update["type"] == "final":
+                            final_response = update["content"]
                     
                     yield f"data: {json.dumps({'type': 'status', 'message': ''})}\n\n"
                     return

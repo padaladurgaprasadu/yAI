@@ -1,97 +1,51 @@
 import json
-import concurrent.futures
+import asyncio
+from typing import Dict, Any, List
 from langchain_core.messages import HumanMessage, SystemMessage
 from backend.agents.base import BaseAgent
 from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-EXPERT_PROMPTS = {
-    "AI_ML": """ROLE: AI / Machine Learning Expert Agent
-OBJECTIVE: Act as a Senior AI Research Engineer.
-RESPONSIBILITIES: Machine Learning, Deep Learning, LLMs, Transformers, RAG, Vector Databases, Prompt Engineering, NLP, Computer Vision, Speech AI, Recommendation Systems, Time Series, Reinforcement Learning, Model Optimization, Fine-tuning, Quantization, LoRA, Distributed Training, CUDA, PyTorch, TensorFlow, ONNX, TensorRT, Inference Optimization, MLOps, AI Deployment, Model Evaluation, Synthetic Data, Benchmarking.
-DELIVERABLES: Complete AI architecture, Training pipeline, Inference pipeline, Dataset recommendations, Evaluation metrics, Production deployment, GPU optimization, Performance analysis, Research paper references, Example code, Best practices.
-You MUST produce structured, highly technical, and evidence-based output.
-""",
-    
-    "Data_Science": """ROLE: Data Analytics / Data Science Expert Agent
-OBJECTIVE: Act as a Senior Data Scientist.
-RESPONSIBILITIES: EDA, Data Cleaning, Feature Engineering, Statistics, Probability, Data Visualization, SQL, Python, Pandas, NumPy, Power BI, Tableau, Excel, Business Intelligence, Forecasting, Dashboards, KPIs, Customer Analytics, Financial Analytics, Marketing Analytics, A/B Testing, Predictive Analytics, Big Data, Spark, Hadoop, Data Warehousing, Data Governance.
-DELIVERABLES: EDA report, Charts, Dashboards, SQL queries, Python notebooks, Statistical analysis, Business insights, Forecast reports, Recommendations.
-You MUST produce structured, highly technical, and evidence-based output.
-""",
-
-    "Electronics": """ROLE: Electronics (ECE / EEE) Expert Agent
-OBJECTIVE: Act as an Electronics Design Engineer.
-RESPONSIBILITIES: Digital Electronics, Analog Electronics, Electrical Machines, Power Systems, Signals and Systems, Control Systems, Embedded Systems, Microcontrollers, ESP32, Arduino, STM32, Raspberry Pi, IoT, FPGA, VLSI, PCB Design, Power Electronics, Communication Systems, Networking, Signal Processing, Sensors, Actuators, Circuit Analysis, MATLAB, Simulink, Verilog, VHDL.
-DELIVERABLES: Circuit diagrams, Block diagrams, PCB recommendations, Simulation steps, Firmware, Embedded code, Hardware architecture, Troubleshooting, Testing procedures, Bill of Materials.
-You MUST produce structured, highly technical, and evidence-based output.
-""",
-
-    "Medical_Coding": """ROLE: Medical Coding Expert Agent
-OBJECTIVE: Act as a Medical Coding and Healthcare Documentation Specialist.
-RESPONSIBILITIES: ICD-10, ICD-11, CPT, HCPCS, Medical Terminology, Healthcare Documentation, Insurance Claims, Revenue Cycle, Clinical Coding, Hospital Billing, Medical Reports, Coding Validation, Compliance, HIPAA awareness, Audit preparation, Medical abbreviations, Procedure coding, Diagnosis coding, Healthcare workflows.
-DELIVERABLES: Medical coding suggestions, Coding validation, Documentation review, Claim support, Compliance checks, Terminology explanations, Workflow guidance, Coding references.
-You MUST produce structured, highly technical, and evidence-based output.
-""",
-
-    "Software_Engineering": """ROLE: Software Engineering Expert Agent
-OBJECTIVE: Act as a Principal Software Engineer.
-RESPONSIBILITIES: Architecture, Backend, Frontend, Database, API, Cloud, Security, Testing, Deployment, Scalability, Performance, DevOps.
-DELIVERABLES: System architecture, Database schemas, API contracts, Framework choices, Scalability strategies, Performance optimization, Code snippets.
-You MUST produce structured, highly technical, and evidence-based output.
-""",
-
-    "Research": """ROLE: Research Expert Agent
-OBJECTIVE: Act as a Senior Academic and Industry Researcher.
-RESPONSIBILITIES: Research papers, Latest technologies, Web search, Official documentation, Scientific references, GitHub repositories, Comparisons, Trend analysis.
-DELIVERABLES: Citations, State-of-the-art comparisons, Emerging trends, Literature reviews, Documentation summaries.
-You MUST produce structured, highly technical, and evidence-based output.
-""",
-
-    "UI_UX": """ROLE: UI / UX Expert Agent
-OBJECTIVE: Act as a Principal Design Systems Engineer.
-RESPONSIBILITIES: Design Systems, Accessibility, Responsive Design, Animations, Color Theory, Typography, Design Tokens, Component Selection, Template Adaptation, User Experience.
-DELIVERABLES: Component architecture, Color palettes, Tailwind configurations, UX workflows, Accessibility audits.
-You MUST produce structured, highly technical, and evidence-based output.
-""",
-
-    "Cybersecurity": """ROLE: Cybersecurity Expert Agent
-OBJECTIVE: Act as a Principal Security Architect.
-RESPONSIBILITIES: Authentication, Authorization, OWASP, Encryption, Threat Modeling, Secure Coding, API Security, Cloud Security, Secrets Management, Security Reviews.
-DELIVERABLES: Threat models, Security audits, Encryption strategies, Auth flows, Vulnerability mitigations.
-You MUST produce structured, highly technical, and evidence-based output.
-""",
-
-    "DevOps": """ROLE: DevOps Expert Agent
-OBJECTIVE: Act as a Principal DevOps & Cloud Engineer.
-RESPONSIBILITIES: Docker, Kubernetes, CI/CD, GitHub Actions, Cloud Deployment, Monitoring, Logging, Scaling, Load Balancing, Infrastructure.
-DELIVERABLES: Dockerfiles, K8s manifests, CI/CD YAMLs, Infrastructure as Code, Monitoring setups, Deployment strategies.
-You MUST produce structured, highly technical, and evidence-based output.
-"""
-}
-
 class DomainOrchestrator(BaseAgent):
+    """
+    The yAI Quantum Orchestrator (formerly DomainOrchestrator).
+    Implements Dynamic Swarm Synthesis, Fractal Planning (DAG), and Meta-Cognitive verification.
+    """
     def __init__(self):
         super().__init__()
         from backend.agents.router import ModelRouter
         self.fast_llm = ModelRouter.get_optimal_llm("DomainOrchestrator", complexity="fast")
         self.smart_llm = ModelRouter.get_optimal_llm("DomainOrchestrator", complexity="smart")
 
-    def _classify_domains(self, request: str) -> list:
-        """Determines which domain experts are required for the task."""
-        sys_prompt = f"""You are the Domain Orchestrator. 
-Given a user request, select the REQUIRED domain experts to solve the problem comprehensively.
-Available Experts: {list(EXPERT_PROMPTS.keys())}
+    async def _generate_fractal_plan(self, request: str, context: str) -> Dict[str, Any]:
+        """Dynamically synthesizes a JSON Directed Acyclic Graph (DAG) of micro-agents."""
+        sys_prompt = """You are the yAI Fractal Planning Engine.
+Your job is to analyze the user's complex request and synthesize a Dynamic Swarm of hyper-specialized micro-agents to solve it.
+You MUST output a valid JSON dependency graph (DAG) representing the plan.
 
-Respond ONLY with a valid JSON list of strings (the keys from the Available Experts list).
-Example: ["AI_ML", "Software_Engineering", "DevOps"]
-Do NOT select more than 4 experts unless absolutely necessary.
-"""
+Schema Requirements:
+{
+  "nodes": [
+    {
+      "id": "agent_identifier_string",
+      "role": "Highly specific expert role (e.g., Database_Schema_Architect, Auth_Security_Specialist)",
+      "task": "Specific instructions for what this agent must produce.",
+      "depends_on": ["list_of_agent_ids_this_node_waits_for"]
+    }
+  ]
+}
+
+Rules:
+1. Break down the request into 3 to 6 highly specialized agents. Do not just use generic roles.
+2. Ensure the `depends_on` arrays create a logical execution order. (e.g., frontend depends on API design).
+3. At least one node should have an empty `depends_on` array to start the graph.
+4. Output ONLY valid JSON."""
+
         try:
-            response = self.fast_llm.invoke([
+            response = await self.fast_llm.ainvoke([
                 SystemMessage(content=sys_prompt),
-                HumanMessage(content=f"User Request: {request}")
+                HumanMessage(content=f"User Request: {request}\nContext: {context}")
             ])
             content = response.content.strip()
             
@@ -100,81 +54,168 @@ Do NOT select more than 4 experts unless absolutely necessary.
             elif content.startswith("```"): content = content[3:]
             if content.endswith("```"): content = content[:-3]
                 
-            experts = json.loads(content.strip())
-            return [e for e in experts if e in EXPERT_PROMPTS]
+            plan = json.loads(content.strip())
+            return plan
         except Exception as e:
-            logger.warning(f"[DomainOrchestrator] Classification failed: {e}. Defaulting to Software_Engineering.")
-            return ["Software_Engineering"]
+            logger.warning(f"[QuantumOrchestrator] Fractal planning failed: {e}. Defaulting to basic plan.")
+            return {
+                "nodes": [
+                    {"id": "software_architect", "role": "Principal Software Architect", "task": "Analyze the request and provide a comprehensive architectural solution.", "depends_on": []}
+                ]
+            }
 
-    def _run_expert(self, expert_id: str, request: str, context: str) -> str:
-        """Runs a specific expert LLM call."""
+    async def _run_micro_agent(self, node: Dict[str, Any], request: str, context: str, message_bus: Dict[str, str]) -> str:
+        """Executes a single dynamically synthesized micro-agent."""
+        agent_id = node['id']
+        role = node['role']
+        task = node['task']
+        dependencies = node.get('depends_on', [])
+        
+        # Pull data from upstream agents via the Message Bus
+        dependency_data = ""
+        if dependencies:
+            dependency_data = "\n".join([f"--- INPUT FROM {dep} ---\n{message_bus.get(dep, '')}" for dep in dependencies])
+
+        sys_prompt = f"""ROLE: {role}
+You are a highly specialized micro-agent running inside the yAI Quantum Orchestrator.
+Your specific task in the greater plan is: {task}
+
+GLOBAL PROJECT REQUEST: {request}
+GLOBAL CONTEXT: {context}
+
+DEPENDENCY INPUTS (Read carefully, you must integrate with this upstream work):
+{dependency_data}
+
+Provide highly structured, expert-level output that strictly fulfills your assigned task."""
+
         try:
-            sys_prompt = EXPERT_PROMPTS[expert_id] + f"\n\nPROJECT CONTEXT:\n{context}"
-            response = self.smart_llm.invoke([
+            response = await self.smart_llm.ainvoke([
                 SystemMessage(content=sys_prompt),
-                HumanMessage(content=f"Task: Analyze the following request from your domain's perspective and provide structured deliverables.\nRequest: {request}")
+                HumanMessage(content="Execute your assigned task.")
             ])
-            return f"=== {expert_id} EXPERT REPORT ===\n{response.content.strip()}\n"
+            return response.content.strip()
         except Exception as e:
-            logger.error(f"[DomainOrchestrator] Expert {expert_id} failed: {e}")
-            return f"=== {expert_id} EXPERT REPORT ===\n[Failed to generate report]"
+            logger.error(f"[QuantumOrchestrator] Micro-Agent {agent_id} failed: {e}")
+            return f"[Error: {agent_id} failed to generate output]"
 
-    def fuse_knowledge(self, request: str, expert_reports: list) -> str:
-        """Fuses multiple expert reports into one coherent response."""
-        all_reports = "\n\n".join(expert_reports)
+    async def _overseer_verify(self, node: Dict[str, Any], output: str) -> Dict[str, Any]:
+        """Meta-Cognitive Overseer checks if the agent hallucinated or failed its task."""
+        sys_prompt = f"""You are the Meta-Cognitive Overseer.
+Your job is to verify if a micro-agent successfully completed its assigned task without hallucinating or going off-topic.
+
+Agent Role: {node['role']}
+Assigned Task: {node['task']}
+
+Review the Agent's Output and respond with valid JSON:
+{{
+  "verified": true or false,
+  "feedback": "If false, explain exactly what the agent missed or did wrong so it can retry. If true, leave empty."
+}}"""
+        try:
+            response = await self.fast_llm.ainvoke([
+                SystemMessage(content=sys_prompt),
+                HumanMessage(content=f"Agent Output:\n{output}")
+            ])
+            content = response.content.strip()
+            if content.startswith("```json"): content = content[7:]
+            elif content.startswith("```"): content = content[3:]
+            if content.endswith("```"): content = content[:-3]
+            return json.loads(content.strip())
+        except Exception as e:
+            logger.warning(f"[QuantumOrchestrator] Overseer failed: {e}. Defaulting to verified.")
+            return {"verified": True, "feedback": ""}
+
+    async def fuse_knowledge(self, request: str, message_bus: Dict[str, str]) -> str:
+        """Fuses all message bus outputs into the final beautifully formatted response."""
+        all_reports = "\n\n".join([f"=== {agent_id} ===\n{output}" for agent_id, output in message_bus.items()])
         sys_prompt = """ROLE: Knowledge Fusion Engine
-GOAL: You have received reports from multiple specialized Domain Experts regarding the user's request. Your job is to merge them into one highly coherent, logically organized, and visually appealing final response.
+GOAL: You have received outputs from a dynamic swarm of specialized micro-agents regarding the user's request. Your job is to merge them into one highly coherent, logically organized, and visually stunning final response.
 RULES:
-1. Resolve any conflicting recommendations.
-2. Structure the output brilliantly using Markdown (Headers, bold text, code blocks, tables).
+1. Resolve any conflicting data.
+2. Structure the output brilliantly using rich Markdown (Headers, bold text, code blocks, tables).
 3. Do not just paste the reports back-to-back. Synthesize the knowledge so it reads like a single master architectural blueprint or expert consultation.
 4. Ensure no critical domain advice is lost.
 """
         try:
-            response = self.smart_llm.invoke([
+            response = await self.smart_llm.ainvoke([
                 SystemMessage(content=sys_prompt),
-                HumanMessage(content=f"User Request: {request}\n\nEXPERT REPORTS:\n{all_reports}")
+                HumanMessage(content=f"User Request: {request}\n\nSWARM OUTPUTS:\n{all_reports}")
             ])
             return response.content.strip()
         except Exception as e:
-            logger.error(f"[DomainOrchestrator] Fusion failed: {e}")
+            logger.error(f"[QuantumOrchestrator] Fusion failed: {e}")
             return all_reports
 
     async def execute_parallel_experts(self, request: str, context: str = "") -> dict:
         """
-        Orchestrates the full flow asynchronously.
+        Executes the Quantum Orchestrator Pipeline (Fractal DAG execution).
         Returns a dict with chosen experts and the fused final response.
         """
-        import asyncio
+        logger.info(f"[QuantumOrchestrator] Generating Fractal Plan...")
         
-        # 1. Classify
-        experts = await asyncio.to_thread(self._classify_domains, request)
-        if not experts:
-            experts = ["Software_Engineering"]
+        # 1. Fractal Planning
+        plan = await self._generate_fractal_plan(request, context)
+        nodes = plan.get("nodes", [])
+        
+        if not nodes:
+             nodes = [{"id": "software_architect", "role": "Principal Software Architect", "task": "Analyze request.", "depends_on": []}]
+             
+        # Extract expert roles for UI
+        experts_list = [node['role'] for node in nodes]
+        logger.info(f"[QuantumOrchestrator] Synthesized Micro-Agents: {experts_list}")
+        
+        # 2. Graph Execution Loop & Message Bus
+        message_bus = {}
+        completed_nodes = set()
+        pending_nodes = {node['id']: node for node in nodes}
+        
+        async def execute_node_with_retry(node: Dict[str, Any], max_retries: int = 2):
+            agent_id = node['id']
+            for attempt in range(max_retries):
+                logger.info(f"[QuantumOrchestrator] Running {agent_id} (Attempt {attempt+1})")
+                output = await self._run_micro_agent(node, request, context, message_bus)
+                
+                # Verify
+                verification = await self._overseer_verify(node, output)
+                if verification.get("verified", True):
+                    message_bus[agent_id] = output
+                    completed_nodes.add(agent_id)
+                    logger.info(f"[QuantumOrchestrator] {agent_id} verified and completed.")
+                    return
+                else:
+                    logger.warning(f"[QuantumOrchestrator] {agent_id} failed verification: {verification.get('feedback')}")
             
-        logger.info(f"[DomainOrchestrator] Activated Experts: {experts}")
-        
-        # 2. Parallel Execution
-        reports = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=len(experts)) as executor:
-            future_to_expert = {executor.submit(self._run_expert, expert, request, context): expert for expert in experts}
-            for future in concurrent.futures.as_completed(future_to_expert):
-                expert_id = future_to_expert[future]
-                try:
-                    report = future.result()
-                    reports.append(report)
-                    logger.info(f"[DomainOrchestrator] Received report from {expert_id}")
-                except Exception as exc:
-                    logger.error(f"[DomainOrchestrator] Expert {expert_id} generated an exception: {exc}")
-                    
+            # If all retries fail, accept the last output anyway to prevent hanging
+            logger.error(f"[QuantumOrchestrator] {agent_id} exhausted retries. Forcing completion.")
+            message_bus[agent_id] = output
+            completed_nodes.add(agent_id)
+
+        # Execution Engine
+        while pending_nodes:
+            ready_to_run = []
+            for node_id, node in pending_nodes.items():
+                dependencies = node.get("depends_on", [])
+                if all(dep in completed_nodes for dep in dependencies):
+                    ready_to_run.append(node_id)
+            
+            if not ready_to_run:
+                logger.error("[QuantumOrchestrator] Deadlock detected in DAG. Forcing completion of remaining nodes.")
+                break
+                
+            tasks = []
+            for node_id in ready_to_run:
+                tasks.append(execute_node_with_retry(pending_nodes[node_id]))
+                
+            await asyncio.gather(*tasks)
+            
+            for node_id in ready_to_run:
+                del pending_nodes[node_id]
+
         # 3. Knowledge Fusion
-        if len(reports) == 1:
-            fused_response = reports[0].split("===\n")[-1] # Strip header if single expert
-        else:
-            fused_response = await asyncio.to_thread(self.fuse_knowledge, request, reports)
+        logger.info("[QuantumOrchestrator] Fusing Knowledge...")
+        fused_response = await self.fuse_knowledge(request, message_bus)
             
         return {
-            "experts": experts,
-            "reports": reports,
+            "experts": experts_list,
             "fused_response": fused_response
         }
