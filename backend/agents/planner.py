@@ -100,8 +100,36 @@ class PlannerAgent(BaseAgent):
             print(f"   -> [Planner] DAG generated with {len(dag_tasks)} nodes.")
         except Exception as e:
             print(f"   -> [Planner] Failed to parse JSON: {e}")
-            modules_list = ["Core System"]
-            dag_tasks = [{"id": "core", "name": "Core System", "depends_on": []}]
+            modules_list = []
+            dag_tasks = []
+
+        # ⚡ SMART FALLBACK: If 0 modules returned, auto-generate from goal keywords
+        if not modules_list:
+            print("   -> [Planner] 0 modules detected — using smart keyword fallback...")
+            goal_lower = state["goal"].lower()
+            # Map common project types to sensible module sets
+            if any(w in goal_lower for w in ["restaurant", "food", "menu", "order"]):
+                modules_list = ["Menu Management", "Order Processing", "Table Booking", "User Auth", "Kitchen Dashboard", "Reports"]
+            elif any(w in goal_lower for w in ["library", "book", "borrow", "catalog"]):
+                modules_list = ["Book Catalog", "User Management", "Borrowing System", "Search & Filter", "Admin Dashboard", "Reports"]
+            elif any(w in goal_lower for w in ["ecommerce", "e-commerce", "shop", "store", "product"]):
+                modules_list = ["Product Catalog", "Shopping Cart", "User Auth", "Payment Gateway", "Order Tracking", "Admin Panel"]
+            elif any(w in goal_lower for w in ["hospital", "clinic", "doctor", "patient", "medical"]):
+                modules_list = ["Patient Records", "Appointment Booking", "Doctor Management", "Billing", "Medical Reports", "Admin"]
+            elif any(w in goal_lower for w in ["school", "college", "student", "course", "education"]):
+                modules_list = ["Student Management", "Course Management", "Attendance", "Grades", "Fee Management", "Reports"]
+            elif any(w in goal_lower for w in ["crm", "customer", "sales", "lead"]):
+                modules_list = ["Contact Management", "Lead Tracking", "Sales Pipeline", "Reports", "User Auth", "Dashboard"]
+            elif any(w in goal_lower for w in ["blog", "cms", "content", "post", "article"]):
+                modules_list = ["Content Editor", "Post Management", "User Auth", "Categories & Tags", "Comments", "SEO"]
+            elif any(w in goal_lower for w in ["task", "todo", "project management", "kanban"]):
+                modules_list = ["Task Management", "Project Board", "Team Management", "Notifications", "User Auth", "Dashboard"]
+            else:
+                # Generic fullstack app modules
+                modules_list = ["User Authentication", "Core Features", "Dashboard", "Data Management", "API Layer", "UI Components"]
+            dag_tasks = [{"id": f"mod_{i}", "name": m, "depends_on": []} for i, m in enumerate(modules_list)]
+            print(f"   -> [Planner] Smart fallback generated {len(modules_list)} modules: {modules_list}")
+
             
         if q:
             modules_str = "\n".join([f"✅ {m}" for m in modules_list[:5]])

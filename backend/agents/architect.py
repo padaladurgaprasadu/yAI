@@ -118,7 +118,7 @@ class ArchitectAgent(BaseAgent):
                 return None
 
         proposals = []
-        timeout_secs = 60 if use_board else 30
+        timeout_secs = 120 if use_board else 90  # NVIDIA streams slowly — need generous timeout
         with concurrent.futures.ThreadPoolExecutor(max_workers=len(board)) as executor:
             futures = [executor.submit(get_proposal, model, i) for i, model in enumerate(board)]
             try:
@@ -129,6 +129,30 @@ class ArchitectAgent(BaseAgent):
                 print("[Architect] Timed out. Using whatever proposals arrived.")
                 for f in futures:
                     if f.done() and not f.exception():
+                        res = f.result()
+                        if res: proposals.append(res)
+
+        # ⚡ EMERGENCY FALLBACK: If all models timed out, invoke self.llm directly
+        if not proposals:
+            print("[Architect] All proposals empty — using direct self.llm fallback...")
+            if q:
+                q.put({"type": "progress", "message": "⚡ Switching to backup model..."})
+            try:
+                c = prompt | self.fast_llm
+                r = c.invoke({
+                    "goal": state["goal"],
+                    "modules": ", ".join(state.get("modules", ["Core System"])),
+                    "context": context
+                })
+                fallback_text = r.content if isinstance(r.content, str) else "".join(
+                    c.get("text", "") if isinstance(c, dict) else str(c)
+                    for c in (r.content if isinstance(r.content, list) else [r.content])
+                )
+                if fallback_text:
+                    proposals.append(fallback_text)
+                    print("[Architect] Fallback model succeeded.")
+            except Exception as fe:
+                print(f"[Architect] Fallback also failed: {fe}")
 
                         res = f.result()
                         if res: proposals.append(res)
