@@ -32,9 +32,19 @@ class AIGateway:
             router_mode = intent_data.get("mode", "chat").lower()
             complexity = intent_data.get("complexity", "fast").lower()
             
-            # Additional heuristic: If the user pastes a massive spec, force builder
             goal_lower = goal.lower()
-            if len(goal) > 600 or "database schema" in goal_lower or "system components" in goal_lower or "build" in goal_lower:
+
+            # ⚡ CRITICAL ROUTING FIX:
+            # The /api/ws/generate WebSocket is ALWAYS a build request.
+            # Force builder mode when:
+            # 1. The goal contains any build/create/make intent
+            # 2. The state already has a blueprint (user clicked Approve & Build)
+            # 3. The goal is long (detailed spec)
+            has_blueprint = bool(initial_state.get("blueprint", {}).get("file_structure"))
+            build_keywords = ["build", "create", "make", "develop", "generate", "system", "app", "application", "website", "platform", "management"]
+            is_build_intent = any(w in goal_lower for w in build_keywords)
+            
+            if has_blueprint or is_build_intent or len(goal) > 400:
                 router_mode = "builder"
                 complexity = "smart"
 
@@ -57,6 +67,7 @@ class AIGateway:
                 final_st = self._run_specialist(initial_state, q, goal_lower)
             else:
                 final_st = self._run_builder(initial_state, q, project_id)
+
                 
             # Phase 3: Safety Validation Layer
             q.put({"type": "progress", "node": "gateway", "message": "🛡️ Running Safety Validation (Nemotron Content Safety)..."})
