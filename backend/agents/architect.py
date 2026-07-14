@@ -154,11 +154,9 @@ class ArchitectAgent(BaseAgent):
             except Exception as fe:
                 print(f"[Architect] Fallback also failed: {fe}")
 
-                        res = f.result()
-                        if res: proposals.append(res)
-                
         if not proposals:
             raise Exception("All Architect models failed to generate a blueprint.")
+
             
         if len(proposals) == 1:
             content = proposals[0]
