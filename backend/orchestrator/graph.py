@@ -12,6 +12,7 @@ from backend.agents.executor import ExecutorAgent
 from backend.agents.memory import MemoryAgent
 from backend.agents.tester import TesterAgent
 from backend.agents.supervisor import SwarmSupervisorAgent
+from backend.agents.completeness import ProjectCompletenessAgent
 from backend.agents.mcp_client import MCPClientAgent
 from backend.agents.adversary import AdversaryAgent
 from langgraph.checkpoint.memory import MemorySaver
@@ -63,10 +64,16 @@ def should_continue_execution(state: AiONState):
     print(f"   -> [Graph] Execution failed with error: {runtime_error}. Routing back to Coder (Attempt {retries}/3).")
     return "coder"
 
-def should_continue_coder(state: AiONState):
+def should_continue_completeness(state: AiONState):
+    missing = state.get("missing_dependencies", [])
+    if missing:
+        print(f"   -> [Graph] Completeness check failed. Missing {len(missing)} files. Routing back to Coder.")
+        return "coder"
+        
+    # If complete, proceed to normal next step
     if state.get("is_fast_track"):
         print("   -> [Graph] Fast Track enabled. Bypassing Quality Intelligence and proceeding to Memory.")
-        return "memory"
+        return "memory_storage"
     return "tester"
 
 def route_from_supervisor(state: AiONState):
@@ -147,6 +154,9 @@ def build_orchestrator_graph():
         from backend.agents.coder import CoderAgent
         return CoderAgent().run(state)
         
+    def run_completeness(state):
+        return ProjectCompletenessAgent().run(state)
+        
     def run_tester(state):
         from backend.agents.tester import TesterAgent
         return TesterAgent().run(state)
@@ -191,6 +201,7 @@ def build_orchestrator_graph():
     workflow.add_node("architect", run_architect)
     workflow.add_node("design", run_design)
     workflow.add_node("coder", run_coder)
+    workflow.add_node("completeness", run_completeness)
     workflow.add_node("tester", run_tester)
     workflow.add_node("reviewer", run_reviewer)
     workflow.add_node("adversary", run_adversary)
@@ -249,8 +260,11 @@ def build_orchestrator_graph():
     # Layer 11: Multi-Agent Engineering
     workflow.add_edge("design", "coder")
     
+    # Layer 11.5: Project Completeness Validation
+    workflow.add_edge("coder", "completeness")
+    workflow.add_conditional_edges("completeness", should_continue_completeness, {"coder": "coder", "memory_storage": "memory_storage", "tester": "tester"})
+    
     # Layer 12: Quality Intelligence (Tester -> Reviewer -> Adversary -> Visual)
-    workflow.add_conditional_edges("coder", should_continue_coder, {"memory_storage": "memory_storage", "tester": "tester"})
     workflow.add_edge("tester", "reviewer")
     workflow.add_conditional_edges("reviewer", should_continue_review, {"coder": "coder", "adversary": "adversary"})
     workflow.add_conditional_edges("adversary", should_continue_adversary, {"coder": "coder", "visual_critique": "visual_critique"})

@@ -321,39 +321,16 @@ export const ${baseName} = () => null;
 
   function autoStubMissingFiles(files, missingImports) {
     const stubbedFiles = { ...files };
-    const stubbedList = [];
-
-    missingImports.forEach(({ file, import: importPath }) => {
-      const dir = file.substring(0, file.lastIndexOf('/'));
-      let resolved;
-      try {
-        resolved = new URL(importPath, `file://${dir}/`).pathname;
-      } catch {
-        return;
-      }
-      // Default to .jsx for the stub
-      const stubPath = resolved.endsWith('.jsx') || resolved.endsWith('.js')
-        ? resolved
-        : resolved + '.jsx';
-
-      if (!stubbedFiles[stubPath]) {
-        stubbedFiles[stubPath] = generateStub(importPath);
-        stubbedList.push(stubPath);
-      }
-    });
-
-    return { stubbedFiles, stubbedList };
+    return { stubbedFiles: {} };
   }
 
   const missingImports = validateClosure(sandpackFiles);
 
   let finalFiles = sandpackFiles;
-  let stubbedList = [];
-
-  if (missingImports.length > 0) {
-    const result = autoStubMissingFiles(sandpackFiles, missingImports);
-    finalFiles = result.stubbedFiles;
-    stubbedList = result.stubbedList;
+  let stubbedFiles = {};
+  if (codeFiles) {
+    const result = analyzeImports(codeFiles);
+    stubbedFiles = result.stubbedFiles || {};
   }
 
   return (
@@ -619,11 +596,7 @@ export const ${baseName} = () => null;
         {/* EXECUTION MANAGER (Preview + WebContainer Terminal) */}
         {(activeTab === 'preview' || activeTab === 'terminal') && (
             <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-              {stubbedList.length > 0 && (
-                <div style={{ padding: '8px 16px', background: '#3a2a00', color: '#fbbf24', fontFamily: 'monospace', fontSize: 13, borderBottom: '1px solid #5a4200' }}>
-                  ⚠ yAI auto-generated {stubbedList.length} placeholder file(s) the Coder agent missed: {stubbedList.map(s => s.split('/').pop()).join(', ')} — app will run but this functionality is incomplete.
-                </div>
-              )}
+              {/* Backend now guarantees completeness; removed placeholder warning banner */}
               <div style={{ flex: 1 }}>
                 <ExecutionManager 
                     files={finalFiles}
