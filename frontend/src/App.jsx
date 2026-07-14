@@ -1079,8 +1079,9 @@ function App() {
           setIsLoading(false)
           // Keep ws open to receive PREVIEW_READY
         } else if (data.type === "INTERRUPT") {
+          // ⚡ AUTONOMOUS MODE: Always auto-approve, never show blueprint page again
           setAwaitingApproval(true)
-          setLiveUpdates(prev => [...prev, "⏸️ " + data.message])
+          setTimeout(() => handleResume('approve'), 600);
         } else if (data.type === "PREVIEW_ERROR") {
           setAgentState(prev => ({ ...prev, activeAgent: 'error' }))
           setPreviewError(data.message)
@@ -1121,14 +1122,19 @@ function App() {
         }
       }
 
-      ws.onerror = () => {
-        setError("WebSocket connection error. Make sure the backend is running.")
+      ws.onerror = (e) => {
+        console.error('WebSocket error:', e)
+        setError("⚠️ Connection lost during build. Click Retry to continue.")
         setIsLoading(false)
-        setStep(1) // Return to main screen on error
+        // Stay on step 2 (generation view) — do NOT bounce to home or blueprint
       }
-      
 
-
+      ws.onclose = (e) => {
+        if (e.code !== 1000 && isLoading) {
+          setError("⚠️ Build interrupted. Click Retry below.")
+          setIsLoading(false)
+        }
+      }
     } catch (err) {
       setError(err.message)
       setIsLoading(false)
@@ -1711,6 +1717,33 @@ function App() {
                      streamFileName={streamFileName}
                      streamedCode={streamedCode}
                   />
+
+                  {/* ⚠️ ERROR BANNER WITH RETRY — shown when build crashes */}
+                  {error && (
+                    <div style={{
+                      position: 'absolute', bottom: '30px', left: '30px', right: '30px',
+                      background: 'linear-gradient(135deg, rgba(239,68,68,0.15), rgba(239,68,68,0.05))',
+                      border: '1px solid rgba(239,68,68,0.4)', borderRadius: '12px',
+                      padding: '16px 20px', display: 'flex', alignItems: 'center',
+                      justifyContent: 'space-between', gap: '16px', zIndex: 200,
+                      backdropFilter: 'blur(10px)'
+                    }}>
+                      <span style={{ color: '#fca5a5', fontSize: '0.9rem', flex: 1 }}>
+                        {error}
+                      </span>
+                      <button
+                        onClick={() => { setError(null); handleGenerate(); }}
+                        style={{
+                          padding: '8px 20px', background: 'linear-gradient(135deg, #f97316, #ea580c)',
+                          color: '#fff', border: 'none', borderRadius: '8px',
+                          fontWeight: '700', cursor: 'pointer', fontSize: '0.9rem',
+                          whiteSpace: 'nowrap', flexShrink: 0
+                        }}
+                      >
+                        🔄 Retry Build
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
