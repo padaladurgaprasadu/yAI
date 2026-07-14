@@ -79,19 +79,30 @@ class ArchitectAgent(BaseAgent):
             injected_list = "\n".join(injected_files)
             context += f"\n\n--- PRE-INJECTED TEMPLATES (ZERO-SHOT ASSEMBLY) ---\nThe following premium components have already been injected into the project codebase by the Template Engine. You MUST include these exact file paths in your 'file_structure' array, as they form the UI foundation.\n{injected_list}"
             
-        # --- Board of Directors Protocol (Mixture of Agents) ---
-        from backend.utils.model_registry import AIModelRegistry
+        # --- Smart Architect Protocol ---
+        # Standard builds (Simple/Medium/Large) → single model, fast
+        # Enterprise builds only → full Board of Directors (3 models)
         import concurrent.futures
-        
+        from backend.utils.model_registry import AIModelRegistry
+
+        complexity = state.get("complexity", "Large")
+        use_board = complexity == "Enterprise"
+
         try:
             llms = AIModelRegistry.get_all_llms("architecture")
         except:
             llms = [self.llm]
-            
-        board = llms[:3]
-        if q and len(board) > 1:
-            q.put({"type": "progress", "message": f"🏛️ Spawning Board of Directors ({len(board)} Models) for Consensus..."})
-            
+
+        if use_board:
+            board = llms[:3]
+            if q:
+                q.put({"type": "progress", "message": f"🏛️ Board of Directors ({len(board)} Models) — Enterprise Mode..."})
+        else:
+            # Fast single-model path for 95% of builds
+            board = llms[:1]
+            if q:
+                q.put({"type": "progress", "message": "⚡ Fast Architect — Designing blueprint..."})
+
         def get_proposal(model, index):
             try:
                 print(f"[Architect] Requesting proposal from Model {index+1}...")
@@ -105,19 +116,20 @@ class ArchitectAgent(BaseAgent):
             except Exception as e:
                 print(f"[Architect] Model {index+1} failed: {e}")
                 return None
-                
+
         proposals = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        timeout_secs = 60 if use_board else 30
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(board)) as executor:
             futures = [executor.submit(get_proposal, model, i) for i, model in enumerate(board)]
-            # Hard 45-second timeout — never hangs the pipeline
             try:
-                for f in concurrent.futures.as_completed(futures, timeout=45):
+                for f in concurrent.futures.as_completed(futures, timeout=timeout_secs):
                     res = f.result()
                     if res: proposals.append(res)
             except concurrent.futures.TimeoutError:
-                print("[Architect] Board of Directors timed out. Using whatever proposals arrived.")
+                print("[Architect] Timed out. Using whatever proposals arrived.")
                 for f in futures:
                     if f.done() and not f.exception():
+
                         res = f.result()
                         if res: proposals.append(res)
                 

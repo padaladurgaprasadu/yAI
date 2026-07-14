@@ -110,6 +110,16 @@ class PlannerAgent(BaseAgent):
         # Update and return the state
         state["modules"] = modules_list
         state["dag_tasks"] = dag_tasks
+
+        # Auto-detect complexity so Architect can choose fast vs Enterprise mode
+        n = len(modules_list)
+        if n <= 3:
+            state["complexity"] = "Simple"
+        elif n <= 6:
+            state["complexity"] = "Large"
+        else:
+            state["complexity"] = "Enterprise"
+        print(f"   -> [Planner] Complexity detected: {state['complexity']} ({n} modules)")
         
         project_dir = state.get("project_dir")
         if project_dir:
